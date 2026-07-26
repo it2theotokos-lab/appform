@@ -261,11 +261,17 @@ class UpdateEngineService {
                     return $path;
                 }
             }
-            // Last resort: ask the shell
-            $whereOutput = [];
-            exec('where mysqldump.exe 2>NUL', $whereOutput);
-            if (!empty($whereOutput[0]) && file_exists(trim($whereOutput[0]))) {
-                return trim($whereOutput[0]);
+            // Last resort: ask the OS to locate mysqldump without using exec()
+            $whereProcess = proc_open('where mysqldump.exe', [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $wherePipes);
+            if (is_resource($whereProcess)) {
+                $whereResult = trim(stream_get_contents($wherePipes[1]));
+                fclose($wherePipes[1]);
+                fclose($wherePipes[2]);
+                proc_close($whereProcess);
+                $firstLine = explode("\n", $whereResult)[0] ?? '';
+                if (!empty($firstLine) && file_exists(trim($firstLine))) {
+                    return trim($firstLine);
+                }
             }
         }
         return 'mysqldump'; // Unix / PATH fallback
