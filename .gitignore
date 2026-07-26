@@ -6,7 +6,7 @@ appform.db
 node_modules/
 AppForm-v*.zip
 
-release/
+/release/
 storage/backups/
 storage/document_final_pdfs/
 storage/private_uploads/
@@ -16,5 +16,7 @@ public/storage/
 
 config/config.local.php
 config/installed.lock
+
+tools/release/config.json
 
 *.bak

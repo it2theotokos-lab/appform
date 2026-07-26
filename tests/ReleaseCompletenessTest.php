@@ -37,7 +37,42 @@ class ReleaseCompletenessTest {
         }
         $checksums = json_decode($checksumsContent, true);
 
-        // 2. Validate declared files exist in ZIP
+        // 2. Strict Assertions for Excluded / Included files
+        // 013 must not exist
+        if ($zip->locateName('migrations/013_cloud_backup.sql') !== false) {
+            throw new Exception("ERROR: db/migrations/013_cloud_backup.sql exists inside update ZIP!");
+        }
+        if (in_array('013_cloud_backup.sql', $manifest['migrations'])) {
+            throw new Exception("ERROR: db/migrations/013_cloud_backup.sql is declared in manifest migrations!");
+        }
+
+        // schema.sql must not exist
+        if ($zip->locateName('files/db/schema.sql') !== false) {
+            throw new Exception("ERROR: db/schema.sql exists inside update ZIP!");
+        }
+        if (in_array('db/schema.sql', $manifest['files'])) {
+            throw new Exception("ERROR: db/schema.sql is declared in manifest files!");
+        }
+
+        // worker.php must exist
+        if ($zip->locateName('files/tools/release/worker.php') === false) {
+            throw new Exception("ERROR: tools/release/worker.php is missing from update ZIP!");
+        }
+        if (!in_array('tools/release/worker.php', $manifest['files'])) {
+            throw new Exception("ERROR: tools/release/worker.php is not declared in manifest files list!");
+        }
+
+        // migrations list check
+        $expectedMigrations = [
+            '023_cloud_backup_metadata.sql',
+            '024_create_update_tables.sql',
+            '025_add_updates_permissions.sql'
+        ];
+        if (array_diff($manifest['migrations'], $expectedMigrations) !== array_diff($expectedMigrations, $manifest['migrations'])) {
+            throw new Exception("ERROR: Migrations list does not match expected list exactly.");
+        }
+
+        // 3. Validate declared files exist in ZIP
         foreach ($manifest['files'] as $f) {
             $zipFilePath = "files/{$f}";
             if ($zip->locateName($zipFilePath) === false) {
@@ -51,7 +86,7 @@ class ReleaseCompletenessTest {
             }
         }
 
-        // 3. Validate ZIP files are declared in manifest
+        // 4. Validate ZIP files are declared in manifest
         for ($i = 0; $i < $zip->numFiles; $i++) {
             $name = $zip->getNameIndex($i);
             if ($name === 'manifest.json' || $name === 'checksums.json') {
@@ -70,11 +105,11 @@ class ReleaseCompletenessTest {
             }
         }
 
-        // 4. Verify Git diff files are fully present
+        // 5. Verify Git diff --name-status files are fully present
         $baselineCommit = '950316d';
-        $diffFilesOutput = shell_exec("git diff --name-only {$baselineCommit} HEAD");
+        $diffFilesOutput = shell_exec("git diff --name-status --find-renames {$baselineCommit} HEAD");
         if ($diffFilesOutput !== null) {
-            $diffFiles = array_filter(array_map('trim', explode("\n", $diffFilesOutput)));
+            $lines = array_filter(array_map('trim', explode("\n", $diffFilesOutput)));
             $exclusions = [
                 'config/config.local.php',
                 'config/installed.lock',
@@ -90,41 +125,54 @@ class ReleaseCompletenessTest {
                 'storage/sessions'
             ];
 
-            foreach ($diffFiles as $f) {
-                $relative = str_replace('\\', '/', $f);
-                $isExcluded = false;
-                foreach ($exclusions as $exclude) {
-                    if ($relative === $exclude || str_starts_with($relative, $exclude . '/')) {
-                        $isExcluded = true;
-                        break;
+            foreach ($lines as $line) {
+                if (empty($line)) continue;
+                $parts = preg_split('/\s+/', $line);
+                if (count($parts) < 2) continue;
+
+                $status = $parts[0];
+                
+                if (str_starts_with($status, 'R')) {
+                    $oldFile = str_replace('\\', '/', $parts[1]);
+                    $newFile = str_replace('\\', '/', $parts[2]);
+                    
+                    if (!self::isExcluded($oldFile, $exclusions)) {
+                        if (!in_array($oldFile, $manifest['deleted_files'])) {
+                            throw new Exception("Renamed old file '{$oldFile}' missing from manifest deleted_files");
+                        }
                     }
-                }
-                if (str_starts_with($relative, 'tests/') || 
-                    str_starts_with($relative, 'tools/release/config') || 
-                    str_starts_with($relative, 'storage/') || 
-                    $relative === 'tools/release/build.php' ||
-                    $relative === 'README.md' ||
-                    $relative === '.gitignore') {
-                    $isExcluded = true;
-                }
-
-                if ($isExcluded) {
-                    continue;
-                }
-
-                if (str_starts_with($relative, 'db/migrations/')) {
-                    $m = basename($relative);
-                    if (!in_array($m, $manifest['migrations'])) {
-                        throw new Exception("Migration '{$m}' from Git diff is missing from manifest migrations");
+                    if (!self::isExcluded($newFile, $exclusions)) {
+                        if (str_starts_with($newFile, 'db/migrations/')) {
+                            $m = basename($newFile);
+                            if ($m !== '013_cloud_backup.sql' && !in_array($m, $manifest['migrations'])) {
+                                throw new Exception("Renamed new migration '{$m}' missing from manifest migrations");
+                            }
+                        } else {
+                            if (!in_array($newFile, $manifest['files'])) {
+                                throw new Exception("Renamed new file '{$newFile}' missing from manifest files");
+                            }
+                        }
                     }
                 } else {
-                    if (file_exists(__DIR__ . "/../{$relative}")) {
-                        if (!in_array($relative, $manifest['files'])) {
-                            throw new Exception("Production file '{$relative}' from Git diff is missing from manifest files list");
+                    $file = str_replace('\\', '/', $parts[1]);
+                    if (self::isExcluded($file, $exclusions)) {
+                        continue;
+                    }
+
+                    if ($status === 'D') {
+                        if (!in_array($file, $manifest['deleted_files'])) {
+                            throw new Exception("Deleted file '{$file}' missing from manifest deleted_files");
                         }
                     } else {
-                        if (!in_array($relative, $manifest['deleted_files'])) {
-                            throw new Exception("Deleted file '{$relative}' from Git diff is missing from manifest deleted_files");
+                        if (str_starts_with($file, 'db/migrations/')) {
+                            $m = basename($file);
+                            if ($m !== '013_cloud_backup.sql' && !in_array($m, $manifest['migrations'])) {
+                                throw new Exception("Migration '{$m}' missing from manifest migrations");
+                            }
+                        } else {
+                            if (!in_array($file, $manifest['files'])) {
+                                throw new Exception("Production file '{$file}' missing from manifest files");
+                            }
                         }
                     }
                 }
@@ -133,6 +181,28 @@ class ReleaseCompletenessTest {
 
         $zip->close();
         echo "Test 1 Passed: Package contents match manifest exactly.\n";
+        echo "Test 2 Passed: worker.php exists and exclusions (013, schema.sql) verified.\n";
+        echo "Test 3 Passed: Git diff renames, additions, and deletions verified.\n";
+    }
+
+    private static function isExcluded(string $relative, array $exclusions): bool {
+        if ($relative === 'db/schema.sql' || $relative === 'db/migrations/013_cloud_backup.sql') {
+            return true;
+        }
+        foreach ($exclusions as $exclude) {
+            if ($relative === $exclude || str_starts_with($relative, $exclude . '/')) {
+                return true;
+            }
+        }
+        if (str_starts_with($relative, 'tests/') || 
+            str_starts_with($relative, 'tools/release/config') || 
+            str_starts_with($relative, 'storage/') || 
+            $relative === 'tools/release/build.php' ||
+            $relative === 'README.md' ||
+            $relative === '.gitignore') {
+            return true;
+        }
+        return false;
     }
 }
 ReleaseCompletenessTest::run();
