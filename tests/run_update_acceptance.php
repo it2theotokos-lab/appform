@@ -382,8 +382,11 @@ if ($PASS) {
 }
 echo str_repeat("=", 60) . "\n\n";
 
-// Write log to file
-$logPath = $root . '/public/storage/acceptance_test_log.txt';
+// Write log to storage/logs (outside public/storage — excluded from release ZIPs)
+$logPath = $root . '/storage/logs/acceptance_test_log.txt';
+if (!is_dir(dirname($logPath))) {
+    mkdir(dirname($logPath), 0755, true);
+}
 file_put_contents($logPath, implode("\n", $log));
 echo "Log written to: {$logPath}\n";
 
