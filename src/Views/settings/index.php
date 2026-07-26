@@ -490,48 +490,58 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                 </div>
             </div>
         </div>
+    <?php elseif ($activeTab === 'cloud'): ?>
+        <?php
+        $tokensByProvider = [];
+        if (isset($cloudTokens) && is_array($cloudTokens)) {
+            foreach ($cloudTokens as $tok) {
+                $tokensByProvider[$tok['provider']] = $tok;
+            }
+        }
+        ?>
+        <div>
             <!-- OAuth Credentials Configuration Form -->
-            <div class="card p-4 border border-secondary bg-dark mb-4 text-start">
-                <h5 class="text-white mb-3"><i class="fa-solid fa-key text-primary me-2"></i> Ρύθμιση OAuth Credentials</h5>
+            <div class="card p-4 mb-4 text-start" style="background:var(--color-surface);border-color:var(--color-border);">
+                <h5 class="mb-3" style="color:var(--color-text);"><i class="fa-solid fa-key text-primary me-2"></i> Ρύθμιση OAuth Credentials</h5>
                 <form action="/admin/settings/update" method="POST">
                     <?= \App\Core\Csrf::field() ?>
                     <div class="row">
                         <!-- Google Credentials -->
-                        <div class="col-md-6 border-end border-secondary">
-                            <h6 class="text-white mb-3"><i class="fa-brands fa-google text-success me-2"></i> Google Drive Client API</h6>
+                        <div class="col-md-6 border-end" style="border-color:var(--color-border)!important;">
+                            <h6 class="mb-3" style="color:var(--color-text);"><i class="fa-brands fa-google text-success me-2"></i> Google Drive Client API</h6>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Client ID</label>
+                                <label class="form-label text-muted small">Client ID</label>
                                 <input type="text" class="form-control" name="google_client_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('google_client_id') ?? '') ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Client Secret</label>
+                                <label class="form-label text-muted small">Client Secret</label>
                                 <?php $googleSecret = \App\Models\SystemSetting::getVal('google_client_secret'); ?>
                                 <input type="password" class="form-control" name="google_client_secret" value="<?= !empty($googleSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : '' ?>" placeholder="<?= !empty($googleSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : 'Εισάγετε Client Secret' ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Redirect URI</label>
+                                <label class="form-label text-muted small">Redirect URI</label>
                                 <input type="text" class="form-control" name="google_redirect_uri" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('google_redirect_uri') ?? '') ?>">
                             </div>
                         </div>
 
                         <!-- Microsoft Credentials -->
                         <div class="col-md-6 ps-md-4">
-                            <h6 class="text-white mb-3"><i class="fa-brands fa-windows text-info me-2"></i> Microsoft OneDrive API</h6>
+                            <h6 class="mb-3" style="color:var(--color-text);"><i class="fa-brands fa-windows text-info me-2"></i> Microsoft OneDrive API</h6>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Client ID</label>
+                                <label class="form-label text-muted small">Client ID</label>
                                 <input type="text" class="form-control" name="onedrive_client_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_client_id') ?? '') ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Client Secret</label>
+                                <label class="form-label text-muted small">Client Secret</label>
                                 <?php $onedriveSecret = \App\Models\SystemSetting::getVal('onedrive_client_secret'); ?>
                                 <input type="password" class="form-control" name="onedrive_client_secret" value="<?= !empty($onedriveSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : '' ?>" placeholder="<?= !empty($onedriveSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : 'Εισάγετε Client Secret' ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Tenant ID</label>
+                                <label class="form-label text-muted small">Tenant ID</label>
                                 <input type="text" class="form-control" name="onedrive_tenant_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_tenant_id') ?? 'common') ?>">
                             </div>
                             <div class="mb-3">
-                                <label class="form-label text-white-50">Redirect URI</label>
+                                <label class="form-label text-muted small">Redirect URI</label>
                                 <input type="text" class="form-control" name="onedrive_redirect_uri" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_redirect_uri') ?? '') ?>">
                             </div>
                         </div>
@@ -544,9 +554,9 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
             <div class="row mb-4">
                 <!-- Microsoft OneDrive -->
                 <div class="col-md-6 mb-3">
-                    <div class="card p-4 border border-secondary bg-dark text-center">
+                    <div class="card p-4 text-center" style="background:var(--color-surface);border-color:var(--color-border);">
                         <i class="fa-brands fa-windows text-info mb-3" style="font-size: 3rem;"></i>
-                        <h5 class="text-white">Microsoft OneDrive</h5>
+                        <h5 style="color:var(--color-text);">Microsoft OneDrive</h5>
 
                         <?php 
                         $hasOneDriveCreds = !empty(\App\Models\SystemSetting::getVal('onedrive_client_id')) && 
@@ -558,11 +568,11 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
                             $statusColor = $isExpired ? 'text-warning' : 'text-success';
                         ?>
-                            <div class="text-start mb-3 bg-dark bg-opacity-50 p-3 rounded border border-glass">
-                                <p class="mb-1 text-white-50 small">Κατάσταση: <span class="<?= $statusColor ?> font-bold"><?= $statusText ?></span></p>
-                                <p class="mb-1 text-white-50 small">Λογαριασμός: <span class="text-white"><?= htmlspecialchars($tok['connected_account'] ?? 'N/A') ?></span></p>
-                                <p class="mb-1 text-white-50 small">Σύνδεση: <span class="text-white"><?= date('d/m/Y H:i', strtotime($tok['last_connected_at'])) ?></span></p>
-                                <p class="mb-0 text-white-50 small">Φάκελος: <span class="text-white"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
+                            <div class="text-start mb-3 p-3 rounded border" style="background:var(--color-bg);border-color:var(--color-border);">
+                                <p class="mb-1 text-muted small">Κατάσταση: <span class="<?= $statusColor ?> font-bold"><?= $statusText ?></span></p>
+                                <p class="mb-1 text-muted small">Λογαριασμός: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['connected_account'] ?? 'N/A') ?></span></p>
+                                <p class="mb-1 text-muted small">Σύνδεση: <span style="color:var(--color-text);"><?= date('d/m/Y H:i', strtotime($tok['last_connected_at'])) ?></span></p>
+                                <p class="mb-0 text-muted small">Φάκελος: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
                             </div>
                             <div class="d-flex gap-2">
                                 <?php if ($hasOneDriveCreds): ?>
@@ -592,9 +602,9 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
 
                 <!-- Google Drive -->
                 <div class="col-md-6 mb-3">
-                    <div class="card p-4 border border-secondary bg-dark text-center">
+                    <div class="card p-4 text-center" style="background:var(--color-surface);border-color:var(--color-border);">
                         <i class="fa-brands fa-google text-success mb-3" style="font-size: 3rem;"></i>
-                        <h5 class="text-white">Google Drive</h5>
+                        <h5 style="color:var(--color-text);">Google Drive</h5>
 
                         <?php 
                         $hasGoogleCreds = !empty(\App\Models\SystemSetting::getVal('google_client_id')) && 
@@ -606,11 +616,11 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
                             $statusColor = $isExpired ? 'text-warning' : 'text-success';
                         ?>
-                            <div class="text-start mb-3 bg-dark bg-opacity-50 p-3 rounded border border-glass">
-                                <p class="mb-1 text-white-50 small">Κατάσταση: <span class="<?= $statusColor ?> font-bold"><?= $statusText ?></span></p>
-                                <p class="mb-1 text-white-50 small">Λογαριασμός: <span class="text-white"><?= htmlspecialchars($tok['connected_account'] ?? 'N/A') ?></span></p>
-                                <p class="mb-1 text-white-50 small">Σύνδεση: <span class="text-white"><?= date('d/m/Y H:i', strtotime($tok['last_connected_at'])) ?></span></p>
-                                <p class="mb-0 text-white-50 small">Φάκελος: <span class="text-white"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
+                            <div class="text-start mb-3 p-3 rounded border" style="background:var(--color-bg);border-color:var(--color-border);">
+                                <p class="mb-1 text-muted small">Κατάσταση: <span class="<?= $statusColor ?> font-bold"><?= $statusText ?></span></p>
+                                <p class="mb-1 text-muted small">Λογαριασμός: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['connected_account'] ?? 'N/A') ?></span></p>
+                                <p class="mb-1 text-muted small">Σύνδεση: <span style="color:var(--color-text);"><?= date('d/m/Y H:i', strtotime($tok['last_connected_at'])) ?></span></p>
+                                <p class="mb-0 text-muted small">Φάκελος: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
                             </div>
                             <div class="d-flex gap-2">
                                 <?php if ($hasGoogleCreds): ?>
@@ -640,16 +650,16 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
             </div>
 
             <!-- Cloud Backups Replication Table -->
-            <div class="table-responsive bg-dark p-3 rounded border border-secondary">
-                <h6 class="text-white mb-3"><i class="fa-solid fa-cloud-arrow-up me-2 text-warning"></i> Ιστορικό Συγχρονισμού Backup</h6>
+            <div class="table-responsive p-3 rounded border" style="background:var(--color-surface);border-color:var(--color-border);">
+                <h6 class="mb-3" style="color:var(--color-text);"><i class="fa-solid fa-cloud-arrow-up me-2 text-warning"></i> Ιστορικό Συγχρονισμού Backup</h6>
                 <table class="table table-hover mb-0">
                     <thead>
-                        <tr class="text-white">
-                            <th>Όνομα Αρχείου</th>
-                            <th>Provider</th>
-                            <th>Ταχύτητα</th>
-                            <th>Κατάσταση Cloud</th>
-                            <th>Ενέργειες</th>
+                        <tr>
+                            <th style="color:var(--color-text);">Όνομα Αρχείου</th>
+                            <th style="color:var(--color-text);">Provider</th>
+                            <th style="color:var(--color-text);">Ταχύτητα</th>
+                            <th style="color:var(--color-text);">Κατάσταση Cloud</th>
+                            <th style="color:var(--color-text);">Ενέργειες</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -660,7 +670,7 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                         <?php else: ?>
                             <?php foreach ($backups as $bk): ?>
                                 <tr>
-                                    <td class="align-middle text-white"><?= \App\Core\View::escape($bk['filename']) ?></td>
+                                    <td class="align-middle" style="color:var(--color-text);"><?= \App\Core\View::escape($bk['filename']) ?></td>
                                     <td class="align-middle text-muted"><?= htmlspecialchars($bk['cloud_provider'] ?: 'None') ?></td>
                                     <td class="align-middle text-muted"><?= $bk['upload_speed_kbps'] ? $bk['upload_speed_kbps'] . ' KB/s' : '-' ?></td>
                                     <td class="align-middle">

@@ -2,6 +2,13 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.4-Stable] - 2026-07-26
+
+### Fixed
+- **Cloud Backup UI Restoration**: Restored the Cloud Backup tab rendering by fixing the activeTab conditional wrapper block and aligning controller variable names.
+- **OAuth Settings Completion**: Standardized client secrets storage, masking passwords in HTML settings inputs, and preserving existing secret settings values when inputs are submitted blank.
+- **OAuth Redirection and Connection Flow**: Enabled support for dynamic Microsoft OneDrive tenant IDs, enforced user profile verification on OAuth callbacks, and implemented real connection tests for Google Drive and OneDrive API endpoints.
+
 ## [1.1.3-Stable] - 2026-07-26
 
 ### Fixed

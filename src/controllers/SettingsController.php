@@ -863,7 +863,7 @@ class SettingsController extends Controller {
         $expiresIn = $res['expires_in'] ?? 3600;
         
         // Retrieve connected account identity / email
-        $connectedAccount = 'Unknown Account';
+        $connectedAccount = null;
         if ($provider === 'googledrive') {
             $ch = curl_init("https://www.googleapis.com/oauth2/v2/userinfo");
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -884,6 +884,12 @@ class SettingsController extends Controller {
             } elseif (!empty($userInfo['userPrincipalName'])) {
                 $connectedAccount = $userInfo['userPrincipalName'];
             }
+        }
+
+        if (empty($connectedAccount)) {
+            Session::flash('error', 'Αποτυχία άντλησης στοιχείων ταυτοποίησης χρήστη από τον provider.');
+            $this->redirect('/admin/settings?tab=cloud');
+            return;
         }
         
         // Save token to DB

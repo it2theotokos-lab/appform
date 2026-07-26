@@ -200,5 +200,73 @@ assert(!$firstDivHasHidden,
 echo "Test 22 Passed: Updates panel outer container is not hidden by default CSS.\n";
 
 echo "=== All 7 Updates Tab Rendering Tests Passed! ===\n";
-echo "\nTotal: 22 tests passed.\n";
+
+echo "\n=== Running Cloud Backup & OAuth flow Regression Tests ===\n";
+
+// ---------- TEST 23: Cloud Backup tab conditional check exist in index.php ----------
+$hasCloudBlock = str_contains($settingsIndexView, "activeTab === 'cloud'");
+assert($hasCloudBlock, "Test 23 Failed: settings/index.php has no 'cloud' elseif block wrapper — Cloud Backup tab is blank.");
+echo "Test 23 Passed: Cloud Backup tab is present and conditional wrapper exists.\n";
+
+// ---------- TEST 24: No hardcoded bg-dark or text-white inside the cloud tab ----------
+$cloudBlockStart = strpos($settingsIndexView, "activeTab === 'cloud'");
+$cloudSlice = substr($settingsIndexView, $cloudBlockStart, 4000);
+$hasHardcodedDark = str_contains($cloudSlice, 'class="card p-4 border border-secondary bg-dark')
+                 || str_contains($cloudSlice, 'class="text-white"')
+                 || str_contains($cloudSlice, 'class="table-responsive bg-dark');
+assert(!$hasHardcodedDark, "Test 24 Failed: Hardcoded bg-dark, text-white or border-secondary classes found inside Cloud Backup tab.");
+echo "Test 24 Passed: Hardcoded styling classes were removed from Cloud Backup tab.\n";
+
+// ---------- TEST 25: Client Secret is password input and masked ----------
+$hasPasswordInputs = preg_match('/type="password"[^>]+google_client_secret/', $cloudSlice)
+                  && preg_match('/type="password"[^>]+onedrive_client_secret/', $cloudSlice);
+assert($hasPasswordInputs, "Test 25 Failed: Client Secret inputs are not type='password'.");
+$hasMaskedPlaceholder = str_contains($cloudSlice, '[Κρυπτογραφημένο / Αμετάβλητο]');
+assert($hasMaskedPlaceholder, "Test 25 Failed: Secrets do not show the masked placeholder in value/placeholder.");
+echo "Test 25 Passed: Client Secrets are password inputs, masked, and do not return the actual secrets in HTML.\n";
+
+// ---------- TEST 26: Settings Update preserves secret if submitted empty or masked ----------
+$hasSecretPreserve = str_contains($settingsCtrl, 'google_client_secret')
+                  && str_contains($settingsCtrl, 'onedrive_client_secret')
+                  && str_contains($settingsCtrl, '[Κρυπτογραφημένο / Αμετάβλητο]');
+assert($hasSecretPreserve, "Test 26 Failed: Settings update does not protect existing client secrets when submitted blank or masked.");
+echo "Test 26 Passed: Settings controller preserves secrets when submitted empty or placeholder.\n";
+
+// ---------- TEST 27: OneDrive Tenant ID and redirect URIs are supported and saved ----------
+$hasOneDriveTenantField = str_contains($cloudSlice, 'name="onedrive_tenant_id"');
+$hasOneDriveRedirectField = str_contains($cloudSlice, 'name="onedrive_redirect_uri"');
+$hasGoogleRedirectField = str_contains($cloudSlice, 'name="google_redirect_uri"');
+assert($hasOneDriveTenantField, "Test 27 Failed: Tenant ID field is missing in Microsoft OneDrive credentials form.");
+assert($hasOneDriveRedirectField, "Test 27 Failed: Redirect URI field is missing in Microsoft OneDrive credentials form.");
+assert($hasGoogleRedirectField, "Test 27 Failed: Redirect URI field is missing in Google Drive credentials form.");
+echo "Test 27 Passed: Tenant ID and Redirect URIs are supported and saved.\n";
+
+// ---------- TEST 28: OAuth Callback state validation check ----------
+$hasOAuthStateValidation = str_contains($settingsCtrl, 'oauth_state')
+                        && str_contains($settingsCtrl, 'savedState')
+                        && str_contains($settingsCtrl, 'Invalid or expired OAuth state');
+assert($hasOAuthStateValidation, "Test 28 Failed: handleProviderCallback does not validate state against savedState correctly.");
+echo "Test 28 Passed: OAuth callback correctly validates state parameters.\n";
+
+// ---------- TEST 29: Connected state requires successful API user profile response ----------
+$hasProfileChecks = str_contains($settingsCtrl, '/userinfo')
+                 && str_contains($settingsCtrl, '/me')
+                 && str_contains($settingsCtrl, 'connectedAccount = null')
+                 || str_contains($settingsCtrl, 'empty($connectedAccount)');
+assert($hasProfileChecks, "Test 29 Failed: Connected state is marked without verifying the user profile identity response.");
+echo "Test 29 Passed: Connected state display requires verified provider identity response.\n";
+
+// ---------- TEST 30: Test Connection uses real API calls ----------
+$cloudBackupSvcFile = file_get_contents($root . '/src/Services/CloudBackupService.php');
+$hasRealConnectionTest = str_contains($cloudBackupSvcFile, '/drive/v3/files')
+                      && str_contains($cloudBackupSvcFile, '/v1.0/me/drive');
+assert($hasRealConnectionTest, "Test 30 Failed: testConnection does not make real provider API calls.");
+echo "Test 30 Passed: Connection test performs real provider requests.\n";
+
+// ---------- TEST 31: Disconnect deletes tokens ----------
+$hasDisconnectDelete = str_contains($cloudBackupSvcFile, 'DELETE FROM oauth_tokens WHERE provider = ?');
+assert($hasDisconnectDelete, "Test 31 Failed: disconnectProvider does not delete provider tokens.");
+echo "Test 31 Passed: Disconnect deletes tokens successfully.\n";
+
+echo "\nTotal: 31 tests passed.\n";
 return true;
