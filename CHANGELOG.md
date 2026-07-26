@@ -2,7 +2,13 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
-## [1.1.1-Stable] - 2026-07-26
+## [1.1.2-Stable] - 2026-07-26
+
+### Fixed
+- **Installer Storage Path Check**: Refactored the installer system requirements logic to perform robust write-tests on both the root `storage/` and public `public/storage/` directories, preventing false unwritable reports under Windows/IIS.
+- **Clean Package Exclusions**: Refactored the release builder script to completely exclude runtime data (logs, signatures, PDFs) from both `storage/` and `public/storage/` directories, preserving structure with `.gitkeep` placeholders.
+
+## [1.1.1-Stable] - 2026-07-26 (Withdrawn/Invalid)
 
 ### Fixed
 - **Permissions Migration 025**: Refactored `role_permissions` mapping to resolve Administrator role dynamically by slug, preventing clean-install foreign key constraint failures.

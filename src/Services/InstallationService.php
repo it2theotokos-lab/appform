@@ -5,7 +5,7 @@ use PDO;
 use PDOException;
 
 class InstallationService {
-    private static $lockFile = __DIR__ . '/../../storage/install.lock';
+    private static $lockFile = __DIR__ . '/../../public/storage/install.lock';
     private static $installedLock = __DIR__ . '/../../config/installed.lock';
     private static $configPath = __DIR__ . '/../../config/config.local.php';
 
@@ -84,14 +84,14 @@ class InstallationService {
             'dir_config_writable' => [
                 'name' => 'Config Directory Writable',
                 'required' => 'Writable',
-                'detected' => is_writable(__DIR__ . '/../../config') ? 'Writable' : 'Unwritable',
-                'pass' => is_writable(__DIR__ . '/../../config')
+                'detected' => self::isWritableDirectory(__DIR__ . '/../../config') ? 'Writable' : 'Unwritable',
+                'pass' => self::isWritableDirectory(__DIR__ . '/../../config')
             ],
             'dir_storage_writable' => [
                 'name' => 'Storage Directory Writable',
                 'required' => 'Writable',
-                'detected' => is_writable(__DIR__ . '/../../storage') ? 'Writable' : 'Unwritable',
-                'pass' => is_writable(__DIR__ . '/../../storage')
+                'detected' => self::isWritableDirectory(__DIR__ . '/../../public/storage') ? 'Writable' : 'Unwritable',
+                'pass' => self::isWritableDirectory(__DIR__ . '/../../public/storage')
             ]
         ];
 
@@ -314,5 +314,22 @@ class InstallationService {
                 $currentQuery = '';
             }
         }
+    }
+
+    /**
+     * Checks if a directory is writable by attempting to write a temporary file.
+     */
+    public static function isWritableDirectory(string $path): bool {
+        if (!is_dir($path)) {
+            return false;
+        }
+        $tempFile = $path . '/' . uniqid('test_write_', true) . '.tmp';
+        $fp = @fopen($tempFile, 'w');
+        if ($fp === false) {
+            return false;
+        }
+        fclose($fp);
+        @unlink($tempFile);
+        return true;
     }
 }

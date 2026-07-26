@@ -183,6 +183,60 @@ class ReleaseCompletenessTest {
         echo "Test 1 Passed: Package contents match manifest exactly.\n";
         echo "Test 2 Passed: worker.php exists and exclusions (013, schema.sql) verified.\n";
         echo "Test 3 Passed: Git diff renames, additions, and deletions verified.\n";
+
+        // 6. Validate Installer storage path checks
+        $installerSource = file_get_contents(__DIR__ . '/../src/Services/InstallationService.php');
+        if (str_contains($installerSource, "'../../storage'") || str_contains($installerSource, '"../../storage"')) {
+            throw new Exception("ERROR: Installer is checking root/storage directory directly!");
+        }
+        if (!str_contains($installerSource, 'public/storage')) {
+            throw new Exception("ERROR: Installer is not checking public/storage directory!");
+        }
+        echo "Test 4 Passed: Installer verification path checks public/storage canonical path.\n";
+
+        // 7. Validate Clean ZIP package structure and runtime file exclusions
+        $cleanZipPath = __DIR__ . "/../release/AppForm-{$version}.zip";
+        if (!file_exists($cleanZipPath)) {
+            throw new Exception("Clean ZIP not found at {$cleanZipPath}");
+        }
+        $cleanZip = new ZipArchive();
+        if ($cleanZip->open($cleanZipPath) !== true) {
+            throw new Exception("Failed to open clean ZIP");
+        }
+
+        $expectedKeepPaths = [
+            'public/storage/document_final_pdfs/.gitkeep',
+            'public/storage/document_signatures/.gitkeep',
+            'public/storage/logs/.gitkeep'
+        ];
+        foreach ($expectedKeepPaths as $keep) {
+            if ($cleanZip->locateName($keep) === false) {
+                throw new Exception("ERROR: Clean ZIP is missing required runtime directory placeholder: {$keep}");
+            }
+        }
+
+        for ($i = 0; $i < $cleanZip->numFiles; $i++) {
+            $name = $cleanZip->getNameIndex($i);
+            
+            // Check no PDF, signatures or logs exist in public/storage
+            if (str_starts_with($name, 'public/storage/')) {
+                if ($name === 'public/storage/' || in_array($name, $expectedKeepPaths)) {
+                    continue;
+                }
+                
+                $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                if ($ext === 'pdf' || $ext === 'log' || $ext === 'png' || $ext === 'jpg' || $ext === 'txt') {
+                    throw new Exception("ERROR: Clean ZIP contains runtime data file: {$name}");
+                }
+            }
+
+            // Verify no root storage folder exists inside clean ZIP
+            if (str_starts_with($name, 'storage/')) {
+                throw new Exception("ERROR: Clean ZIP contains excluded root storage folder path: {$name}");
+            }
+        }
+        $cleanZip->close();
+        echo "Test 5 Passed: Clean ZIP does not contain runtime data, root storage, and preserves required placeholders.\n";
     }
 
     private static function isExcluded(string $relative, array $exclusions): bool {

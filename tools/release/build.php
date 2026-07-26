@@ -64,12 +64,13 @@ $exclusions = [
     '.git',
     'appform.db',
     'release',
-    'storage/backups',
-    'storage/private_uploads',
-    'storage/document_final_pdfs',
-    'storage/logs',
-    'storage/cache',
-    'storage/sessions'
+    'storage'
+];
+
+$runtimeDirs = [
+    'public/storage/document_final_pdfs',
+    'public/storage/document_signatures',
+    'public/storage/logs'
 ];
 
 // 3. Build Full Clean-Install ZIP
@@ -77,6 +78,11 @@ echo "Building Full Clean-Install package ({$fullZipName})... ";
 $zipFull = new ZipArchive();
 if ($zipFull->open($fullZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
     die("FAILED: Cannot open ZIP archive for output.\n");
+}
+
+// Add empty runtime directories with .gitkeep first
+foreach ($runtimeDirs as $dir) {
+    $zipFull->addFromString($dir . '/.gitkeep', '');
 }
 
 $allFiles = getDirectoryFiles($rootPath);
@@ -88,6 +94,14 @@ foreach ($allFiles as $file) {
     $isExcluded = false;
     foreach ($exclusions as $exclude) {
         if ($relative === $exclude || str_starts_with($relative, $exclude . '/')) {
+            $isExcluded = true;
+            break;
+        }
+    }
+
+    // Filter runtime data
+    foreach ($runtimeDirs as $rdir) {
+        if (str_starts_with($relative, $rdir . '/')) {
             $isExcluded = true;
             break;
         }
