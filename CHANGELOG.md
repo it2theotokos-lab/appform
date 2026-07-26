@@ -2,7 +2,13 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
-## [1.1.0-Stable] - 2026-07-26
+## [1.1.1-Stable] - 2026-07-26
+
+### Fixed
+- **Permissions Migration 025**: Refactored `role_permissions` mapping to resolve Administrator role dynamically by slug, preventing clean-install foreign key constraint failures.
+- **Update Package Manifest Builder**: Reprogrammed release builder script to dynamically compile all modified/added production assets using Git diff comparison, correcting package omission bugs.
+
+## [1.1.0-Stable] - 2026-07-26 (Withdrawn/Invalid)
 
 ### Added
 - **Update & Upgrade Engine**: Integrated 25-step update execution pipeline with database dumps and automatic rollbacks.

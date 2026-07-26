@@ -55,7 +55,8 @@ $testFiles = [
     'SettingsValidationTest.php',
     'NotificationOwnershipTest.php',
     'DashboardAuthorizationTest.php',
-    'HealthCheckTest.php'
+    'HealthCheckTest.php',
+    'ReleaseCompletenessTest.php'
 ];
 
 $failed = false;
