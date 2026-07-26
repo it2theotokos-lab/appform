@@ -14,9 +14,12 @@
 // 11. Active Directory / LDAP (/admin/settings/ldap)
 // 12. Καταγραφές Ενεργειών (tab=audit)
 
-// Resolve current active tab
-$currentUrl = $_SERVER['REQUEST_URI'] ?? '';
-$activeTab = $_GET['tab'] ?? '';
+// Resolve active nav item for highlighting.
+// IMPORTANT: Do NOT use $activeTab here — that variable belongs to index.php
+// and is used AFTER this nav partial is included to select the correct tab panel.
+// Using a local $navActiveTab prevents overwriting the parent scope's $activeTab.
+$currentUrl    = $_SERVER['REQUEST_URI'] ?? '';
+$navActiveTab  = $_GET['tab'] ?? '';
 
 if (str_contains($currentUrl, '/admin/settings/updates')) {
     $activeItem = 'updates';
@@ -25,7 +28,7 @@ if (str_contains($currentUrl, '/admin/settings/updates')) {
 } elseif (str_contains($currentUrl, '/admin/settings/ldap')) {
     $activeItem = 'ldap';
 } else {
-    $activeItem = $activeTab ?: 'general';
+    $activeItem = $navActiveTab ?: 'general';
 }
 
 $hasUpdatesPermission = \App\Core\Auth::hasPermission('updates.view');
