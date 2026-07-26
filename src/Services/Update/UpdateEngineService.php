@@ -31,6 +31,9 @@ class UpdateEngineService {
             return false;
         }
 
+        $root = realpath(dirname(__DIR__) . '/../../');
+        $storageDir = $root . '/public/storage';
+
         try {
             // 2. Lock check
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_WAITING_FOR_LOCK, 'lock_check');
@@ -44,50 +47,85 @@ class UpdateEngineService {
 
             // 4. File Backups
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_BACKING_UP_FILES, 'file_backup');
-            $fileBackupZip = dirname(__DIR__) . "/../../public/storage/update_backup_files_{$updateId}.zip";
+            $fileBackupZip = "{$storageDir}/update_backup_files_{$updateId}.zip";
             if (!self::createFileBackup($fileBackupZip)) {
                 throw new \Exception("File backup generation failed.");
             }
-            // Update backup details in db
             $stmtUp = $db->prepare("UPDATE application_updates SET backup_path = ?, backup_sha256 = ? WHERE id = ?");
             $stmtUp->execute([$fileBackupZip, hash_file('sha256', $fileBackupZip), $updateId]);
-            UpdateStatusService::updateProgress($updateId, 30);
- 
+            UpdateStatusService::updateProgress($updateId, 25);
+
             // 5. Database Backup
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_BACKING_UP_DATABASE, 'database_backup');
-            $dbBackupSql = dirname(__DIR__) . "/../../public/storage/update_backup_db_{$updateId}.sql";
+            $dbBackupSql = "{$storageDir}/update_backup_db_{$updateId}.sql";
             if (!self::createDatabaseBackup($dbBackupSql)) {
                 throw new \Exception("Database backup generation failed.");
             }
             $stmtUpDb = $db->prepare("UPDATE application_updates SET database_backup_path = ?, database_backup_sha256 = ? WHERE id = ?");
             $stmtUpDb->execute([$dbBackupSql, hash_file('sha256', $dbBackupSql), $updateId]);
+            UpdateStatusService::updateProgress($updateId, 40);
+
+            // 6. Locate and verify update package
+            UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_VERIFYING_PACKAGE, 'verify_package');
+            $packagePath = "{$storageDir}/update_package_{$updateId}.zip";
+
+            // Load package path from DB record if already downloaded
+            if (!empty($update['package_path']) && file_exists($update['package_path'])) {
+                $packagePath = $update['package_path'];
+            }
+
+            if (!file_exists($packagePath)) {
+                throw new \Exception("Update package not found at: {$packagePath}");
+            }
+
+            // SHA-256 verify
+            if (!empty($update['package_sha256'])) {
+                $actualHash = hash_file('sha256', $packagePath);
+                if (!hash_equals($update['package_sha256'], $actualHash)) {
+                    throw new \Exception("SHA-256 mismatch on update package. Expected: {$update['package_sha256']}, Got: {$actualHash}");
+                }
+                UpdateStatusService::appendLog($updateId, 'verify_package', 'info', "SHA-256 verified: {$actualHash}");
+            }
+
+            // Package structure validation
+            $validation = PackageValidatorService::validatePackage($packagePath);
+            if (!$validation['success']) {
+                throw new \Exception("Package validation failed: " . $validation['message']);
+            }
             UpdateStatusService::updateProgress($updateId, 50);
 
-            // 6. Running Migrations
-            UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_RUNNING_MIGRATIONS, 'running_migrations');
-            self::runNewMigrations($updateId);
-            UpdateStatusService::updateProgress($updateId, 75);
+            // 7. Extract and deploy files
+            UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_EXTRACTING, 'extract_files');
+            if (!self::deployPackageFiles($packagePath, $root, $updateId)) {
+                throw new \Exception("File deployment failed.");
+            }
+            UpdateStatusService::updateProgress($updateId, 70);
 
-            // 7. Health check validation
+            // 8. Running Migrations
+            UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_RUNNING_MIGRATIONS, 'running_migrations');
+            self::runNewMigrations($updateId, $packagePath);
+            UpdateStatusService::updateProgress($updateId, 85);
+
+            // 9. Health check validation
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_VALIDATING_APPLICATION, 'health_check');
             if (!self::runHealthChecks()) {
                 throw new \Exception("Health check validation failed after update.");
             }
 
-            // 8. Completed
+            // 10. Completed
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_COMPLETED, 'finalize');
             UpdateStatusService::updateProgress($updateId, 100);
 
-            // Re-sync local status and release lock
             self::setMaintenanceState(false);
             self::writeLocalStatus($updateId, 'completed', 100);
+            Logger::log("Update #{$updateId} completed successfully.");
             return true;
 
         } catch (\Throwable $e) {
-            Logger::log("Update failed: " . $e->getMessage());
+            Logger::log("Update #{$updateId} failed: " . $e->getMessage());
             UpdateStatusService::markFailure($updateId, 'UPDATE_PIPELINE_ERROR', $e->getMessage());
             self::writeLocalStatus($updateId, 'failed', 50, $e->getMessage());
-            
+
             // Trigger automatic rollback
             self::rollback($updateId);
             return false;
@@ -289,15 +327,162 @@ class UpdateEngineService {
     }
 
     /**
-     * Executes pending migrations in update sequence.
+     * Deploys files from the update package to the application root.
+     * Respects the protected paths deny-list — will throw if any protected path is targeted.
      */
-    private static function runNewMigrations(int $updateId) {
+    private static function deployPackageFiles(string $packagePath, string $appRoot, int $updateId): bool {
+        $zip = new ZipArchive();
+        if ($zip->open($packagePath) !== true) {
+            throw new \Exception("Cannot open update package ZIP for deployment.");
+        }
+
+        $protectedPaths = [
+            'config/config.local.php',
+            'config/installed.lock',
+            'public/storage/',
+            'uploads/',
+            'backups/',
+        ];
+
+        $deployed = 0;
+        $skipped  = 0;
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $entry = $zip->getNameIndex($i);
+
+            // Only process files inside the files/ directory
+            if (!str_starts_with($entry, 'files/')) {
+                continue;
+            }
+
+            $relativePath = substr($entry, 6); // strip "files/"
+            if (empty($relativePath) || str_ends_with($relativePath, '/')) {
+                continue; // directory entry, skip
+            }
+
+            // Normalise to forward slashes for comparison
+            $normRelative = str_replace('\\', '/', $relativePath);
+
+            // Protected path check
+            foreach ($protectedPaths as $protected) {
+                if (str_starts_with($normRelative, $protected) || $normRelative === rtrim($protected, '/')) {
+                    UpdateStatusService::appendLog($updateId, 'deploy', 'warning', "Skipped protected path: {$normRelative}");
+                    $skipped++;
+                    continue 2;
+                }
+            }
+
+            $destPath = $appRoot . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+            $destDir  = dirname($destPath);
+
+            if (!is_dir($destDir)) {
+                mkdir($destDir, 0755, true);
+            }
+
+            $data = $zip->getFromIndex($i);
+            if ($data === false) {
+                throw new \Exception("Failed to read file from package: {$entry}");
+            }
+
+            if (file_put_contents($destPath, $data) === false) {
+                throw new \Exception("Failed to write file: {$destPath}");
+            }
+
+            $deployed++;
+        }
+
+        // Handle deleted_files list from manifest
+        $manifestRaw = $zip->getFromName('manifest.json');
+        if ($manifestRaw) {
+            $manifest = json_decode($manifestRaw, true);
+            $deletedFiles = $manifest['deleted_files'] ?? [];
+            foreach ($deletedFiles as $del) {
+                $normDel = str_replace('/', DIRECTORY_SEPARATOR, $del);
+                $delPath = $appRoot . DIRECTORY_SEPARATOR . $normDel;
+
+                // Never delete protected files
+                $isProtected = false;
+                foreach ($protectedPaths as $protected) {
+                    if (str_starts_with(str_replace('\\', '/', $del), $protected)) {
+                        $isProtected = true;
+                        break;
+                    }
+                }
+
+                if (!$isProtected && file_exists($delPath) && is_file($delPath)) {
+                    unlink($delPath);
+                    UpdateStatusService::appendLog($updateId, 'deploy', 'info', "Deleted removed file: {$del}");
+                }
+            }
+        }
+
+        $zip->close();
+
+        UpdateStatusService::appendLog($updateId, 'deploy', 'info', "Deployed {$deployed} files, skipped {$skipped} protected paths.");
+        Logger::log("Update #{$updateId}: deployed {$deployed} files, skipped {$skipped}.");
+        return true;
+    }
+
+    /**
+     * Executes pending migrations from the update package.
+     * Reads SQL files from the migrations/ folder inside the ZIP and runs each one.
+     * Tracks which migrations have already been applied via the schema_migrations table.
+     */
+    private static function runNewMigrations(int $updateId, string $packagePath = '') {
         $db = Database::getInstance();
-        
-        // Normally loads the migration files and runs them.
-        // We will execute a simple query to assert functionality.
-        $db->query("SELECT 1");
-        UpdateStatusService::appendLog($updateId, 'migrations', 'info', "Executed incremental update migrations.");
+
+        // Ensure migration tracking table exists
+        $db->exec("CREATE TABLE IF NOT EXISTS schema_migrations (
+            migration VARCHAR(255) PRIMARY KEY,
+            applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )");
+
+        if (empty($packagePath) || !file_exists($packagePath)) {
+            UpdateStatusService::appendLog($updateId, 'migrations', 'warning', "No package path provided, skipping file-based migrations.");
+            return;
+        }
+
+        $zip = new ZipArchive();
+        if ($zip->open($packagePath) !== true) {
+            throw new \Exception("Cannot open package for migration extraction.");
+        }
+
+        // Collect migration entries from manifest
+        $manifestRaw = $zip->getFromName('manifest.json');
+        $migrations  = [];
+        if ($manifestRaw) {
+            $manifest   = json_decode($manifestRaw, true);
+            $migrations = $manifest['migrations'] ?? [];
+        }
+
+        sort($migrations); // ensure sequential execution
+
+        foreach ($migrations as $migrationFile) {
+            // Check if already applied
+            $stmt = $db->prepare("SELECT COUNT(*) FROM schema_migrations WHERE migration = ?");
+            $stmt->execute([$migrationFile]);
+            if ((int)$stmt->fetchColumn() > 0) {
+                UpdateStatusService::appendLog($updateId, 'migrations', 'info', "Migration already applied, skipping: {$migrationFile}");
+                continue;
+            }
+
+            $sql = $zip->getFromName("migrations/{$migrationFile}");
+            if ($sql === false) {
+                throw new \Exception("Migration file not found in package: {$migrationFile}");
+            }
+
+            try {
+                $db->exec($sql);
+                $db->prepare("INSERT INTO schema_migrations (migration) VALUES (?)")->execute([$migrationFile]);
+                UpdateStatusService::appendLog($updateId, 'migrations', 'info', "Applied migration: {$migrationFile}");
+                Logger::log("Update #{$updateId}: applied migration {$migrationFile}");
+            } catch (\Throwable $e) {
+                throw new \Exception("Migration failed [{$migrationFile}]: " . $e->getMessage());
+            }
+        }
+
+        $zip->close();
+        UpdateStatusService::appendLog($updateId, 'migrations', 'info', "All migrations processed successfully.");
     }
 
     /**

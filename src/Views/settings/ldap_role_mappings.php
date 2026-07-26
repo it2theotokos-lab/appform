@@ -10,7 +10,7 @@
     </div>
 </div>
 
-<?= \App\Core\View::render('settings/nav') ?>
+<?php require __DIR__ . '/nav.php'; ?>
 
 <div class="row g-4">
     <div class="col-md-4">

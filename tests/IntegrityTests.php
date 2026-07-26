@@ -76,13 +76,18 @@ $buildScript = file_get_contents($root . '/tools/release/build.php');
 assert(str_contains($buildScript, "'.env'") && str_contains($buildScript, "'config/config.local.php'"), "Test 9 Failed: Credentials are not excluded in release build script.");
 echo "Test 9 Passed: Release package rules exclude environment credentials and local configurations.\n";
 
-// 10. Settings pages do not use common navigation component
+// 10. Settings pages include the common navigation component (as a direct partial require, not View::render)
 $indexView = file_get_contents($root . '/src/Views/settings/index.php');
 $ldapView = file_get_contents($root . '/src/Views/settings/ldap.php');
 $roleView = file_get_contents($root . '/src/Views/settings/ldap_role_mappings.php');
-assert(str_contains($indexView, "settings/nav"), "Test 10 Failed: settings index does not render shared navigation.");
-assert(str_contains($ldapView, "settings/nav"), "Test 10 Failed: ldap settings does not render shared navigation.");
-assert(str_contains($roleView, "settings/nav"), "Test 10 Failed: role mappings settings does not render shared navigation.");
+// Must use direct require (not View::render which wraps in full layout causing duplicate header)
+assert(str_contains($indexView, "require __DIR__ . '/nav.php'"), "Test 10 Failed: settings index does not render shared navigation.");
+assert(str_contains($ldapView, "require __DIR__ . '/nav.php'"), "Test 10 Failed: ldap settings does not render shared navigation.");
+assert(str_contains($roleView, "require __DIR__ . '/nav.php'"), "Test 10 Failed: role mappings settings does not render shared navigation.");
+// Ensure NO view uses View::render for nav (which causes duplicate layout)
+assert(!str_contains($indexView, "View::render('settings/nav')"), "Test 10 Failed: settings index uses View::render for nav — causes duplicate header regression.");
+assert(!str_contains($ldapView, "View::render('settings/nav')"), "Test 10 Failed: ldap view uses View::render for nav — causes duplicate header regression.");
+assert(!str_contains($roleView, "View::render('settings/nav')"), "Test 10 Failed: role view uses View::render for nav — causes duplicate header regression.");
 echo "Test 10 Passed: All settings views render the common navigation component.\n";
 
 // 11. Settings tabs order changes per active page
@@ -134,7 +139,11 @@ echo "Test 18 Passed: Update pipeline aborts and rolls back on migration failure
 echo "Test 19 Passed: Update pipeline aborts and rolls back on extraction/deployment failures.\n";
 
 // 20. Linux-only command in update flow
-assert(!str_contains($engineScript, 'exec(') && !str_contains($engineScript, 'shell_exec(') && !str_contains($engineScript, 'system('), "Test 20 Failed: Linux commands executed inside update engine.");
+// Check for bare shell exec/shell_exec/system calls — NOT PDO ->exec() method calls
+$hasShellExec   = preg_match('/(?<!->|pdo|db|conn|pdo_)\bexec\s*\(/i', $engineScript);
+$hasShellExec  |= str_contains($engineScript, 'shell_exec(');
+$hasShellExec  |= preg_match('/(?<!\$db->)\bsystem\s*\(/i', $engineScript);
+assert(!$hasShellExec, "Test 20 Failed: Linux commands executed inside update engine.");
 echo "Test 20 Passed: Update engine uses native cross-platform PHP APIs instead of Linux CLI commands.\n";
 
 // 21. v1.1.3 manifest does not declare correct version/build/package type

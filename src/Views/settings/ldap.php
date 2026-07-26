@@ -13,7 +13,7 @@
     </div>
 </div>
 
-<?= \App\Core\View::render('settings/nav') ?>
+<?php require __DIR__ . '/nav.php'; ?>
 
 <div class="card p-4">
     <form action="/admin/settings/ldap" method="POST" id="ldap-settings-form">

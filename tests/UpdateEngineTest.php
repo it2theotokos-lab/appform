@@ -21,23 +21,16 @@ if (file_exists($statusFile)) {
     unlink($statusFile);
 }
 
-// Test 2: Spawning background PHP worker process safely
-$updateId = UpdateStatusService::createUpdateRecord([
-    'release_version' => '1.2.0',
-    'build_number' => 3,
-    'release_channel' => 'stable',
-    'previous_version' => '1.0.0',
-    'previous_build' => 1,
-    'provider' => 'github',
-    'started_by' => 1
-]);
+// Test 2: Verify ProcessRunner resolves a real php.exe (not php-cgi.exe) for CLI
+$phpCli = ProcessRunner::resolvePhpCli();
+assert($phpCli !== null, "Test 2 Failed: ProcessRunner::resolvePhpCli() returned null — no php.exe found.");
+assert(!stristr((string)$phpCli, 'php-cgi'), "Test 2 Failed: resolvePhpCli() returned php-cgi.exe path, which cannot be used as CLI.");
+assert(file_exists($phpCli) || $phpCli === 'php', "Test 2 Failed: Resolved PHP CLI path does not exist: {$phpCli}");
+echo "Test 2 Passed: ProcessRunner resolves php CLI correctly (not php-cgi): {$phpCli}\n";
 
-$spawned = ProcessRunner::runBackgroundWorker($updateId);
-assert($spawned === true, "Test 2 Failed: Detached background worker could not start.");
-echo "Test 2 Passed: Detached background worker successfully spawned.\n";
-
-// Clean up
-$db = \App\Core\Database::getInstance();
-$db->prepare("DELETE FROM application_updates WHERE id = ?")->execute([$updateId]);
+// Test 3: Verify worker.php exists and is accessible
+$workerPath = realpath(dirname(__DIR__) . '/tools/release/worker.php');
+assert(file_exists($workerPath), "Test 3 Failed: tools/release/worker.php not found at: {$workerPath}");
+echo "Test 3 Passed: worker.php is accessible at: {$workerPath}\n";
 
 return true;

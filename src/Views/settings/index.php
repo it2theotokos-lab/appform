@@ -26,7 +26,7 @@ $activeTab = $_GET['tab'] ?? 'general';
 <?php endif; ?>
 
 <!-- Tabs Navigation Header -->
-<?= \App\Core\View::render('settings/nav') ?>
+<?php require __DIR__ . '/nav.php'; ?>
 
 <!-- Tab Content Container Panels -->
 <div class="card p-4">

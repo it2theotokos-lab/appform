@@ -57,7 +57,8 @@ $testFiles = [
     'DashboardAuthorizationTest.php',
     'HealthCheckTest.php',
     'ReleaseCompletenessTest.php',
-    'IntegrityTests.php'
+    'IntegrityTests.php',
+    'SettingsUpdateRegressionTest.php'
 ];
 
 $failed = false;

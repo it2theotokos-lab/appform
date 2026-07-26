@@ -164,7 +164,7 @@ class SettingsController extends Controller {
                 'logs' => $logs
             ]);
         } else {
-            $statusFile = dirname(__DIR__) . '/../../storage/update_status.json';
+            $statusFile = dirname(__DIR__) . '/../../public/storage/update_status.json';
             if (file_exists($statusFile)) {
                 $statusData = json_decode(file_get_contents($statusFile), true);
                 if ($statusData) {
