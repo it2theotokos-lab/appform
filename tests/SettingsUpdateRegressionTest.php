@@ -124,4 +124,81 @@ assert(!$completedBeforeHealthCheck, "Test 15 Failed: STATE_COMPLETED appears be
 echo "Test 15 Passed: STATE_COMPLETED is declared only after health check validation.\n";
 
 echo "=== All 15 Settings UI & Update Flow Tests Passed! ===\n";
+
+// ============================================================================================
+// UPDATES TAB RENDERING TESTS (7 additional conditions)
+// These fail when the "Αναβάθμιση" tab does not render correctly.
+// ============================================================================================
+echo "\n=== Running 7 Updates Tab Rendering Tests ===\n";
+
+// ---------- TEST 16: settings/index.php uses $tab variable (not only $_GET) for activeTab ----------
+// The fix: $activeTab = $tab ?? $_GET['tab'] ?? 'general'
+// Without this, /admin/settings/updates renders general tab (showUpdates() passes $tab='updates')
+$activeTabResolvesControllerVar = preg_match('/\$activeTab\s*=\s*\$tab\s*\?\?/', $settingsIndexView);
+assert($activeTabResolvesControllerVar,
+    "Test 16 Failed: settings/index.php does not use controller-passed \$tab variable for \$activeTab resolution. " .
+    "The update tab will never render from /admin/settings/updates (no ?tab= in URL).");
+echo "Test 16 Passed: settings/index.php resolves \$activeTab from controller-passed \$tab first.\n";
+
+// ---------- TEST 17: showUpdates() passes 'tab'=>'updates' to the view ----------
+$controllerPassesTab = str_contains($settingsCtrl, "'tab' => 'updates'")
+                    || str_contains($settingsCtrl, '"tab" => "updates"');
+assert($controllerPassesTab,
+    "Test 17 Failed: SettingsController::showUpdates() does not pass 'tab'=>'updates' to the view. " .
+    "The view cannot know which tab to render.");
+echo "Test 17 Passed: showUpdates() passes 'tab'=>'updates' to the view.\n";
+
+// ---------- TEST 18: showUpdates() passes verData to the view ----------
+$controllerPassesVerData = preg_match('/showUpdates.*?verData/s', $settingsCtrl)
+                        || (str_contains($settingsCtrl, 'showUpdates') && str_contains($settingsCtrl, "'verData'"));
+assert($controllerPassesVerData,
+    "Test 18 Failed: showUpdates() does not pass verData to the view — installed version cannot be displayed.");
+echo "Test 18 Passed: showUpdates() passes verData (version/build) to the view.\n";
+
+// ---------- TEST 19: updates panel exists in index.php with required DOM elements ----------
+$hasUpdatesBlock    = str_contains($settingsIndexView, "activeTab === 'updates'");
+$hasBtnCheck        = str_contains($settingsIndexView, 'btn-check-updates');
+$hasVersionDisplay  = str_contains($settingsIndexView, 'verData[\'version\']') || str_contains($settingsIndexView, "verData['version']");
+$hasProgressBar     = str_contains($settingsIndexView, 'update-progress-bar');
+$hasUpdateDetails   = str_contains($settingsIndexView, 'update-details');
+$hasErrorArea       = str_contains($settingsIndexView, 'update-console-log') || str_contains($settingsIndexView, 'alert-danger');
+
+assert($hasUpdatesBlock,    "Test 19 Failed: settings/index.php has no 'updates' elseif block — the panel is missing entirely.");
+assert($hasBtnCheck,        "Test 19 Failed: settings/index.php missing #btn-check-updates DOM element.");
+assert($hasVersionDisplay,  "Test 19 Failed: settings/index.php does not display \$verData['version'] — installed version not shown.");
+assert($hasProgressBar,     "Test 19 Failed: settings/index.php missing #update-progress-bar DOM element.");
+assert($hasUpdateDetails,   "Test 19 Failed: settings/index.php missing #update-details container.");
+echo "Test 19 Passed: updates panel exists with all required DOM elements (version, check button, progress, details).\n";
+
+// ---------- TEST 20: The /admin/settings/updates route is registered ----------
+$routesFile = file_get_contents(dirname(__DIR__) . '/public/index.php');
+$hasUpdatesRoute = str_contains($routesFile, "'/admin/settings/updates'")
+               && str_contains($routesFile, 'showUpdates');
+assert($hasUpdatesRoute,
+    "Test 20 Failed: /admin/settings/updates route not found in public/index.php — navigation will 404.");
+echo "Test 20 Passed: /admin/settings/updates route is registered and maps to showUpdates().\n";
+
+// ---------- TEST 21: GitHub provider failure does not produce blank page (has try/catch or error handling) ----------
+$ghProviderHasErrorHandling = str_contains($githubProvider, 'try {') || str_contains($githubProvider, 'catch (')
+                           || str_contains($githubProvider, 'return null') || str_contains($githubProvider, 'return []');
+assert($ghProviderHasErrorHandling,
+    "Test 21 Failed: GitHubReleaseProvider has no error handling — a connection failure will throw an unhandled exception and produce a blank page.");
+echo "Test 21 Passed: GitHubReleaseProvider has error handling (connection failures won't produce blank page).\n";
+
+// ---------- TEST 22: updates panel is not hidden by default CSS (the outer div has no display:none) ----------
+// Find the 'updates' elseif block and check if the opening div has display:none
+$updatesBlockStart = strpos($settingsIndexView, "activeTab === 'updates'");
+$updatesBlockEnd   = $updatesBlockStart + 3000; // check first 3000 chars of the block
+$updatesSlice      = substr($settingsIndexView, $updatesBlockStart, 3000);
+// The first <div> after the conditional should NOT have display:none (progress card is correctly hidden, that's fine)
+// Check the OUTER wrapping div
+$outerDivHiddenMatch = preg_match('/<div[^>]*elseif[^>]*style\s*=\s*["\'][^"\']*display\s*:\s*none/', $updatesSlice);
+// More precisely: the first div after the opening "?>" of the elseif block
+$firstDivHasHidden = preg_match('/\?\>\s*<div[^>]+style\s*=\s*["\'][^"\']*display\s*:\s*none/', $updatesSlice);
+assert(!$firstDivHasHidden,
+    "Test 22 Failed: The updates panel outer container has display:none — panel hidden without reason.");
+echo "Test 22 Passed: Updates panel outer container is not hidden by default CSS.\n";
+
+echo "=== All 7 Updates Tab Rendering Tests Passed! ===\n";
+echo "\nTotal: 22 tests passed.\n";
 return true;

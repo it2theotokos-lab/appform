@@ -1,5 +1,7 @@
 <?php
-$activeTab = $_GET['tab'] ?? 'general';
+// $tab may be set by the controller (e.g. showUpdates() passes 'tab'=>'updates')
+// Fallback to ?tab= query param for tab-based pages, then default to 'general'
+$activeTab = $tab ?? $_GET['tab'] ?? 'general';
 ?>
 
 <div class="row mb-4 align-items-center">
