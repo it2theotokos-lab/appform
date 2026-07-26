@@ -1,0 +1,138 @@
+/* =====================================================================
+   AppForm Enterprise UI — Responsive Overrides
+   ===================================================================== */
+
+/* ── Tablet & Mobile viewports (< 992px) ────────────────────────────── */
+@media (max-width: 991.98px) {
+  /* Off-canvas sidebar */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.25s ease-in-out;
+    width: 264px;
+    z-index: 1050;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* Shift main workspace to fill screen */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Show mobile menu button */
+  .btn-mobile-menu {
+    display: block !important;
+  }
+
+  /* Adjust app header spacing */
+  .app-header {
+    padding: 0 16px !important;
+  }
+
+  /* Grid layout overrides */
+  .row > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Dashboard card columns stacking */
+  .dashboard-grid, .grid-3, .grid-4 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Form columns stacking */
+  .form-grid-2, .form-grid-3 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Modal scaling for smaller viewports */
+  .app-modal-dialog {
+    width: 95% !important;
+    margin: 10px auto !important;
+    max-height: calc(100vh - 20px) !important;
+  }
+
+  /* Font size adjustment to prevent iOS automatic zoom on focus */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Compact padding for cards and sections */
+  .card-body, .workspace-area {
+    padding: 16px !important;
+  }
+
+  /* Form Designer mobile overrides: stack palette, canvas and properties */
+  .designer-container {
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .designer-palette, .designer-canvas, .designer-properties {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+}
+
+/* ── Mobile portrait viewports (< 576px) ────────────────────────────── */
+@media (max-width: 575.98px) {
+  /* Hide user name details in header to save space */
+  .user-info-block {
+    display: none !important;
+  }
+
+  /* Header adjustments */
+  .header-left div {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-page-title {
+    font-size: 0.95rem !important;
+  }
+
+  .header-page-subtitle {
+    font-size: 0.68rem !important;
+  }
+
+  /* Button alignment wrapping */
+  .card-header-actions, .d-flex.gap-2 {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .btn {
+    width: 100% !important;
+    text-align: center !important;
+  }
+
+  /* Global Tables scrolling wrapper */
+  .table, table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+}
+
+/* ── Horizontal Scrolling wrapper for safe data tables ──────────────── */
+@media (max-width: 768px) {
+  .table-responsive-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    margin-bottom: 1rem !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .table-responsive-wrapper table {
+    margin-bottom: 0 !important;
+  }
+}

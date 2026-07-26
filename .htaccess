@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine on
+    RewriteRule ^$ public/ [L]
+    RewriteRule (.*) public/$1 [L]
+</IfModule>
+
+# Protect sensitive directories from direct access
+RedirectMatch 404 ^/(config|db|src|storage|tests|vendor|scratch)

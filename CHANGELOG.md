@@ -1,0 +1,11 @@
+# Change Log
+
+All notable changes to **AppForm** will be documented in this file.
+
+## [1.0.0-Stable] - 2026-07-20
+
+### Added
+- **Wide Form Designer Workspace**: Added full-width 3-column builder screen.
+- **Reporting Hierarchy & Tree View**: Added manager assignments, loops validations, and interactive org hierarchy tree.
+- **LDAP / Active Directory Integration**: Connected config views, dual login fallback and auto provisioning syncs.
+- **System Health Dashboard**: Real-time status checks on DB, job queue, LDAP, SMTP configurations.
