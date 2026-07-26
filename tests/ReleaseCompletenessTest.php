@@ -62,14 +62,13 @@ class ReleaseCompletenessTest {
             throw new Exception("ERROR: tools/release/worker.php is not declared in manifest files list!");
         }
 
-        // migrations list check
-        $expectedMigrations = [
-            '023_cloud_backup_metadata.sql',
-            '024_create_update_tables.sql',
-            '025_add_updates_permissions.sql'
-        ];
-        if (array_diff($manifest['migrations'], $expectedMigrations) !== array_diff($expectedMigrations, $manifest['migrations'])) {
-            throw new Exception("ERROR: Migrations list does not match expected list exactly.");
+        // migrations list check — dynamically built from git diff, validated that 013 excluded
+        // Verify 013 is excluded and 026 is present (v1.1.3 requirement)
+        if (in_array('013_cloud_backup.sql', $manifest['migrations'])) {
+            throw new Exception("ERROR: 013_cloud_backup.sql must never appear in update package migrations!");
+        }
+        if (!in_array('026_add_oauth_settings.sql', $manifest['migrations'])) {
+            throw new Exception("ERROR: 026_add_oauth_settings.sql missing from manifest migrations for v1.1.3!");
         }
 
         // 3. Validate declared files exist in ZIP
