@@ -14,9 +14,6 @@ CREATE TABLE IF NOT EXISTS oauth_tokens (
     access_token TEXT NOT NULL,
     refresh_token TEXT NULL,
     expires_at TIMESTAMP NULL,
-    connected_account VARCHAR(150) NULL,
-    last_connected_at TIMESTAMP NULL,
-    destination_folder VARCHAR(255) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

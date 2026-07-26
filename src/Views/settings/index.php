@@ -55,6 +55,11 @@ $activeTab = $_GET['tab'] ?? 'general';
         <li class="nav-item">
             <a class="nav-link <?= $activeTab === 'plugins' ? 'active' : '' ?>" href="/admin/settings?tab=plugins"><i class="fa-solid fa-puzzle-piece me-1"></i> Πρόσθετα</a>
         </li>
+        <?php if (\App\Core\Auth::hasPermission('updates.view')): ?>
+        <li class="nav-item">
+            <a class="nav-link <?= $activeTab === 'updates' ? 'active' : '' ?>" href="/admin/settings/updates"><i class="fa-solid fa-cloud-arrow-down me-1"></i> Αναβάθμιση</a>
+        </li>
+        <?php endif; ?>
         <li class="nav-item">
             <a class="nav-link" href="/admin/settings/ldap"><i class="fa-solid fa-server me-1"></i> Active Directory / LDAP</a>
         </li>
@@ -70,7 +75,7 @@ $activeTab = $_GET['tab'] ?? 'general';
         <div>
             <h4 class="text-white mb-2"><i class="fa-solid fa-sliders text-primary me-2"></i> Γενικές Ρυθμίσεις</h4>
             <p class="text-muted mb-4">Διαμόρφωση βασικών παραμέτρων λειτουργίας της πύλης.</p>
-            
+
             <form action="/admin/settings/update" method="POST" style="max-width: 600px;">
                 <?= \App\Core\Csrf::field() ?>
                 <?php foreach ($settings as $set): ?>
@@ -437,7 +442,7 @@ $activeTab = $_GET['tab'] ?? 'general';
                         <h5 class="text-warning"><i class="fa-solid fa-wand-magic-sparkles me-2"></i> Οδηγός Επαναφοράς</h5>
                         <form action="/admin/settings/restore/execute" method="POST" id="restore-wizard-form">
                             <?= \App\Core\Csrf::field() ?>
-                            
+
                             <div class="mb-3">
                                 <label class="form-label text-white small">Βήμα 1: Επιλογή Backup</label>
                                 <select class="form-select form-select-sm" name="backup_id" required>
@@ -550,8 +555,8 @@ $activeTab = $_GET['tab'] ?? 'general';
                     <div class="card p-4 border border-secondary bg-dark text-center">
                         <i class="fa-brands fa-windows text-info mb-3" style="font-size: 3rem;"></i>
                         <h5 class="text-white">Microsoft OneDrive</h5>
-                        
-                        <?php if (isset($tokensByProvider['onedrive'])): 
+
+                        <?php if (isset($tokensByProvider['onedrive'])):
                             $tok = $tokensByProvider['onedrive'];
                             $isExpired = strtotime($tok['expires_at']) < time();
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
@@ -586,8 +591,8 @@ $activeTab = $_GET['tab'] ?? 'general';
                     <div class="card p-4 border border-secondary bg-dark text-center">
                         <i class="fa-brands fa-google text-success mb-3" style="font-size: 3rem;"></i>
                         <h5 class="text-white">Google Drive</h5>
-                        
-                        <?php if (isset($tokensByProvider['googledrive'])): 
+
+                        <?php if (isset($tokensByProvider['googledrive'])):
                             $tok = $tokensByProvider['googledrive'];
                             $isExpired = strtotime($tok['expires_at']) < time();
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
@@ -654,7 +659,7 @@ $activeTab = $_GET['tab'] ?? 'general';
                                         <?php endif; ?>
                                     </td>
                                     <td class="align-middle">
-                                        <?php 
+                                        <?php
                                         $hasConnected = !empty($tokensByProvider);
                                         ?>
                                         <form action="/admin/settings/cloud/sync/<?= (int)$bk['id'] ?>" method="POST" class="d-inline">
@@ -867,6 +872,245 @@ $activeTab = $_GET['tab'] ?? 'general';
                     </tbody>
                 </table>
             </div>
+    <?php elseif ($activeTab === 'updates'): ?>
+        <div>
+            <h4 class="text-white mb-2"><i class="fa-solid fa-cloud-arrow-down text-primary me-2"></i> Αναβάθμιση & Ενημέρωση Συστήματος</h4>
+            <p class="text-muted mb-4">Διαχείριση εκδόσεων λογισμικού, λήψη νέων releases και εκτέλεση incremental updates.</p>
+
+            <div class="row">
+                <!-- Current Version Metadata Info -->
+                <div class="col-md-4 mb-4">
+                    <div class="card p-3 bg-dark border-secondary h-100">
+                        <h6 class="text-white border-bottom border-secondary pb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i> Τρέχουσα Έκδοση</h6>
+                        <table class="table table-sm table-borderless text-muted mb-0">
+                            <tr>
+                                <td>Έκδοση (Version):</td>
+                                <td class="text-white fw-bold"><?= htmlspecialchars($verData['version'] ?? '1.0.0') ?></td>
+                            </tr>
+                            <tr>
+                                <td>Αριθμός Build:</td>
+                                <td class="text-white"><?= htmlspecialchars($verData['build'] ?? 1) ?></td>
+                            </tr>
+                            <tr>
+                                <td>Κανάλι (Channel):</td>
+                                <td class="text-white text-capitalize"><span class="badge bg-secondary"><?= htmlspecialchars($verData['channel'] ?? 'stable') ?></span></td>
+                            </tr>
+                        </table>
+                        <div class="mt-4 d-grid gap-2">
+                            <button id="btn-check-updates" class="btn btn-primary btn-sm"><i class="fa-solid fa-arrows-rotate me-1"></i> Έλεγχος για Ενημερώσεις</button>
+                            <a href="/admin/settings/updates/logs/download" class="btn btn-outline-info btn-sm"><i class="fa-solid fa-download me-1"></i> Διαγνωστικά Logs</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Update State / Available Upgrades Panel -->
+                <div class="col-md-8 mb-4">
+                    <div class="card p-3 bg-dark border-secondary h-100">
+                        <h6 class="text-white border-bottom border-secondary pb-2"><i class="fa-solid fa-bullseye me-2 text-success"></i> Διαθέσιμη Αναβάθμιση</h6>
+                        <div id="no-updates-alert" class="alert alert-secondary mb-0">
+                            Πατήστε "Έλεγχος για Ενημερώσεις" για να αναζητήσετε διαθέσιμα πακέτα.
+                        </div>
+                        <div id="update-details" style="display:none;">
+                            <div class="alert alert-success">
+                                <h6 class="alert-heading text-white fw-bold mb-1"><i class="fa-solid fa-circle-check me-2"></i> Βρέθηκε Νέα Έκδοση: <span id="lbl-target-version"></span></h6>
+                                <p class="small mb-0">Το πακέτο είναι συμβατό με τις τρέχουσες απαιτήσεις συστήματος.</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">Release Notes / Changelog:</label>
+                                <div id="lbl-changelog" class="p-2 border border-secondary rounded bg-black text-muted small" style="max-height: 120px; overflow-y: auto;"></div>
+                            </div>
+                            <?php if (\App\Core\Auth::hasPermission('updates.manage')): ?>
+                            <form id="form-start-update" action="/admin/settings/updates/start" method="POST">
+                                <?= \App\Core\Csrf::field() ?>
+                                <input type="hidden" name="target_version" id="inp-target-version">
+                                <input type="hidden" name="build_number" id="inp-build-number">
+                                <input type="hidden" name="channel" id="inp-channel">
+                                <button type="submit" class="btn btn-success btn-sm"><i class="fa-solid fa-play me-1"></i> Έναρξη Διαδικασίας Αναβάθμισης</button>
+                            </form>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Console Log / Real-time Progress Bar -->
+            <div id="update-progress-card" class="card p-3 bg-dark border-secondary mb-4" style="display:none;">
+                <h6 class="text-white mb-3"><i class="fa-solid fa-gear fa-spin me-2 text-warning"></i> Πρόοδος Εγκατάστασης</h6>
+                <div class="progress mb-3 bg-secondary" style="height: 20px;">
+                    <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;">0%</div>
+                </div>
+                <div class="d-flex justify-content-between mb-3 text-muted small">
+                    <div>Τρέχον Βήμα: <span id="lbl-current-step" class="text-white fw-bold">-</span></div>
+                    <div>Heartbeat: <span id="lbl-heartbeat" class="text-white">-</span></div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small">Logs Εγκατάστασης:</label>
+                    <pre id="update-console-log" class="p-3 border border-secondary rounded bg-black text-success small mb-0" style="max-height: 250px; overflow-y: auto; font-family: monospace;"></pre>
+                </div>
+                <div class="d-flex gap-2">
+                    <?php if (\App\Core\Auth::hasPermission('updates.rollback')): ?>
+                    <button id="btn-rollback" class="btn btn-danger btn-sm" style="display:none;"><i class="fa-solid fa-clock-rotate-left me-1"></i> Rollback</button>
+                    <?php endif; ?>
+                    <?php if (\App\Core\Auth::hasPermission('updates.manage')): ?>
+                    <button id="btn-unlock" class="btn btn-outline-warning btn-sm" style="display:none;"><i class="fa-solid fa-lock-open me-1"></i> Force Unlock</button>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnCheck = document.getElementById('btn-check-updates');
+            const alertNo = document.getElementById('no-updates-alert');
+            const panelDetails = document.getElementById('update-details');
+            const lblVersion = document.getElementById('lbl-target-version');
+            const lblChangelog = document.getElementById('lbl-changelog');
+            const formStart = document.getElementById('form-start-update');
+
+            const inpVersion = document.getElementById('inp-target-version');
+            const inpBuild = document.getElementById('inp-build-number');
+            const inpChannel = document.getElementById('inp-channel');
+
+            const progressCard = document.getElementById('update-progress-card');
+            const progressBar = document.getElementById('update-progress-bar');
+            const lblStep = document.getElementById('lbl-current-step');
+            const lblHeartbeat = document.getElementById('lbl-heartbeat');
+            const consoleLog = document.getElementById('update-console-log');
+
+            const btnRollback = document.getElementById('btn-rollback');
+            const btnUnlock = document.getElementById('btn-unlock');
+
+            let pollInterval = null;
+
+            // Check Updates Trigger
+            btnCheck.addEventListener('click', function() {
+                btnCheck.disabled = true;
+                btnCheck.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Έλεγχος...';
+
+                fetch('/admin/settings/updates/check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: '_token=' + encodeURIComponent('<?= \App\Core\Csrf::token() ?>')
+                })
+                .then(res => res.json())
+                .then(data => {
+                    btnCheck.disabled = false;
+                    btnCheck.innerHTML = '<i class="fa-solid fa-arrows-rotate me-1"></i> Έλεγχος για Ενημερώσεις';
+
+                    if (data.success && data.latest) {
+                        alertNo.style.display = 'none';
+                        panelDetails.style.display = 'block';
+                        lblVersion.innerText = data.latest.version + ' (Build: ' + data.latest.build + ')';
+                        lblChangelog.innerText = data.latest.changelog || 'Δεν υπάρχουν διαθέσιμες σημειώσεις.';
+
+                        inpVersion.value = data.latest.version;
+                        inpBuild.value = data.latest.build;
+                        inpChannel.value = data.latest.channel || 'stable';
+                    } else {
+                        alertNo.innerText = 'Δεν βρέθηκαν διαθέσιμες ενημερώσεις. Η εφαρμογή είναι ενημερωμένη.';
+                        alertNo.style.display = 'block';
+                        panelDetails.style.display = 'none';
+                    }
+                })
+                .catch(() => {
+                    btnCheck.disabled = false;
+                    btnCheck.innerHTML = '<i class="fa-solid fa-arrows-rotate me-1"></i> Έλεγχος για Ενημερώσεις';
+                });
+            });
+
+            // Start Update Trigger
+            if (formStart) {
+                formStart.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (!confirm('ΠΡΟΣΟΧΗ: Η αναβάθμιση θα θέσει την εφαρμογή σε Maintenance Mode. Είστε σίγουροι ότι θέλετε να ξεκινήσετε;')) {
+                        return;
+                    }
+
+                    const fd = new FormData(formStart);
+                    const params = new URLSearchParams(fd);
+
+                    fetch('/admin/settings/updates/start', {
+                        method: 'POST',
+                        body: params
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            progressCard.style.display = 'block';
+                            startPolling();
+                        } else {
+                            alert('Αποτυχία εκκίνησης αναβάθμισης.');
+                        }
+                    });
+                });
+            }
+
+            function startPolling() {
+                if (pollInterval) clearInterval(pollInterval);
+                pollInterval = setInterval(pollStatus, 1500);
+                pollStatus();
+            }
+
+            function pollStatus() {
+                fetch('/admin/settings/updates/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.active || data.status !== 'idle') {
+                        progressCard.style.display = 'block';
+                        progressBar.style.width = data.progress_percent + '%';
+                        progressBar.innerText = data.progress_percent + '%';
+                        lblStep.innerText = data.current_step || '-';
+                        lblHeartbeat.innerText = data.heartbeat_at || '-';
+
+                        // Build log display
+                        if (data.logs) {
+                            let logText = '';
+                            data.logs.forEach(l => {
+                                logText += '[' + l.created_at + '] [' + l.level + '] ' + l.message + '\n';
+                            });
+                            consoleLog.innerText = logText;
+                            consoleLog.scrollTop = consoleLog.scrollHeight;
+                        }
+
+                        if (data.status === 'failed') {
+                            btnRollback.style.display = 'inline-block';
+                            btnUnlock.style.display = 'inline-block';
+                        } else {
+                            btnRollback.style.display = 'none';
+                            btnUnlock.style.display = 'none';
+                        }
+                    } else {
+                        clearInterval(pollInterval);
+                    }
+                });
+            }
+
+            // Force Unlock
+            btnUnlock.addEventListener('click', function() {
+                if (confirm('Είστε σίγουροι ότι θέλετε να ξεκλειδώσετε χειροκίνητα τη διαδικασία;')) {
+                    fetch('/admin/settings/updates/force-release', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: '_token=' + encodeURIComponent('<?= \App\Core\Csrf::token() ?>')
+                    }).then(() => pollStatus());
+                }
+            });
+
+            // Rollback
+            btnRollback.addEventListener('click', function() {
+                if (confirm('Είστε σίγουροι ότι θέλετε να εκτελέσετε Rollback στην προηγούμενη έκδοση;')) {
+                    fetch('/admin/settings/updates/rollback', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: '_token=' + encodeURIComponent('<?= \App\Core\Csrf::token() ?>')
+                    }).then(() => pollStatus());
+                }
+            });
+
+            // Initial Polling Check
+            pollStatus();
+        });
+        </script>
     <?php endif; ?>
 </div>
+<?php htmlspecialchars(''); // Keep trailing placeholder ?>

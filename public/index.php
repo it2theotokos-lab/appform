@@ -277,6 +277,15 @@ $router->post('/admin/settings/plugins/install', [\App\Controllers\PluginControl
 $router->post('/admin/settings/plugins/{key}/enable', [\App\Controllers\PluginController::class, 'enable'], ['auth', 'permission:plugins.enable']);
 $router->post('/admin/settings/plugins/{key}/disable', [\App\Controllers\PluginController::class, 'disable'], ['auth', 'permission:plugins.disable']);
 
+// --- UPDATE & UPGRADE SYSTEM ROUTES ---
+$router->get('/admin/settings/updates', [\App\Controllers\SettingsController::class, 'showUpdates'], ['auth', 'permission:updates.view']);
+$router->post('/admin/settings/updates/check', [\App\Controllers\SettingsController::class, 'checkUpdates'], ['auth', 'permission:updates.manage']);
+$router->post('/admin/settings/updates/start', [\App\Controllers\SettingsController::class, 'startUpdate'], ['auth', 'permission:updates.manage']);
+$router->get('/admin/settings/updates/status', [\App\Controllers\SettingsController::class, 'getStatus'], ['auth', 'permission:updates.view']);
+$router->post('/admin/settings/updates/rollback', [\App\Controllers\SettingsController::class, 'rollbackUpdate'], ['auth', 'permission:updates.rollback']);
+$router->post('/admin/settings/updates/force-release', [\App\Controllers\SettingsController::class, 'forceReleaseLock'], ['auth', 'permission:updates.manage']);
+$router->get('/admin/settings/updates/logs/download', [\App\Controllers\SettingsController::class, 'downloadDiagnosticLogs'], ['auth', 'permission:updates.view']);
+
 // Audit Logs
 $router->get('/admin/audit', [\App\Controllers\AuditController::class, 'index'], ['auth', 'permission:audit.view']);
 

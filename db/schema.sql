@@ -194,3 +194,17 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_audit_logs_action (action)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 12. OAuth Tokens table (Cloud Backup & Replication integration metadata)
+CREATE TABLE IF NOT EXISTS oauth_tokens (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    provider VARCHAR(50) NOT NULL UNIQUE, -- 'onedrive', 'googledrive'
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NULL,
+    expires_at TIMESTAMP NULL,
+    connected_account VARCHAR(150) NULL,
+    last_connected_at TIMESTAMP NULL,
+    destination_folder VARCHAR(255) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

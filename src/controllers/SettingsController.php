@@ -33,11 +33,11 @@ class SettingsController extends Controller {
 
     public function index() {
         $settings = SystemSetting::getAll();
-        
+
         // Fetch local backups list
         $db = Database::getInstance();
         $stmtBackups = $db->query("
-            SELECT b.*, u.full_name as creator_name 
+            SELECT b.*, u.full_name as creator_name
             FROM system_backups b
             JOIN users u ON b.created_by = u.id
             ORDER BY b.id DESC
@@ -49,7 +49,7 @@ class SettingsController extends Controller {
 
         // Fetch Audit history
         $stmtAudits = $db->query("
-            SELECT a.*, u.full_name as user_name 
+            SELECT a.*, u.full_name as user_name
             FROM audit_logs a
             JOIN users u ON a.user_id = u.id
             WHERE a.action LIKE 'settings.%' OR a.action LIKE 'backup.%' OR a.action LIKE 'demo_data.%' OR a.action LIKE 'smtp.%' OR a.action LIKE 'email.%'
@@ -79,8 +79,158 @@ class SettingsController extends Controller {
             'jobs' => $jobsList,
             'workers' => $workersList,
             'plugins' => $pluginsList,
-            'cloudTokens' => \App\Services\CloudBackupService::getTokens()
+            'cloudTokens' => \App\Services\CloudBackupService::getTokens(),
+            'verData' => \App\Services\VersionService::getVersionData()
         ]);
+    }
+
+    public function showUpdates() {
+        $db = Database::getInstance();
+        $history = \App\Services\Update\UpdateStatusService::getUpdateHistory(10);
+        $active = \App\Services\Update\UpdateStatusService::getActiveUpdate();
+        $verData = \App\Services\VersionService::getVersionData();
+
+        View::render('settings/index', [
+            'title' => 'Κέντρο Διαχείρισης Συστήματος',
+            'tab' => 'updates',
+            'verData' => $verData,
+            'history' => $history,
+            'active' => $active,
+            'settings' => SystemSetting::getAll(),
+            'backups' => [],
+            'smtp' => [],
+            'audits' => [],
+            'jobs' => [],
+            'workers' => [],
+            'plugins' => [],
+            'cloudTokens' => []
+        ]);
+    }
+
+    public function checkUpdates() {
+        $this->checkCsrf();
+        $provider = new \App\Services\Update\GitHubReleaseProvider();
+        $verData = \App\Services\VersionService::getVersionData();
+        $latest = $provider->getLatestCompatibleRelease($verData['version'], $verData['channel']);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'latest' => $latest
+        ]);
+        exit;
+    }
+
+    public function startUpdate() {
+        $this->checkCsrf();
+
+        $targetVersion = Request::post('target_version');
+        $buildNumber = (int)Request::post('build_number', 1);
+        $channel = Request::post('channel', 'stable');
+
+        $verData = \App\Services\VersionService::getVersionData();
+
+        $updateId = \App\Services\Update\UpdateStatusService::createUpdateRecord([
+            'release_version' => $targetVersion,
+            'build_number' => $buildNumber,
+            'release_channel' => $channel,
+            'previous_version' => $verData['version'],
+            'previous_build' => $verData['build'],
+            'provider' => 'github'
+        ]);
+
+        $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $started,
+            'update_id' => $updateId
+        ]);
+        exit;
+    }
+
+    public function getStatus() {
+        $active = \App\Services\Update\UpdateStatusService::getActiveUpdate();
+        $data = [
+            'active' => false,
+            'status' => 'idle',
+            'progress_percent' => 0
+        ];
+
+        if ($active) {
+            $logs = \App\Services\Update\UpdateStatusService::getLogs($active['id']);
+            $data = array_merge($active, [
+                'active' => true,
+                'logs' => $logs
+            ]);
+        } else {
+            $statusFile = dirname(__DIR__) . '/../../storage/update_status.json';
+            if (file_exists($statusFile)) {
+                $statusData = json_decode(file_get_contents($statusFile), true);
+                if ($statusData) {
+                    $data = array_merge($data, $statusData);
+                }
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($data);
+        exit;
+    }
+
+    public function rollbackUpdate() {
+        $this->checkCsrf();
+        $active = \App\Services\Update\UpdateStatusService::getActiveUpdate();
+
+        if (!$active) {
+            $db = Database::getInstance();
+            $stmt = $db->query("SELECT id FROM application_updates WHERE status = 'failed' ORDER BY id DESC LIMIT 1");
+            $updateId = (int)$stmt->fetchColumn();
+        } else {
+            $updateId = $active['id'];
+        }
+
+        if (!$updateId) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Δεν βρέθηκε κατάλληλο update για rollback.']);
+            exit;
+        }
+
+        $success = \App\Services\Update\UpdateEngineService::rollback($updateId);
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => $success]);
+        exit;
+    }
+
+    public function forceReleaseLock() {
+        $this->checkCsrf();
+        $active = \App\Services\Update\UpdateLockService::getActiveLock();
+
+        if ($active) {
+            \App\Services\Update\UpdateLockService::forceRelease($active['id'], \App\Core\Auth::id());
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode(['success' => true]);
+        exit;
+    }
+
+    public function downloadDiagnosticLogs() {
+        $db = Database::getInstance();
+        $stmt = $db->query("SELECT * FROM application_update_logs ORDER BY id ASC");
+        $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $out = "AppForm Update Diagnostic Log\n";
+        $out .= "=================================\n";
+        foreach ($logs as $log) {
+            $out .= "[{$log['created_at']}] [{$log['level']}] [{$log['step_key']}] {$log['message']}\n";
+        }
+
+        header('Content-Type: text/plain');
+        header('Content-Disposition: attachment; filename="update_diagnostic_log.txt"');
+        echo $out;
+        exit;
     }
 
     public function update() {
@@ -97,7 +247,7 @@ class SettingsController extends Controller {
                 $stmt->execute([$value, $key]);
             }
             $db->commit();
-            
+
             $this->logAudit('settings.updated', 'system_settings', null, ['updated_fields' => array_keys($data)]);
             Session::flash('success', 'Οι γενικές ρυθμίσεις αποθηκεύτηκαν επιτυχώς.');
         } catch (\Exception $e) {
@@ -210,44 +360,44 @@ class SettingsController extends Controller {
             // Run backup processing depending on backup type
             if ($type === 'database') {
                 $filePath = $storageDir . '/' . $filename . '.sql';
-                
+
                 // MySQL Database credentials resolution
                 $config = \App\Core\App::$config['db'];
-                
+
                 // We create local SQL dump file safely using native query backup if mysqldump is not found
                 $tables = [];
                 $result = $db->query("SHOW TABLES");
                 while ($row = $result->fetch(PDO::FETCH_NUM)) {
                     $tables[] = $row[0];
                 }
-                
+
                 $sqlContent = "-- AppForm Manual DB Backup\n-- Date: " . date('Y-m-d H:i:s') . "\n\n";
                 foreach ($tables as $table) {
                     $showCreate = $db->query("SHOW CREATE TABLE `$table`")->fetch();
                     $sqlContent .= $showCreate['Create Table'] . ";\n\n";
-                    
+
                     $rows = $db->query("SELECT * FROM `$table`")->fetchAll(PDO::FETCH_ASSOC);
                     foreach ($rows as $r) {
                         $keys = array_map(function($k) { return "`$k`"; }, array_keys($r));
-                        $vals = array_map(function($v) use ($db) { 
+                        $vals = array_map(function($v) use ($db) {
                             if ($v === null) return 'NULL';
                             return $db->quote($v);
                         }, array_values($r));
-                        
+
                         $sqlContent .= "INSERT INTO `$table` (" . implode(', ', $keys) . ") VALUES (" . implode(', ', $vals) . ");\n";
                     }
                     $sqlContent .= "\n\n";
                 }
-                
+
                 file_put_contents($filePath, $sqlContent);
                 $compressedPath = $filePath . '.gz';
-                
+
                 // Compress backup file
                 $fp = gzopen($compressedPath, 'w9');
                 gzwrite($fp, file_get_contents($filePath));
                 gzclose($fp);
                 unlink($filePath);
-                
+
                 $finalPath = $compressedPath;
                 $finalFilename = $filename . '.sql.gz';
             } else {
@@ -306,7 +456,7 @@ class SettingsController extends Controller {
             // Update backup details to completed
             $db->beginTransaction();
             $stmtUpdate = $db->prepare("
-                UPDATE system_backups 
+                UPDATE system_backups
                 SET filename = ?, storage_path = ?, file_size = ?, sha256_hash = ?, status = 'completed', completed_at = NOW()
                 WHERE id = ?
             ");
@@ -383,7 +533,7 @@ class SettingsController extends Controller {
         }
 
         $this->logAudit('backup.downloaded', 'system_backups', $id, ['filename' => $backup['filename']]);
-        
+
         header('Content-Description: File Transfer');
         header('Content-Type: application/octet-stream');
         header('Content-Disposition: attachment; filename="' . basename($backup['filename']) . '"');
@@ -391,7 +541,7 @@ class SettingsController extends Controller {
         header('Cache-Control: must-revalidate');
         header('Pragma: public');
         header('Content-Length: ' . filesize($backup['storage_path']));
-        
+
         readfile($backup['storage_path']);
         exit;
     }
@@ -427,7 +577,7 @@ class SettingsController extends Controller {
         $db->prepare("DELETE FROM system_backups WHERE id = ?")->execute([$id]);
         $this->logAudit('backup.deleted', 'system_backups', $id, ['filename' => $backup['filename']]);
         Session::flash('success', 'Το backup διαγράφηκε επιτυχώς.');
-        
+
         $this->redirect('/admin/settings?tab=backup');
     }
 
@@ -448,7 +598,7 @@ class SettingsController extends Controller {
         $db->beginTransaction();
         try {
             $demoBatchId = 'DEMO-BATCH-' . date('Ymd-His');
-            
+
             // Seed demo reviewer account
             $passHash = password_hash('reviewer123', PASSWORD_BCRYPT);
             $db->prepare("
@@ -524,12 +674,12 @@ class SettingsController extends Controller {
     // Redirect user to OAuth cloud provider gateway
     public function redirectToProvider(array $params) {
         $provider = $params['provider'] ?? 'googledrive';
-        
+
         // Simulating the standard OAuth redirection workflow parameters
         $clientId = 'appform_mock_client_id_1234';
         $redirectUri = urlencode('http://127.0.0.1:8080/admin/settings/cloud/callback?provider=' . $provider);
-        
-        $authUrl = ($provider === 'googledrive') 
+
+        $authUrl = ($provider === 'googledrive')
             ? "https://accounts.google.com/o/oauth2/v2/auth?client_id={$clientId}&redirect_uri={$redirectUri}&response_type=code&scope=drive"
             : "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={$clientId}&redirect_uri={$redirectUri}&response_type=code&scope=files.readwrite";
 
@@ -551,7 +701,7 @@ class SettingsController extends Controller {
         // Store secure tokens
         \App\Services\CloudBackupService::saveToken($provider, 'mock_access_token_abc123', 'mock_refresh_token_xyz890', 3600);
         $this->logAudit('cloud.auth.connected', 'oauth_tokens', null, ['provider' => $provider]);
-        
+
         Session::flash('success', 'Συνδεθήκατε επιτυχώς με τον Cloud Provider (' . htmlspecialchars($provider) . ')!');
         $this->redirect('/admin/settings?tab=cloud');
     }
@@ -564,7 +714,7 @@ class SettingsController extends Controller {
         $userId = \App\Core\Auth::id();
 
         $res = \App\Services\CloudReplicationService::queueReplication($id, $provider, $userId);
-        
+
         if ($res['success']) {
             $this->logAudit('cloud.job.queued', 'system_backups', $id, ['provider' => $provider, 'job_id' => $res['job_id']]);
             Session::flash('success', $res['message']);
@@ -644,7 +794,7 @@ class SettingsController extends Controller {
     public function testLdapConnection() {
         $this->checkCsrf();
         $this->logAudit('ldap.connection_test', 'ldap_config', null, []);
-        
+
         // Return JSON confirmation result
         header('Content-Type: application/json');
         echo json_encode([
@@ -657,7 +807,7 @@ class SettingsController extends Controller {
     public function showLdapRoleMappings() {
         $db = Database::getInstance();
         $mappings = $db->query("
-            SELECT m.*, r.name as role_name 
+            SELECT m.*, r.name as role_name
             FROM ldap_role_mappings m
             JOIN roles r ON m.appform_role_id = r.id
             ORDER BY m.id DESC
@@ -716,8 +866,8 @@ class SettingsController extends Controller {
 
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            UPDATE notification_templates 
-            SET is_active = ?, subject = ?, body_html = ?, body_text = ?, updated_at = NOW() 
+            UPDATE notification_templates
+            SET is_active = ?, subject = ?, body_html = ?, body_text = ?, updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([
