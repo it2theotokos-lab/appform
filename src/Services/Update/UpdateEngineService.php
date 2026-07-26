@@ -241,7 +241,62 @@ class UpdateEngineService {
     }
 
     /**
+     * Resolves the mysqldump executable path.
+     * On Windows, mysqldump is often not in PATH — check known installation locations.
+     */
+    private static function resolveMysqldump(): string {
+        if (stripos(PHP_OS, 'WIN') === 0) {
+            $knownPaths = [
+                'C:\\Antigravity-PRJ\\Tools\\MariaDB\\bin\\mysqldump.exe',
+                'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysqldump.exe',
+                'C:\\Program Files\\MySQL\\MySQL Server 5.7\\bin\\mysqldump.exe',
+                'C:\\Program Files (x86)\\MySQL\\MySQL Server 5.7\\bin\\mysqldump.exe',
+                'C:\\xampp\\mysql\\bin\\mysqldump.exe',
+                'C:\\laragon\\bin\\mysql\\mysql-8.0.30-winx64\\bin\\mysqldump.exe',
+                'C:\\tools\\mysql\\bin\\mysqldump.exe',
+            ];
+            foreach ($knownPaths as $path) {
+                if (file_exists($path)) {
+                    Logger::log("[UpdateEngine] Resolved mysqldump: {$path}");
+                    return $path;
+                }
+            }
+            // Last resort: ask the shell
+            $whereOutput = [];
+            exec('where mysqldump.exe 2>NUL', $whereOutput);
+            if (!empty($whereOutput[0]) && file_exists(trim($whereOutput[0]))) {
+                return trim($whereOutput[0]);
+            }
+        }
+        return 'mysqldump'; // Unix / PATH fallback
+    }
+
+    /**
+     * Resolves the mysql client executable path (for restoreDatabase).
+     */
+    private static function resolveMysqlClient(): string {
+        if (stripos(PHP_OS, 'WIN') === 0) {
+            $knownPaths = [
+                'C:\\Antigravity-PRJ\\Tools\\MariaDB\\bin\\mysql.exe',
+                'C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\mysql.exe',
+                'C:\\Program Files\\MySQL\\MySQL Server 5.7\\bin\\mysql.exe',
+                'C:\\xampp\\mysql\\bin\\mysql.exe',
+                'C:\\laragon\\bin\\mysql\\mysql-8.0.30-winx64\\bin\\mysql.exe',
+            ];
+            foreach ($knownPaths as $path) {
+                if (file_exists($path)) {
+                    return $path;
+                }
+            }
+        }
+        return 'mysql';
+    }
+
+    /**
      * Dumps database using mysqldump safely.
+     * Uses --defaults-extra-file temp CNF for password — MYSQL_PWD env var is unreliable
+     * when passed via proc_open on Windows (TCP socket env isolation issue).
+     * CRITICAL: temp CNF is deleted AFTER proc_close, not before — mysqldump reads it async.
      */
     private static function createDatabaseBackup(string $outputPath): bool {
         $dbConfig = App::$config['db'];
@@ -251,36 +306,63 @@ class UpdateEngineService {
         $user = $dbConfig['user'];
         $pass = $dbConfig['pass'];
 
-        // Build command using proc_open to pass password securely in environment variables
-        $cmd = "mysqldump --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " --user=" . escapeshellarg($user) . " " . escapeshellarg($dbName) . " > " . escapeshellarg($outputPath);
+        $mysqldump = self::resolveMysqldump();
+
+        // Write credentials to a temp file so password never appears in cmdline
+        $tmpCnf = tempnam(sys_get_temp_dir(), 'mysqldump_') . '.cnf';
+        file_put_contents($tmpCnf, "[client]\npassword=" . $pass . "\n");
+
+        $cmd = '"' . $mysqldump . '"'
+            . ' --defaults-extra-file=' . $tmpCnf
+            . ' --host=' . escapeshellarg($host)
+            . ' --port=' . escapeshellarg($port)
+            . ' --user=' . escapeshellarg($user)
+            . ' ' . escapeshellarg($dbName);
+
+        // Write stdout directly to output file via descriptor (no shell redirect)
+        $outputHandle = fopen($outputPath, 'w');
+        if (!$outputHandle) {
+            @unlink($tmpCnf);
+            Logger::log("Database Backup Failed: Cannot open output path: {$outputPath}");
+            return false;
+        }
 
         $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
+            0 => ['pipe', 'r'],  // stdin
+            1 => $outputHandle,  // stdout → directly to file
+            2 => ['pipe', 'w'],  // stderr
         ];
-        $env = array_merge($_ENV, ['MYSQL_PWD' => $pass]);
 
-        $process = proc_open($cmd, $descriptors, $pipes, null, $env);
+        $process = proc_open($cmd, $descriptors, $pipes, null);
+        fclose($outputHandle);
+        // NOTE: Do NOT unlink $tmpCnf here — mysqldump reads the file asynchronously
+
         if (is_resource($process)) {
             fclose($pipes[0]);
-            fclose($pipes[1]);
             $stderr = stream_get_contents($pipes[2]);
             fclose($pipes[2]);
             $exitCode = proc_close($process);
+            @unlink($tmpCnf); // NOW safe — mysqldump process has fully exited
 
             if ($exitCode !== 0) {
-                Logger::log("Database Backup Failed: " . $stderr);
+                Logger::log("Database Backup Failed (exit {$exitCode}): " . trim($stderr));
                 return false;
             }
-            return file_exists($outputPath) && filesize($outputPath) > 0;
+
+            $fileOk = file_exists($outputPath) && filesize($outputPath) > 0;
+            if (!$fileOk) {
+                Logger::log("Database Backup Failed: output file empty or missing. stderr: " . trim($stderr));
+            }
+            return $fileOk;
         }
 
+        @unlink($tmpCnf);
+        Logger::log("Database Backup Failed: proc_open returned false. Cmd: {$cmd}");
         return false;
     }
 
     /**
-     * Restores database from backup file.
+     * Restores database from a SQL backup file.
      */
     private static function restoreDatabase(string $sqlPath): bool {
         $dbConfig = App::$config['db'];
@@ -290,25 +372,46 @@ class UpdateEngineService {
         $user = $dbConfig['user'];
         $pass = $dbConfig['pass'];
 
-        $cmd = "mysql --host=" . escapeshellarg($host) . " --port=" . escapeshellarg($port) . " --user=" . escapeshellarg($user) . " " . escapeshellarg($dbName) . " < " . escapeshellarg($sqlPath);
+        $mysqlClient = self::resolveMysqlClient();
+
+        // Temp CNF for password — same secure pattern as createDatabaseBackup
+        $tmpCnf = tempnam(sys_get_temp_dir(), 'mysql_restore_') . '.cnf';
+        file_put_contents($tmpCnf, "[client]\npassword=" . $pass . "\n");
+
+        $cmd = '"' . $mysqlClient . '"'
+            . ' --defaults-extra-file=' . $tmpCnf
+            . ' --host=' . escapeshellarg($host)
+            . ' --port=' . escapeshellarg($port)
+            . ' --user=' . escapeshellarg($user)
+            . ' ' . escapeshellarg($dbName);
+
+        // Feed SQL file to stdin via descriptor
+        $inputHandle = fopen($sqlPath, 'r');
+        if (!$inputHandle) {
+            @unlink($tmpCnf);
+            return false;
+        }
 
         $descriptors = [
-            0 => ['pipe', 'r'],
-            1 => ['pipe', 'w'],
-            2 => ['pipe', 'w']
+            0 => $inputHandle,   // stdin ← SQL file
+            1 => ['pipe', 'w'],  // stdout
+            2 => ['pipe', 'w'],  // stderr
         ];
-        $env = array_merge($_ENV, ['MYSQL_PWD' => $pass]);
 
-        $process = proc_open($cmd, $descriptors, $pipes, null, $env);
+        $process = proc_open($cmd, $descriptors, $pipes, null);
+        fclose($inputHandle);
+
         if (is_resource($process)) {
-            fclose($pipes[0]);
             fclose($pipes[1]);
             $stderr = stream_get_contents($pipes[2]);
             fclose($pipes[2]);
             $exitCode = proc_close($process);
+            @unlink($tmpCnf);
 
             return $exitCode === 0;
         }
+
+        @unlink($tmpCnf);
         return false;
     }
 
