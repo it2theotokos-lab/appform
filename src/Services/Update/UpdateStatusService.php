@@ -127,9 +127,22 @@ class UpdateStatusService {
 
     public static function getActiveUpdate(): ?array {
         $db = Database::getInstance();
+        // Only return records that represent a truly in-progress update.
+        // Terminal states (completed, failed, rolled_back, rollback_failed) must
+        // never be returned here — they cause stale progress panels on page load.
         $stmt = $db->prepare("
-            SELECT * FROM application_updates 
-            WHERE status NOT IN ('completed', 'rolled_back')
+            SELECT * FROM application_updates
+            WHERE status IN (
+                'pending',
+                'waiting_for_lock',
+                'maintenance_enabled',
+                'backing_up_files',
+                'backing_up_database',
+                'verifying_package',
+                'extracting',
+                'running_migrations',
+                'validating_application'
+            )
             ORDER BY id DESC LIMIT 1
         ");
         $stmt->execute();

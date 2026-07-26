@@ -75,4 +75,12 @@ class VersionService {
         $data = self::getVersionData();
         return $data['version'];
     }
+
+    /**
+     * Clears the static cache so the next call to getVersionData() re-reads version.php.
+     * Needed after the update engine deploys a new version.php.
+     */
+    public static function clearCache(): void {
+        self::$cachedVersion = null;
+    }
 }

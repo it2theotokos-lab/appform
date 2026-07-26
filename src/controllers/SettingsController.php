@@ -109,7 +109,18 @@ class SettingsController extends Controller {
 
     public function checkUpdates() {
         $this->checkCsrf();
-        $provider = new \App\Services\Update\GitHubReleaseProvider();
+
+        // TEST-MODE: When .update_test_mode flag exists, use LocalReleaseProvider.
+        // This allows end-to-end local acceptance testing without GitHub API.
+        // Remove the flag file to restore production behaviour.
+        // Path: src/controllers/SettingsController.php → dirname(x2) = project root → public/storage/
+        $testModeFlag = dirname(dirname(__DIR__)) . '/public/storage/.update_test_mode';
+        if (file_exists($testModeFlag)) {
+            $provider = new \App\Services\Update\LocalReleaseProvider();
+        } else {
+            $provider = new \App\Services\Update\GitHubReleaseProvider();
+        }
+
         $verData = \App\Services\VersionService::getVersionData();
         $latest = $provider->getLatestCompatibleRelease($verData['version'], $verData['channel']);
 
@@ -124,32 +135,72 @@ class SettingsController extends Controller {
     public function startUpdate() {
         $this->checkCsrf();
 
-        $targetVersion = Request::post('target_version');
-        $buildNumber = (int)Request::post('build_number', 1);
-        $channel = Request::post('channel', 'stable');
+        $targetVersion    = Request::post('target_version');
+        $buildNumber      = (int)Request::post('build_number', 1);
+        $channel          = Request::post('channel', 'stable');
+        $localPackagePath = Request::post('local_package_path', ''); // TEST-MODE only
+        $packageSha256    = Request::post('package_sha256', '');     // TEST-MODE only
 
         $verData = \App\Services\VersionService::getVersionData();
 
+        // Determine provider label (path: project_root/public/storage/.update_test_mode)
+        $testModeFlag = dirname(dirname(__DIR__)) . '/public/storage/.update_test_mode';
+        $providerLabel = file_exists($testModeFlag) ? 'local_test' : 'github';
+
         $updateId = \App\Services\Update\UpdateStatusService::createUpdateRecord([
             'release_version' => $targetVersion,
-            'build_number' => $buildNumber,
+            'build_number'    => $buildNumber,
             'release_channel' => $channel,
             'previous_version' => $verData['version'],
-            'previous_build' => $verData['build'],
-            'provider' => 'github'
+            'previous_build'  => $verData['build'],
+            'provider'        => $providerLabel
         ]);
+
+        // TEST-MODE: if a local package path is supplied, pre-stage it so the engine finds it.
+        // The engine expects the package at public/storage/update_package_{id}.zip
+        // OR at update['package_path'] in DB.
+        if ($localPackagePath && file_exists($localPackagePath)) {
+            $storageDir = dirname(dirname(__DIR__)) . '/public/storage';
+            $stagedPath = $storageDir . '/update_package_' . $updateId . '.zip';
+            copy($localPackagePath, $stagedPath);
+
+            // Write path + sha256 to DB so engine skips download
+            $db = \App\Core\Database::getInstance();
+            $stmt = $db->prepare(
+                "UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?"
+            );
+            $stmt->execute([$stagedPath, $packageSha256 ?: null, $updateId]);
+        }
 
         $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
 
         header('Content-Type: application/json');
         echo json_encode([
-            'success' => $started,
+            'success'   => $started,
             'update_id' => $updateId
         ]);
         exit;
     }
 
     public function getStatus() {
+        // If a specific update_id is requested, return that record directly.
+        // This avoids stale-data issues when multiple update records exist.
+        $requestedId = isset($_GET['update_id']) ? (int)$_GET['update_id'] : 0;
+
+        if ($requestedId > 0) {
+            $db = \App\Core\Database::getInstance();
+            $stmt = $db->prepare("SELECT * FROM application_updates WHERE id = ?");
+            $stmt->execute([$requestedId]);
+            $record = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($record) {
+                $logs = \App\Services\Update\UpdateStatusService::getLogs($record['id']);
+                $data = array_merge($record, ['active' => true, 'logs' => $logs]);
+                header('Content-Type: application/json');
+                echo json_encode($data);
+                exit;
+            }
+        }
+
         $active = \App\Services\Update\UpdateStatusService::getActiveUpdate();
         $data = [
             'active' => false,
@@ -164,7 +215,7 @@ class SettingsController extends Controller {
                 'logs' => $logs
             ]);
         } else {
-            $statusFile = dirname(__DIR__) . '/../../public/storage/update_status.json';
+            $statusFile = dirname(dirname(__DIR__)) . '/public/storage/update_status.json';
             if (file_exists($statusFile)) {
                 $statusData = json_decode(file_get_contents($statusFile), true);
                 if ($statusData) {

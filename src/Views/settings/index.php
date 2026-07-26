@@ -896,20 +896,20 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
             <div class="row">
                 <!-- Current Version Metadata Info -->
                 <div class="col-md-4 mb-4">
-                    <div class="card p-3 bg-dark border-secondary h-100">
-                        <h6 class="text-white border-bottom border-secondary pb-2"><i class="fa-solid fa-circle-info me-2 text-info"></i> Τρέχουσα Έκδοση</h6>
+                    <div class="card p-3 h-100" style="background:var(--color-surface);border-color:var(--color-border);">
+                        <h6 class="border-bottom pb-2" style="color:var(--color-text);border-color:var(--color-border)!important;"><i class="fa-solid fa-circle-info me-2 text-info"></i> Τρέχουσα Έκδοση</h6>
                         <table class="table table-sm table-borderless text-muted mb-0">
                             <tr>
                                 <td>Έκδοση (Version):</td>
-                                <td class="text-white fw-bold"><?= htmlspecialchars($verData['version'] ?? '1.0.0') ?></td>
+                                <td style="color:var(--color-text);font-weight:600;"><?= htmlspecialchars($verData['version'] ?? '1.0.0') ?></td>
                             </tr>
                             <tr>
                                 <td>Αριθμός Build:</td>
-                                <td class="text-white"><?= htmlspecialchars($verData['build'] ?? 1) ?></td>
+                                <td style="color:var(--color-text);"><?= htmlspecialchars($verData['build'] ?? 1) ?></td>
                             </tr>
                             <tr>
                                 <td>Κανάλι (Channel):</td>
-                                <td class="text-white text-capitalize"><span class="badge bg-secondary"><?= htmlspecialchars($verData['channel'] ?? 'stable') ?></span></td>
+                                <td style="color:var(--color-text);"><span class="badge bg-secondary"><?= htmlspecialchars($verData['channel'] ?? 'stable') ?></span></td>
                             </tr>
                         </table>
                         <div class="mt-4 d-grid gap-2">
@@ -921,19 +921,19 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
 
                 <!-- Update State / Available Upgrades Panel -->
                 <div class="col-md-8 mb-4">
-                    <div class="card p-3 bg-dark border-secondary h-100">
-                        <h6 class="text-white border-bottom border-secondary pb-2"><i class="fa-solid fa-bullseye me-2 text-success"></i> Διαθέσιμη Αναβάθμιση</h6>
+                    <div class="card p-3 h-100" style="background:var(--color-surface);border-color:var(--color-border);">
+                        <h6 class="border-bottom pb-2" style="color:var(--color-text);border-color:var(--color-border)!important;"><i class="fa-solid fa-bullseye me-2 text-success"></i> Διαθέσιμη Αναβάθμιση</h6>
                         <div id="no-updates-alert" class="alert alert-secondary mb-0">
                             Πατήστε "Έλεγχος για Ενημερώσεις" για να αναζητήσετε διαθέσιμα πακέτα.
                         </div>
                         <div id="update-details" style="display:none;">
                             <div class="alert alert-success">
-                                <h6 class="alert-heading text-white fw-bold mb-1"><i class="fa-solid fa-circle-check me-2"></i> Βρέθηκε Νέα Έκδοση: <span id="lbl-target-version"></span></h6>
+                                <h6 class="alert-heading fw-bold mb-1" style="color:var(--color-text);"><i class="fa-solid fa-circle-check me-2"></i> Βρέθηκε Νέα Έκδοση: <span id="lbl-target-version"></span></h6>
                                 <p class="small mb-0">Το πακέτο είναι συμβατό με τις τρέχουσες απαιτήσεις συστήματος.</p>
                             </div>
                             <div class="mb-3">
                                 <label class="text-muted small">Release Notes / Changelog:</label>
-                                <div id="lbl-changelog" class="p-2 border border-secondary rounded bg-black text-muted small" style="max-height: 120px; overflow-y: auto;"></div>
+                                <div id="lbl-changelog" class="p-2 border rounded small" style="max-height: 120px; overflow-y: auto; background:var(--color-bg); border-color:var(--color-border)!important; color:var(--color-text-muted);"></div>
                             </div>
                             <?php if (\App\Core\Auth::hasPermission('updates.manage')): ?>
                             <form id="form-start-update" action="/admin/settings/updates/start" method="POST">
@@ -950,18 +950,18 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
             </div>
 
             <!-- Execution Console Log / Real-time Progress Bar -->
-            <div id="update-progress-card" class="card p-3 bg-dark border-secondary mb-4" style="display:none;">
-                <h6 class="text-white mb-3"><i class="fa-solid fa-gear fa-spin me-2 text-warning"></i> Πρόοδος Εγκατάστασης</h6>
+            <div id="update-progress-card" class="card p-3 mb-4" style="display:none;background:var(--color-surface);border-color:var(--color-border);">
+                <h6 class="mb-3" style="color:var(--color-text);"><i class="fa-solid fa-gear fa-spin me-2 text-warning"></i> Πρόοδος Εγκατάστασης</h6>
                 <div class="progress mb-3 bg-secondary" style="height: 20px;">
                     <div id="update-progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%;">0%</div>
                 </div>
                 <div class="d-flex justify-content-between mb-3 text-muted small">
-                    <div>Τρέχον Βήμα: <span id="lbl-current-step" class="text-white fw-bold">-</span></div>
-                    <div>Heartbeat: <span id="lbl-heartbeat" class="text-white">-</span></div>
+                    <div>Τρέχον Βήμα: <span id="lbl-current-step" class="fw-bold" style="color:var(--color-text);">-</span></div>
+                    <div>Heartbeat: <span id="lbl-heartbeat" style="color:var(--color-text);">-</span></div>
                 </div>
                 <div class="mb-3">
                     <label class="text-muted small">Logs Εγκατάστασης:</label>
-                    <pre id="update-console-log" class="p-3 border border-secondary rounded bg-black text-success small mb-0" style="max-height: 250px; overflow-y: auto; font-family: monospace;"></pre>
+                    <pre id="update-console-log" class="p-3 border rounded small mb-0" style="max-height: 250px; overflow-y: auto; font-family: monospace; background:var(--color-bg); border-color:var(--color-border)!important; color:var(--color-success, #28a745);"></pre>
                 </div>
                 <div class="d-flex gap-2">
                     <?php if (\App\Core\Auth::hasPermission('updates.rollback')): ?>
@@ -1071,33 +1071,68 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                 fetch('/admin/settings/updates/status')
                 .then(res => res.json())
                 .then(data => {
-                    if (data.active || data.status !== 'idle') {
+                    const ACTIVE_STATES = [
+                        'pending','waiting_for_lock','maintenance_enabled',
+                        'backing_up_files','backing_up_database','verifying_package',
+                        'extracting','running_migrations','validating_application'
+                    ];
+                    const status = data.status || 'idle';
+                    const pct    = data.progress_percent || 0;
+
+                    if (ACTIVE_STATES.includes(status)) {
+                        // ── In-progress: show card, keep polling ────────────────
                         progressCard.style.display = 'block';
-                        progressBar.style.width = data.progress_percent + '%';
-                        progressBar.innerText = data.progress_percent + '%';
-                        lblStep.innerText = data.current_step || '-';
-                        lblHeartbeat.innerText = data.heartbeat_at || '-';
+                        progressBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success';
+                        progressBar.style.width = pct + '%';
+                        progressBar.innerText   = pct + '%';
+                        lblStep.innerText       = data.current_step || '-';
+                        lblHeartbeat.innerText  = data.heartbeat_at || '-';
+                        btnRollback.style.display = 'none';
+                        btnUnlock.style.display   = 'none';
 
-                        // Build log display
-                        if (data.logs) {
-                            let logText = '';
-                            data.logs.forEach(l => {
-                                logText += '[' + l.created_at + '] [' + l.level + '] ' + l.message + '\n';
-                            });
-                            consoleLog.innerText = logText;
-                            consoleLog.scrollTop = consoleLog.scrollHeight;
-                        }
+                    } else if (status === 'completed') {
+                        // ── Completed: 100%, green, stop polling ────────────────
+                        progressCard.style.display = 'block';
+                        progressBar.className = 'progress-bar bg-success';
+                        progressBar.style.width = '100%';
+                        progressBar.innerText   = '100%';
+                        lblStep.innerText       = 'completed';
+                        lblHeartbeat.innerText  = data.heartbeat_at || '-';
+                        btnRollback.style.display = 'none';
+                        btnUnlock.style.display   = 'none';
+                        clearInterval(pollInterval);
 
-                        if (data.status === 'failed') {
-                            btnRollback.style.display = 'inline-block';
-                            btnUnlock.style.display = 'inline-block';
-                        } else {
-                            btnRollback.style.display = 'none';
-                            btnUnlock.style.display = 'none';
-                        }
+                    } else if (status === 'failed' || status === 'rollback_failed') {
+                        // ── Failed: red bar, show actions, stop polling ─────────
+                        progressCard.style.display = 'block';
+                        progressBar.className = 'progress-bar bg-danger';
+                        progressBar.style.width = pct + '%';
+                        progressBar.innerText   = 'ΑΠΟΤΥΧΙΑ (' + pct + '%)';
+                        lblStep.innerText       = data.current_step || 'error';
+                        lblHeartbeat.innerText  = data.heartbeat_at || '-';
+                        btnRollback.style.display = 'inline-block';
+                        btnUnlock.style.display   = 'inline-block';
+                        clearInterval(pollInterval);
+
                     } else {
+                        // ── Idle / no active update: hide card, stop polling ────
+                        progressCard.style.display = 'none';
                         clearInterval(pollInterval);
                     }
+
+                    // Build log display (for any non-idle state)
+                    if (data.logs && progressCard.style.display !== 'none') {
+                        let logText = '';
+                        data.logs.forEach(l => {
+                            logText += '[' + l.created_at + '] [' + l.level + '] ' + l.message + '\n';
+                        });
+                        consoleLog.innerText = logText;
+                        consoleLog.scrollTop = consoleLog.scrollHeight;
+                    }
+                })
+                .catch(() => {
+                    // On fetch error: silently stop polling
+                    clearInterval(pollInterval);
                 });
             }
 

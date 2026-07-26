@@ -13,8 +13,17 @@ class LocalReleaseProvider implements ReleaseProviderInterface {
     private string $packageDir;
 
     public function __construct(string $packageDir = '') {
-        $this->packageDir = $packageDir ?: (dirname(__DIR__) . '/../../release');
+        if ($packageDir) {
+            $this->packageDir = realpath($packageDir) ?: $packageDir;
+        } else {
+            // Navigate from src/Services/Update/ → src/Services/ → src/ → project_root/ → release/
+            // Using dirname() three times avoids the ../ chain that glob cannot resolve on Windows
+            $projectRoot = dirname(dirname(dirname(__DIR__)));
+            $resolved = $projectRoot . DIRECTORY_SEPARATOR . 'release';
+            $this->packageDir = realpath($resolved) ?: $resolved;
+        }
     }
+
 
     public function isConfigured(): bool {
         return is_dir($this->packageDir);

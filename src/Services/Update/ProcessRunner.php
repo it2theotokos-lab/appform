@@ -108,29 +108,58 @@ class ProcessRunner {
         Logger::log("[ProcessRunner]   WorkingDir: {$workingDir}");
 
         if ($isWindows) {
-            // Use cmd /c start /B to detach process from IIS worker
-            $cmd = 'cmd /c start /B ' . $phpQuoted . ' -f ' . $scriptQuoted . ' -- ' . $updateIdArg . ' >NUL 2>&1';
-            Logger::log("[ProcessRunner]   Command   : {$cmd}");
+            // On Windows, cmd /c start /B blocks when PHP has no console window (cli-server).
+            // Use PowerShell Start-Process (without -Wait) which is guaranteed non-blocking:
+            // PowerShell launches the worker, starts it detached, and exits immediately.
+            // exec() waits for PowerShell to exit (~100-200ms) then returns.
+            //
+            // Escape single quotes for PowerShell string literals.
+            $phpEscaped    = str_replace("'", "''", $phpPath);
+            $scriptEscaped = str_replace("'", "''", $workerScript);
+            $wdEscaped     = str_replace("'", "''", $workingDir);
 
-            $descriptors = [
-                0 => ['pipe', 'r'],
-                1 => ['pipe', 'w'],
-                2 => ['pipe', 'w'],
-            ];
-            $process = proc_open($cmd, $descriptors, $pipes, $workingDir);
-            if (is_resource($process)) {
-                fclose($pipes[0]);
-                $stdout = stream_get_contents($pipes[1]);
-                $stderr = stream_get_contents($pipes[2]);
-                fclose($pipes[1]);
-                fclose($pipes[2]);
-                $exitCode = proc_close($process);
-                Logger::log("[ProcessRunner] Worker launch exit code: {$exitCode}, stderr: " . trim($stderr));
-                // exit code 0 from cmd /c start means the start command executed, not the worker itself
-                return $exitCode === 0;
+            // Build PowerShell argument list as array expression
+            $psArgList = "'-f', '$scriptEscaped', '--', '$updateIdArg'";
+            $psCmd = "powershell -NonInteractive -WindowStyle Hidden -Command \""
+                   . "Start-Process -FilePath '$phpEscaped' "
+                   . "-ArgumentList @($psArgList) "
+                   . "-WorkingDirectory '$wdEscaped' "
+                   . "-WindowStyle Hidden"
+                   . "\"";
+
+            Logger::log("[ProcessRunner]   Command   : powershell Start-Process php.exe -- {$updateIdArg}");
+
+            $before = microtime(true);
+            exec($psCmd, $output, $exitCode);
+            $elapsed = round(microtime(true) - $before, 3);
+            Logger::log("[ProcessRunner] PowerShell Start-Process exit={$exitCode}, elapsed={$elapsed}s");
+
+            if ($exitCode === 0) {
+                Logger::log("[ProcessRunner] Worker launched successfully for update #{$updateId}");
+                return true;
             }
-            Logger::log("[ProcessRunner] proc_open failed on Windows.");
+
+            // Fallback: try direct proc_open without proc_close (fire-and-forget)
+            Logger::log("[ProcessRunner] PowerShell failed (exit={$exitCode}), trying proc_open fire-and-forget");
+            $cmd2 = '"' . $phpPath . '" -f "' . $workerScript . '" -- ' . $updateIdArg;
+            $descriptors2 = [
+                0 => ['file', 'NUL', 'r'],
+                1 => ['file', 'NUL', 'w'],
+                2 => ['file', 'NUL', 'w'],
+            ];
+            $process2 = proc_open($cmd2, $descriptors2, $pipes2, $workingDir, null, ['bypass_shell' => true, 'create_process_group' => true]);
+            if (is_resource($process2)) {
+                // Register shutdown to eventually reap the handle — but DON'T call proc_close() now
+                register_shutdown_function(static function() use ($process2) {
+                    if (is_resource($process2)) @proc_close($process2);
+                });
+                Logger::log("[ProcessRunner] Fallback proc_open launched (fire-and-forget)");
+                return true;
+            }
+
+            Logger::log("[ProcessRunner] ABORT: All spawn methods failed for update #{$updateId}.");
             return false;
+
         } else {
             // Unix: redirect to /dev/null and background with &
             $cmd = $phpQuoted . ' -f ' . $scriptQuoted . ' -- ' . $updateIdArg . ' >/dev/null 2>&1 &';
