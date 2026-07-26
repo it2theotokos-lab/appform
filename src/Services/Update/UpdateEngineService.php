@@ -261,7 +261,7 @@ class UpdateEngineService {
                     return $path;
                 }
             }
-            // Last resort: ask the OS to locate mysqldump without using exec()
+            // Last resort: ask the OS to locate mysqldump via proc_open (no shell functions needed)
             $whereProcess = proc_open('where mysqldump.exe', [1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $wherePipes);
             if (is_resource($whereProcess)) {
                 $whereResult = trim(stream_get_contents($wherePipes[1]));
