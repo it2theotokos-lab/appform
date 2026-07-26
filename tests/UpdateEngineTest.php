@@ -9,7 +9,7 @@ echo "Running UpdateEngine Tests...\n";
 
 // Test 1: Local offline maintenance mode status file creation
 UpdateEngineService::writeLocalStatus(101, 'running_migrations', 80);
-$statusFile = dirname(__DIR__) . '/storage/update_status.json';
+$statusFile = dirname(__DIR__) . '/public/storage/update_status.json';
 assert(file_exists($statusFile), "Test 1 Failed: Status file was not created.");
 $data = json_decode(file_get_contents($statusFile), true);
 assert($data['maintenance_mode'] === true, "Test 1 Failed: Offline maintenance override must be true.");

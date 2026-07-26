@@ -11,7 +11,7 @@ class UpdateEngineService {
     private static $statusFilePath;
 
     public static function init() {
-        self::$statusFilePath = dirname(__DIR__) . '/../../storage/update_status.json';
+        self::$statusFilePath = dirname(__DIR__) . '/../../public/storage/update_status.json';
     }
 
     /**
@@ -44,7 +44,7 @@ class UpdateEngineService {
 
             // 4. File Backups
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_BACKING_UP_FILES, 'file_backup');
-            $fileBackupZip = dirname(__DIR__) . "/../../storage/backups/update_backup_files_{$updateId}.zip";
+            $fileBackupZip = dirname(__DIR__) . "/../../public/storage/update_backup_files_{$updateId}.zip";
             if (!self::createFileBackup($fileBackupZip)) {
                 throw new \Exception("File backup generation failed.");
             }
@@ -52,10 +52,10 @@ class UpdateEngineService {
             $stmtUp = $db->prepare("UPDATE application_updates SET backup_path = ?, backup_sha256 = ? WHERE id = ?");
             $stmtUp->execute([$fileBackupZip, hash_file('sha256', $fileBackupZip), $updateId]);
             UpdateStatusService::updateProgress($updateId, 30);
-
+ 
             // 5. Database Backup
             UpdateStatusService::updateState($updateId, UpdateStateMachine::STATE_BACKING_UP_DATABASE, 'database_backup');
-            $dbBackupSql = dirname(__DIR__) . "/../../storage/backups/update_backup_db_{$updateId}.sql";
+            $dbBackupSql = dirname(__DIR__) . "/../../public/storage/update_backup_db_{$updateId}.sql";
             if (!self::createDatabaseBackup($dbBackupSql)) {
                 throw new \Exception("Database backup generation failed.");
             }

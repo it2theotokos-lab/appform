@@ -13,11 +13,7 @@ class PackageValidatorService {
         'config/installed.lock',
         '.env',
         '.env.local',
-        'storage/backups',
-        'storage/private_uploads',
-        'storage/document_final_pdfs',
-        'public/storage',
-        'storage/logs'
+        'public/storage'
     ];
 
     /**

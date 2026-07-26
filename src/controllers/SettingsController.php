@@ -244,6 +244,13 @@ class SettingsController extends Controller {
             $stmt = $db->prepare("UPDATE system_settings SET setting_value = ? WHERE setting_key = ?");
             foreach ($data as $key => $value) {
                 if ($key === '_token' || $key === '_method') continue;
+
+                // Do not overwrite client secrets with masked values
+                if (($key === 'google_client_secret' || $key === 'onedrive_client_secret') && 
+                    (empty($value) || $value === '[Κρυπτογραφημένο / Αμετάβλητο]' || $value === '******')) {
+                    continue;
+                }
+
                 $stmt->execute([$value, $key]);
             }
             $db->commit();
@@ -255,7 +262,11 @@ class SettingsController extends Controller {
             Session::flash('error', 'Σφάλμα κατά την αποθήκευση: ' . $e->getMessage());
         }
 
-        $this->redirect('/admin/settings?tab=general');
+        $tab = 'general';
+        if (isset($data['google_client_id']) || isset($data['onedrive_client_id'])) {
+            $tab = 'cloud';
+        }
+        $this->redirect('/admin/settings?tab=' . $tab);
     }
 
     // SMTP settings update
@@ -674,35 +685,161 @@ class SettingsController extends Controller {
     // Redirect user to OAuth cloud provider gateway
     public function redirectToProvider(array $params) {
         $provider = $params['provider'] ?? 'googledrive';
-
-        // Simulating the standard OAuth redirection workflow parameters
-        $clientId = 'appform_mock_client_id_1234';
-        $redirectUri = urlencode('http://127.0.0.1:8080/admin/settings/cloud/callback?provider=' . $provider);
-
-        $authUrl = ($provider === 'googledrive')
-            ? "https://accounts.google.com/o/oauth2/v2/auth?client_id={$clientId}&redirect_uri={$redirectUri}&response_type=code&scope=drive"
-            : "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id={$clientId}&redirect_uri={$redirectUri}&response_type=code&scope=files.readwrite";
-
-        // Since it's a simulated environment, we redirect straight to callback to complete registration
-        $this->redirect("/admin/settings/cloud/callback?provider={$provider}&code=mock_authorization_code_9876");
+        
+        // Fetch OAuth credentials from settings
+        if ($provider === 'googledrive') {
+            $clientId = \App\Models\SystemSetting::getVal('google_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('google_client_secret');
+            $redirectUri = \App\Models\SystemSetting::getVal('google_redirect_uri');
+            
+            if (empty($clientId) || empty($clientSecret) || empty($redirectUri)) {
+                Session::flash('error', 'Δεν έχουν ρυθμιστεί OAuth credentials για τον συγκεκριμένο provider.');
+                $this->redirect('/admin/settings?tab=cloud');
+                return;
+            }
+            
+            $state = bin2hex(random_bytes(16));
+            Session::set('oauth_state', $state);
+            Session::set('oauth_provider', $provider);
+            
+            $authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" . http_build_query([
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'response_type' => 'code',
+                'scope' => 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+                'state' => $state,
+                'access_type' => 'offline',
+                'prompt' => 'consent'
+            ]);
+        } else {
+            $clientId = \App\Models\SystemSetting::getVal('onedrive_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('onedrive_client_secret');
+            $redirectUri = \App\Models\SystemSetting::getVal('onedrive_redirect_uri');
+            $tenantId = \App\Models\SystemSetting::getVal('onedrive_tenant_id') ?: 'common';
+            
+            if (empty($clientId) || empty($clientSecret) || empty($redirectUri)) {
+                Session::flash('error', 'Δεν έχουν ρυθμιστεί OAuth credentials για τον συγκεκριμένο provider.');
+                $this->redirect('/admin/settings?tab=cloud');
+                return;
+            }
+            
+            $state = bin2hex(random_bytes(16));
+            Session::set('oauth_state', $state);
+            Session::set('oauth_provider', $provider);
+            
+            $authUrl = "https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/authorize?" . http_build_query([
+                'client_id' => $clientId,
+                'redirect_uri' => $redirectUri,
+                'response_type' => 'code',
+                'scope' => 'files.readwrite offline_access User.Read',
+                'state' => $state
+            ]);
+        }
+        
+        $this->redirect($authUrl);
     }
 
     // Handle OAuth Callback and store secure tokens
     public function handleProviderCallback() {
-        $provider = $_GET['provider'] ?? 'googledrive';
         $code = $_GET['code'] ?? '';
-
+        $state = $_GET['state'] ?? '';
+        $savedState = Session::get('oauth_state');
+        $provider = Session::get('oauth_provider') ?: ($_GET['provider'] ?? 'googledrive');
+        
         if (empty($code)) {
-            Session::flash('error', 'Αποτυχία λήψης κωδικού OAuth.');
+            Session::flash('error', 'OAuth Authorization code is missing or error occurred: ' . htmlspecialchars($_GET['error'] ?? ''));
             $this->redirect('/admin/settings?tab=cloud');
             return;
         }
-
-        // Store secure tokens
-        \App\Services\CloudBackupService::saveToken($provider, 'mock_access_token_abc123', 'mock_refresh_token_xyz890', 3600);
-        $this->logAudit('cloud.auth.connected', 'oauth_tokens', null, ['provider' => $provider]);
-
-        Session::flash('success', 'Συνδεθήκατε επιτυχώς με τον Cloud Provider (' . htmlspecialchars($provider) . ')!');
+        
+        if (empty($state) || $state !== $savedState) {
+            Session::flash('error', 'Invalid or expired OAuth state.');
+            $this->redirect('/admin/settings?tab=cloud');
+            return;
+        }
+        
+        // Clear state
+        Session::remove('oauth_state');
+        Session::remove('oauth_provider');
+        
+        // Exchange code for tokens
+        if ($provider === 'googledrive') {
+            $clientId = \App\Models\SystemSetting::getVal('google_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('google_client_secret');
+            $redirectUri = \App\Models\SystemSetting::getVal('google_redirect_uri');
+            
+            $tokenUrl = "https://oauth2.googleapis.com/token";
+            $postFields = [
+                'code' => $code,
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'grant_type' => 'authorization_code'
+            ];
+        } else {
+            $clientId = \App\Models\SystemSetting::getVal('onedrive_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('onedrive_client_secret');
+            $redirectUri = \App\Models\SystemSetting::getVal('onedrive_redirect_uri');
+            $tenantId = \App\Models\SystemSetting::getVal('onedrive_tenant_id') ?: 'common';
+            
+            $tokenUrl = "https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token";
+            $postFields = [
+                'code' => $code,
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
+                'redirect_uri' => $redirectUri,
+                'grant_type' => 'authorization_code'
+            ];
+        }
+        
+        $ch = curl_init($tokenUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($postFields));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        $res = json_decode(curl_exec($ch), true);
+        $codeHttp = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        
+        if ($codeHttp !== 200 || empty($res['access_token'])) {
+            Session::flash('error', 'Token exchange failed: ' . ($res['error_description'] ?? $res['error'] ?? 'HTTP Code ' . $codeHttp));
+            $this->redirect('/admin/settings?tab=cloud');
+            return;
+        }
+        
+        $accessToken = $res['access_token'];
+        $refreshToken = $res['refresh_token'] ?? null;
+        $expiresIn = $res['expires_in'] ?? 3600;
+        
+        // Retrieve connected account identity / email
+        $connectedAccount = 'Unknown Account';
+        if ($provider === 'googledrive') {
+            $ch = curl_init("https://www.googleapis.com/oauth2/v2/userinfo");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+            $userInfo = json_decode(curl_exec($ch), true);
+            curl_close($ch);
+            if (!empty($userInfo['email'])) {
+                $connectedAccount = $userInfo['email'];
+            }
+        } else {
+            $ch = curl_init("https://graph.microsoft.com/v1.0/me");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+            $userInfo = json_decode(curl_exec($ch), true);
+            curl_close($ch);
+            if (!empty($userInfo['mail'])) {
+                $connectedAccount = $userInfo['mail'];
+            } elseif (!empty($userInfo['userPrincipalName'])) {
+                $connectedAccount = $userInfo['userPrincipalName'];
+            }
+        }
+        
+        // Save token to DB
+        \App\Services\CloudBackupService::saveToken($provider, $accessToken, $refreshToken, $expiresIn, $connectedAccount);
+        $this->logAudit('cloud.auth.connected', 'oauth_tokens', null, ['provider' => $provider, 'account' => $connectedAccount]);
+        
+        Session::flash('success', "Συνδεθήκατε επιτυχώς με τον Cloud Provider ({$provider}) ως {$connectedAccount}!");
         $this->redirect('/admin/settings?tab=cloud');
     }
 

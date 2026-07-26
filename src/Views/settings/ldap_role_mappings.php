@@ -10,6 +10,8 @@
     </div>
 </div>
 
+<?= \App\Core\View::render('settings/nav') ?>
+
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card p-3">

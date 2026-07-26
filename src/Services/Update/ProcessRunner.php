@@ -7,6 +7,9 @@ class ProcessRunner {
      */
     public static function runBackgroundWorker(int $updateId): bool {
         $phpPath = defined('PHP_BINARY') && PHP_BINARY ? PHP_BINARY : 'php';
+        if (stripos(PHP_OS, 'WIN') === 0) {
+            $phpPath = str_ireplace('php-cgi.exe', 'php.exe', $phpPath);
+        }
         $workerScript = realpath(__DIR__ . '/../../../tools/release/worker.php');
 
         if (!$workerScript) {

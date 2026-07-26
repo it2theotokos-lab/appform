@@ -2,6 +2,13 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.3-Stable] - 2026-07-26
+
+### Fixed
+- **Settings Navigation Layout**: Refactored settings views to use a unified navigation partial component with flexbox wrapper to prevent tab items misalignment across different resolutions.
+- **Cloud Backup (OAuth Integration)**: Replaced mock connection states with real Client OAuth redirection and callback verification, implementing client credentials configuration and identity retrieval.
+- **Update Mechanism on Windows Server**: Corrected FastCGI PHP binary path resolution, allowing updates to run via CLI on IIS. Shifted updater and diagnostic files to `public/storage/`.
+
 ## [1.1.2-Stable] - 2026-07-26
 
 ### Fixed

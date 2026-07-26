@@ -11,7 +11,7 @@ class CloudBackupService {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public static function saveToken(string $provider, string $accessToken, ?string $refreshToken, int $expiresIn) {
+    public static function saveToken(string $provider, string $accessToken, ?string $refreshToken, int $expiresIn, string $connectedAccount = 'Unknown Account') {
         $db = Database::getInstance();
         
         $key = \App\Core\App::$config['app_key'] ?? 'appform_secret_encryption_key_hash';
@@ -19,8 +19,7 @@ class CloudBackupService {
         $encryptedRefresh = $refreshToken ? openssl_encrypt($refreshToken, 'AES-128-ECB', $key) : null;
         
         $expiresAt = date('Y-m-d H:i:s', time() + $expiresIn);
-        $connectedAccount = ($provider === 'googledrive') ? 'user@company.com' : 'user@onedrive.com';
-        $destFolder = '/AppForm-Backups/';
+        $destFolder = ($provider === 'googledrive') ? '/AppForm-Google-Backups/' : '/AppForm-OneDrive-Backups/';
 
         $stmt = $db->prepare("
             INSERT INTO oauth_tokens (provider, access_token, refresh_token, expires_at, connected_account, last_connected_at, destination_folder)
@@ -38,16 +37,103 @@ class CloudBackupService {
 
     public static function testConnection(string $provider): array {
         $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT expires_at FROM oauth_tokens WHERE provider = ?");
+        $stmt = $db->prepare("SELECT * FROM oauth_tokens WHERE provider = ?");
         $stmt->execute([$provider]);
-        $expiresAt = $stmt->fetchColumn();
-        if (!$expiresAt) {
+        $tok = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$tok) {
             return ['success' => false, 'message' => 'Μη συνδεδεμένο. Απαιτείται OAuth σύνδεση.'];
         }
-        if (strtotime($expiresAt) < time()) {
-            return ['success' => false, 'message' => 'Το Access Token έχει λήξει. Απαιτείται επανασύνδεση.'];
+
+        $key = \App\Core\App::$config['app_key'] ?? 'appform_secret_encryption_key_hash';
+        $accessToken = openssl_decrypt($tok['access_token'], 'AES-128-ECB', $key);
+        $refreshToken = $tok['refresh_token'] ? openssl_decrypt($tok['refresh_token'], 'AES-128-ECB', $key) : null;
+
+        // If expired, try refresh token
+        if (strtotime($tok['expires_at']) < time()) {
+            if (!$refreshToken) {
+                return ['success' => false, 'message' => 'Το Access Token έχει λήξει και δεν υπάρχει Refresh Token.'];
+            }
+            $refreshResult = self::refreshAccessToken($provider, $refreshToken);
+            if (!$refreshResult['success']) {
+                return ['success' => false, 'message' => 'Αποτυχία ανανέωσης token: ' . $refreshResult['message']];
+            }
+            $accessToken = $refreshResult['access_token'];
         }
-        return ['success' => true, 'message' => 'Η δοκιμή σύνδεσης ολοκληρώθηκε επιτυχώς!'];
+
+        // Execute real API request to verify connection
+        if ($provider === 'googledrive') {
+            $ch = curl_init("https://www.googleapis.com/drive/v3/files?pageSize=1");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+            curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($code === 200) {
+                return ['success' => true, 'message' => 'Η δοκιμή σύνδεσης με το Google Drive ολοκληρώθηκε επιτυχώς!'];
+            }
+        } else {
+            $ch = curl_init("https://graph.microsoft.com/v1.0/me/drive");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ["Authorization: Bearer {$accessToken}"]);
+            curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($code === 200) {
+                return ['success' => true, 'message' => 'Η δοκιμή σύνδεσης με το Microsoft OneDrive ολοκληρώθηκε επιτυχώς!'];
+            }
+            $code = $code ?: 'No Response';
+        }
+
+        return ['success' => false, 'message' => 'Η δοκιμή σύνδεσης απέτυχε. Invalid response code: ' . $code];
+    }
+
+    private static function refreshAccessToken(string $provider, string $refreshToken): array {
+        if ($provider === 'googledrive') {
+            $clientId = \App\Models\SystemSetting::getVal('google_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('google_client_secret');
+            $tokenUrl = "https://oauth2.googleapis.com/token";
+        } else {
+            $clientId = \App\Models\SystemSetting::getVal('onedrive_client_id');
+            $clientSecret = \App\Models\SystemSetting::getVal('onedrive_client_secret');
+            $tenantId = \App\Models\SystemSetting::getVal('onedrive_tenant_id') ?: 'common';
+            $tokenUrl = "https://login.microsoftonline.com/{$tenantId}/oauth2/v2.0/token";
+        }
+
+        $ch = curl_init($tokenUrl);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query([
+            'client_id' => $clientId,
+            'client_secret' => $clientSecret,
+            'refresh_token' => $refreshToken,
+            'grant_type' => 'refresh_token'
+        ]));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/x-www-form-urlencoded']);
+        $res = json_decode(curl_exec($ch), true);
+        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if ($code !== 200 || empty($res['access_token'])) {
+            return ['success' => false, 'message' => $res['error_description'] ?? 'HTTP Code ' . $code];
+        }
+
+        // Save new access token
+        $newRefresh = $res['refresh_token'] ?? $refreshToken;
+        $expiresIn = $res['expires_in'] ?? 3600;
+
+        $db = Database::getInstance();
+        $key = \App\Core\App::$config['app_key'] ?? 'appform_secret_encryption_key_hash';
+        $encryptedAccess = openssl_encrypt($res['access_token'], 'AES-128-ECB', $key);
+        $encryptedRefresh = openssl_encrypt($newRefresh, 'AES-128-ECB', $key);
+        $expiresAt = date('Y-m-d H:i:s', time() + $expiresIn);
+
+        $stmt = $db->prepare("UPDATE oauth_tokens SET access_token = ?, refresh_token = ?, expires_at = ?, last_connected_at = NOW() WHERE provider = ?");
+        $stmt->execute([$encryptedAccess, $encryptedRefresh, $expiresAt, $provider]);
+
+        return ['success' => true, 'access_token' => $res['access_token']];
     }
 
     public static function uploadToCloud(int $backupId, string $provider): array {

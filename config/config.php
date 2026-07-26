@@ -35,9 +35,9 @@ $default = [
         ],
     ],
     'storage' => [
-        'logs' => __DIR__ . '/../storage/logs/app.log',
-        'private_uploads' => __DIR__ . '/../storage/private_uploads',
-        'exports' => __DIR__ . '/../storage/exports',
+        'logs' => __DIR__ . '/../public/storage/logs/app.log',
+        'private_uploads' => __DIR__ . '/../public/storage/private_uploads',
+        'exports' => __DIR__ . '/../public/storage/exports',
     ]
 ];
 

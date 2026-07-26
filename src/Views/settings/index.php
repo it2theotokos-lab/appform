@@ -26,48 +26,7 @@ $activeTab = $_GET['tab'] ?? 'general';
 <?php endif; ?>
 
 <!-- Tabs Navigation Header -->
-<div class="card p-2 mb-4 bg-dark border-secondary">
-    <ul class="nav nav-pills nav-fill" role="tablist">
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'general' ? 'active' : '' ?>" href="/admin/settings?tab=general"><i class="fa-solid fa-sliders me-1"></i> Γενικές Ρυθμίσεις</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'backup' ? 'active' : '' ?>" href="/admin/settings?tab=backup"><i class="fa-solid fa-database me-1"></i> Backup</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'demo' ? 'active' : '' ?>" href="/admin/settings?tab=demo"><i class="fa-solid fa-cubes me-1"></i> Demo Data</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'smtp' ? 'active' : '' ?>" href="/admin/settings?tab=smtp"><i class="fa-solid fa-envelope me-1"></i> SMTP & Email</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'global_notifications' ? 'active' : '' ?>" href="/admin/settings?tab=global_notifications"><i class="fa-solid fa-envelope-circle-check me-1"></i> Global Notifications</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'restore' ? 'active' : '' ?>" href="/admin/settings?tab=restore"><i class="fa-solid fa-clock-rotate-left me-1"></i> Επαναφορά</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'cloud' ? 'active' : '' ?>" href="/admin/settings?tab=cloud"><i class="fa-solid fa-cloud me-1"></i> Cloud Backup</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'queue' ? 'active' : '' ?>" href="/admin/settings?tab=queue"><i class="fa-solid fa-list-check me-1"></i> Ουρά Εργασιών</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'plugins' ? 'active' : '' ?>" href="/admin/settings?tab=plugins"><i class="fa-solid fa-puzzle-piece me-1"></i> Πρόσθετα</a>
-        </li>
-        <?php if (\App\Core\Auth::hasPermission('updates.view')): ?>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'updates' ? 'active' : '' ?>" href="/admin/settings/updates"><i class="fa-solid fa-cloud-arrow-down me-1"></i> Αναβάθμιση</a>
-        </li>
-        <?php endif; ?>
-        <li class="nav-item">
-            <a class="nav-link" href="/admin/settings/ldap"><i class="fa-solid fa-server me-1"></i> Active Directory / LDAP</a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link <?= $activeTab === 'audit' ? 'active' : '' ?>" href="/admin/settings?tab=audit"><i class="fa-solid fa-clock-rotate-left me-1"></i> Καταγραφές Ενεργειών</a>
-        </li>
-    </ul>
-</div>
+<?= \App\Core\View::render('settings/nav') ?>
 
 <!-- Tab Content Container Panels -->
 <div class="card p-4">
@@ -529,24 +488,55 @@ $activeTab = $_GET['tab'] ?? 'general';
                 </div>
             </div>
         </div>
-    <?php elseif ($activeTab === 'cloud'): ?>
-        <div>
-            <h4 class="text-white mb-2"><i class="fa-solid fa-cloud text-primary me-2"></i> Cloud Backup & Replication</h4>
-            <p class="text-muted mb-4">Διαχειριστείτε τις συνδέσεις σας με Cloud Providers (Microsoft OneDrive, Google Drive) και παρακολουθήστε την κατάσταση συγχρονισμού των αρχείων.</p>
+            <!-- OAuth Credentials Configuration Form -->
+            <div class="card p-4 border border-secondary bg-dark mb-4 text-start">
+                <h5 class="text-white mb-3"><i class="fa-solid fa-key text-primary me-2"></i> Ρύθμιση OAuth Credentials</h5>
+                <form action="/admin/settings/update" method="POST">
+                    <?= \App\Core\Csrf::field() ?>
+                    <div class="row">
+                        <!-- Google Credentials -->
+                        <div class="col-md-6 border-end border-secondary">
+                            <h6 class="text-white mb-3"><i class="fa-brands fa-google text-success me-2"></i> Google Drive Client API</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Client ID</label>
+                                <input type="text" class="form-control" name="google_client_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('google_client_id') ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Client Secret</label>
+                                <?php $googleSecret = \App\Models\SystemSetting::getVal('google_client_secret'); ?>
+                                <input type="password" class="form-control" name="google_client_secret" value="<?= !empty($googleSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : '' ?>" placeholder="<?= !empty($googleSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : 'Εισάγετε Client Secret' ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Redirect URI</label>
+                                <input type="text" class="form-control" name="google_redirect_uri" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('google_redirect_uri') ?? '') ?>">
+                            </div>
+                        </div>
 
-            <!-- Informational Block -->
-            <div class="alert alert-info border-glass bg-transparent text-white mb-4">
-                <i class="fa-solid fa-circle-info text-info me-2"></i>
-                Για να αποθηκεύσετε backup στο cloud, συνδέστε πρώτα έναν λογαριασμό Google Drive ή Microsoft OneDrive. Μετά επιλέξτε το backup και πατήστε Αποστολή στο Cloud.
+                        <!-- Microsoft Credentials -->
+                        <div class="col-md-6 ps-md-4">
+                            <h6 class="text-white mb-3"><i class="fa-brands fa-windows text-info me-2"></i> Microsoft OneDrive API</h6>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Client ID</label>
+                                <input type="text" class="form-control" name="onedrive_client_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_client_id') ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Client Secret</label>
+                                <?php $onedriveSecret = \App\Models\SystemSetting::getVal('onedrive_client_secret'); ?>
+                                <input type="password" class="form-control" name="onedrive_client_secret" value="<?= !empty($onedriveSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : '' ?>" placeholder="<?= !empty($onedriveSecret) ? '[Κρυπτογραφημένο / Αμετάβλητο]' : 'Εισάγετε Client Secret' ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Tenant ID</label>
+                                <input type="text" class="form-control" name="onedrive_tenant_id" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_tenant_id') ?? 'common') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label text-white-50">Redirect URI</label>
+                                <input type="text" class="form-control" name="onedrive_redirect_uri" value="<?= \App\Core\View::escape(\App\Models\SystemSetting::getVal('onedrive_redirect_uri') ?? '') ?>">
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-2"><i class="fa-solid fa-floppy-disk me-1"></i> Αποθήκευση API Credentials</button>
+                </form>
             </div>
-
-            <!-- Map Tokens -->
-            <?php
-            $tokensByProvider = [];
-            foreach ($cloudTokens ?? [] as $tok) {
-                $tokensByProvider[$tok['provider']] = $tok;
-            }
-            ?>
 
             <!-- OAuth Cloud Connection Actions -->
             <div class="row mb-4">
@@ -556,7 +546,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                         <i class="fa-brands fa-windows text-info mb-3" style="font-size: 3rem;"></i>
                         <h5 class="text-white">Microsoft OneDrive</h5>
 
-                        <?php if (isset($tokensByProvider['onedrive'])):
+                        <?php 
+                        $hasOneDriveCreds = !empty(\App\Models\SystemSetting::getVal('onedrive_client_id')) && 
+                                             !empty(\App\Models\SystemSetting::getVal('onedrive_client_secret')) && 
+                                             !empty(\App\Models\SystemSetting::getVal('onedrive_redirect_uri'));
+                        if (isset($tokensByProvider['onedrive'])):
                             $tok = $tokensByProvider['onedrive'];
                             $isExpired = strtotime($tok['expires_at']) < time();
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
@@ -569,7 +563,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                                 <p class="mb-0 text-white-50 small">Φάκελος: <span class="text-white"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
                             </div>
                             <div class="d-flex gap-2">
-                                <a href="/admin/settings/cloud/auth/onedrive" class="btn btn-sm btn-outline-warning flex-fill"><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</a>
+                                <?php if ($hasOneDriveCreds): ?>
+                                    <a href="/admin/settings/cloud/auth/onedrive" class="btn btn-sm btn-outline-warning flex-fill"><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</a>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-outline-secondary flex-fill" disabled><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</button>
+                                <?php endif; ?>
                                 <form action="/admin/settings/cloud/test/onedrive" method="POST" class="flex-fill">
                                     <?= \App\Core\Csrf::field() ?>
                                     <button type="submit" class="btn btn-sm btn-outline-info w-100"><i class="fa-solid fa-square-check"></i> Δοκιμή</button>
@@ -581,7 +579,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                             </div>
                         <?php else: ?>
                             <p class="text-muted small">Συνδέστε το AppForm Enterprise με το Microsoft OneDrive λογαριασμό σας.</p>
-                            <a href="/admin/settings/cloud/auth/onedrive" class="btn btn-outline-info w-100"><i class="fa-solid fa-link me-1"></i> Σύνδεση με OneDrive</a>
+                            <?php if ($hasOneDriveCreds): ?>
+                                <a href="/admin/settings/cloud/auth/onedrive" class="btn btn-outline-info w-100"><i class="fa-solid fa-link me-1"></i> Σύνδεση με OneDrive</a>
+                            <?php else: ?>
+                                <div class="alert alert-warning py-2 mb-0 text-start small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Δεν έχουν ρυθμιστεί OAuth credentials για τον συγκεκριμένο provider.</div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -592,7 +594,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                         <i class="fa-brands fa-google text-success mb-3" style="font-size: 3rem;"></i>
                         <h5 class="text-white">Google Drive</h5>
 
-                        <?php if (isset($tokensByProvider['googledrive'])):
+                        <?php 
+                        $hasGoogleCreds = !empty(\App\Models\SystemSetting::getVal('google_client_id')) && 
+                                           !empty(\App\Models\SystemSetting::getVal('google_client_secret')) && 
+                                           !empty(\App\Models\SystemSetting::getVal('google_redirect_uri'));
+                        if (isset($tokensByProvider['googledrive'])):
                             $tok = $tokensByProvider['googledrive'];
                             $isExpired = strtotime($tok['expires_at']) < time();
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
@@ -605,7 +611,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                                 <p class="mb-0 text-white-50 small">Φάκελος: <span class="text-white"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
                             </div>
                             <div class="d-flex gap-2">
-                                <a href="/admin/settings/cloud/auth/googledrive" class="btn btn-sm btn-outline-warning flex-fill"><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</a>
+                                <?php if ($hasGoogleCreds): ?>
+                                    <a href="/admin/settings/cloud/auth/googledrive" class="btn btn-sm btn-outline-warning flex-fill"><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</a>
+                                <?php else: ?>
+                                    <button class="btn btn-sm btn-outline-secondary flex-fill" disabled><i class="fa-solid fa-arrows-rotate"></i> Επανασύνδεση</button>
+                                <?php endif; ?>
                                 <form action="/admin/settings/cloud/test/googledrive" method="POST" class="flex-fill">
                                     <?= \App\Core\Csrf::field() ?>
                                     <button type="submit" class="btn btn-sm btn-outline-info w-100"><i class="fa-solid fa-square-check"></i> Δοκιμή</button>
@@ -617,7 +627,11 @@ $activeTab = $_GET['tab'] ?? 'general';
                             </div>
                         <?php else: ?>
                             <p class="text-muted small">Συνδέστε το AppForm Enterprise με το Google Drive workspace σας.</p>
-                            <a href="/admin/settings/cloud/auth/googledrive" class="btn btn-outline-success w-100"><i class="fa-solid fa-link me-1"></i> Σύνδεση με Google Drive</a>
+                            <?php if ($hasGoogleCreds): ?>
+                                <a href="/admin/settings/cloud/auth/googledrive" class="btn btn-outline-success w-100"><i class="fa-solid fa-link me-1"></i> Σύνδεση με Google Drive</a>
+                            <?php else: ?>
+                                <div class="alert alert-warning py-2 mb-0 text-start small"><i class="fa-solid fa-triangle-exclamation me-1"></i> Δεν έχουν ρυθμιστεί OAuth credentials για τον συγκεκριμένο provider.</div>
+                            <?php endif; ?>
                         <?php endif; ?>
                     </div>
                 </div>

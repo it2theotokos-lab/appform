@@ -3,7 +3,7 @@ namespace App\Core;
 
 class Logger {
     public static function log(string $message, string $level = 'ERROR') {
-        $logPath = App::$config['storage']['logs'] ?? __DIR__ . '/../../storage/logs/app.log';
+        $logPath = App::$config['storage']['logs'] ?? __DIR__ . '/../../public/storage/logs/app.log';
         $logDir = dirname($logPath);
 
         // Auto-create directories if they do not exist
