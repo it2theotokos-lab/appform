@@ -2,6 +2,15 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.5-Stable] - 2026-07-27
+
+### Fixed
+- **Pre-flight Checks**: Added checks for GitHub Release API, cURL/SSL, PHP ZipArchive, and write permissions before updating.
+- **mysqldump Execution**: Added support for custom mysqldump executable path with fallback to Windows PATH.
+- **Backup Validations**: Added validation to ensure database and file backups are created successfully and are valid.
+- **Rollback State Transitions**: Allowed rollback transitions from failed states to prevent state machine transition errors.
+- **Force Unlock**: Implemented robust unlock mechanism resetting update_status.json and setting maintenance_mode to 0.
+
 ## [1.1.4-Stable] - 2026-07-26
 
 ### Fixed

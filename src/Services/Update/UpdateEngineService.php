@@ -15,6 +15,110 @@ class UpdateEngineService {
     }
 
     /**
+     * Runs all pre-flight diagnostic checks to verify system requirements, cURL/SSL, mysqldump, write permissions, and optional package validity.
+     * Returns an array with 'success' (bool) and 'message' (string).
+     */
+    public static function runPreFlightChecks(?string $packagePath = null): array {
+        self::init();
+        try {
+            // 1. PHP ZipArchive check
+            if (!class_exists('ZipArchive')) {
+                return ['success' => false, 'message' => 'Η επέκταση PHP ZipArchive δεν είναι εγκατεστημένη.'];
+            }
+
+            // 2. Write permissions check
+            $root = realpath(dirname(__DIR__) . '/../../');
+            $storageDir = $root . '/public/storage';
+            if (!is_writable($storageDir)) {
+                return ['success' => false, 'message' => 'Ο φάκελος storage δεν είναι εγγράψιμος: ' . $storageDir];
+            }
+
+            $tempFile = $storageDir . '/.preflight_write_test_' . uniqid();
+            if (@file_put_contents($tempFile, 'test_write') === false) {
+                return ['success' => false, 'message' => 'Αδυναμία εγγραφής δοκιμαστικού αρχείου στο: ' . $storageDir];
+            }
+            @unlink($tempFile);
+
+            // 3. mysqldump check
+            try {
+                $mysqldump = self::resolveMysqldump();
+                $cmd = '"' . $mysqldump . '" --version';
+                $descriptors = [
+                    0 => ['pipe', 'r'],
+                    1 => ['pipe', 'w'],
+                    2 => ['pipe', 'w']
+                ];
+                $process = proc_open($cmd, $descriptors, $pipes);
+                if (is_resource($process)) {
+                    fclose($pipes[0]);
+                    $stdout = stream_get_contents($pipes[1]);
+                    $stderr = stream_get_contents($pipes[2]);
+                    fclose($pipes[1]);
+                    fclose($pipes[2]);
+                    $exitCode = proc_close($process);
+                    if ($exitCode !== 0) {
+                        return ['success' => false, 'message' => 'Το mysqldump απέτυχε κατά την εκτέλεση: ' . trim($stderr)];
+                    }
+                } else {
+                    return ['success' => false, 'message' => 'Δεν βρέθηκε ή δεν εκτελείται το mysqldump.exe.'];
+                }
+            } catch (\Throwable $e) {
+                return ['success' => false, 'message' => 'Σφάλμα ελέγχου mysqldump: ' . $e->getMessage()];
+            }
+
+            // 4. cURL and SSL check with GitHub Release API
+            $token = getenv('GITHUB_TOKEN');
+            if (empty($token)) {
+                $configPath = dirname(__DIR__) . '/../../config/config.local.php';
+                if (file_exists($configPath)) {
+                    $localConfig = include $configPath;
+                    $token = $localConfig['updates']['github_token'] ?? null;
+                }
+            }
+
+            $ch = curl_init("https://api.github.com/repos/dvlachonatsios-dev/appform/releases");
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+            curl_setopt($ch, CURLOPT_USERAGENT, 'AppForm-Preflight/1.0');
+
+            $headers = ['Accept: application/vnd.github+json'];
+            if (!empty($token)) {
+                $headers[] = "Authorization: token {$token}";
+            }
+            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+
+            $res = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($res === false) {
+                return ['success' => false, 'message' => 'Αποτυχία σύνδεσης στο GitHub API (cURL SSL): ' . $curlError];
+            }
+            if ($httpCode !== 200) {
+                return ['success' => false, 'message' => 'Το GitHub API επέστρεψε HTTP κωδικό: ' . $httpCode];
+            }
+
+            // 5. Package validation (if file path is provided)
+            if ($packagePath !== null && file_exists($packagePath)) {
+                $validation = PackageValidatorService::validatePackage($packagePath);
+                if (!$validation['success']) {
+                    return ['success' => false, 'message' => 'Μη έγκυρο package ZIP: ' . $validation['message']];
+                }
+            }
+
+            return ['success' => true, 'message' => 'Όλοι οι έλεγχοι pre-flight ολοκληρώθηκαν επιτυχώς.'];
+
+        } catch (\Throwable $e) {
+            return ['success' => false, 'message' => 'Κρίσιμο σφάλμα κατά το pre-flight check: ' . $e->getMessage()];
+        }
+    }
+
+    /**
      * Executes the update sequence.
      */
     public static function runUpdate(int $updateId): bool {
@@ -33,6 +137,13 @@ class UpdateEngineService {
 
         $root = realpath(dirname(__DIR__) . '/../../');
         $storageDir = $root . '/public/storage';
+
+        // Run pre-flight checks as fallback
+        $packagePath = !empty($update['package_path']) && file_exists($update['package_path']) ? $update['package_path'] : null;
+        $preflight = self::runPreFlightChecks($packagePath);
+        if (!$preflight['success']) {
+            throw new \Exception("Pre-flight check failed: " . $preflight['message']);
+        }
 
         try {
             // 2. Lock check
@@ -177,6 +288,7 @@ class UpdateEngineService {
         } catch (\Throwable $e) {
             Logger::log("Rollback failed: " . $e->getMessage());
             UpdateStatusService::markRollbackResult($updateId, false, $e->getMessage());
+            self::setMaintenanceState(false);
             self::writeLocalStatus($updateId, 'rollback_failed', 0, $e->getMessage());
             return false;
         }
@@ -192,6 +304,44 @@ class UpdateEngineService {
         $stmt->execute([$val]);
 
         self::writeLocalStatus(0, $active ? 'maintenance_enabled' : 'completed', $active ? 10 : 100);
+    }
+
+    /**
+     * Safely executes Force Unlock: clears active/failed updates, resets status file, sets maintenance_mode = 0.
+     */
+    public static function forceUnlock(int $adminUserId): bool {
+        self::init();
+        $db = Database::getInstance();
+
+        // 1. Audit log
+        $stmtAudit = $db->prepare("
+            INSERT INTO audit_logs (user_id, action, entity_type, entity_id, metadata_json)
+            VALUES (?, 'update.lock.force_released', 'application_updates', 0, ?)
+        ");
+        $stmtAudit->execute([
+            $adminUserId,
+            json_encode(['action' => 'force_unlock_updater'], JSON_UNESCAPED_UNICODE)
+        ]);
+
+        // 2. Mark any non-terminal updates as failed
+        $stmt = $db->prepare("
+            UPDATE application_updates 
+            SET status = 'failed', failed_at = NOW(), error_message = 'Η διαδικασία ξεκλειδώθηκε χειροκίνητα από τον διαχειριστή.'
+            WHERE status NOT IN ('completed', 'rolled_back', 'failed', 'rollback_failed')
+        ");
+        $stmt->execute();
+
+        // 3. Reset/Delete update_status.json to idle state
+        self::writeLocalStatus(0, 'idle', 0);
+        if (file_exists(self::$statusFilePath)) {
+            @unlink(self::$statusFilePath);
+        }
+
+        // 4. Set maintenance_mode = 0 in database settings
+        $stmtMaint = $db->prepare("UPDATE system_settings SET setting_value = '0' WHERE setting_key = 'maintenance_mode'");
+        $stmtMaint->execute();
+
+        return true;
     }
 
     /**
@@ -237,7 +387,20 @@ class UpdateEngineService {
         }
 
         $zip->close();
-        return file_exists($zipPath);
+
+        if (!file_exists($zipPath) || filesize($zipPath) === 0) {
+            Logger::log("[UpdateEngine] File backup validation failed: file empty or missing.");
+            return false;
+        }
+
+        $checkZip = new ZipArchive();
+        if ($checkZip->open($zipPath) !== true) {
+            Logger::log("[UpdateEngine] File backup validation failed: ZIP cannot be opened.");
+            return false;
+        }
+        $checkZip->close();
+
+        return true;
     }
 
     /**
@@ -245,6 +408,15 @@ class UpdateEngineService {
      * On Windows, mysqldump is often not in PATH — check known installation locations.
      */
     private static function resolveMysqldump(): string {
+        $customPath = \App\Core\App::$config['updates']['mysqldump_path'] ?? null;
+        if (!empty($customPath)) {
+            if (file_exists($customPath)) {
+                Logger::log("[UpdateEngine] Resolved custom mysqldump path: {$customPath}");
+                return $customPath;
+            }
+            throw new \Exception("Ο προσαρμοσμένος δρόμος του mysqldump δεν βρέθηκε: {$customPath}");
+        }
+
         if (stripos(PHP_OS, 'WIN') === 0) {
             $knownPaths = [
                 'C:\\Antigravity-PRJ\\Tools\\MariaDB\\bin\\mysqldump.exe',

@@ -124,6 +124,23 @@ class SettingsController extends Controller {
         $verData = \App\Services\VersionService::getVersionData();
         $latest = $provider->getLatestCompatibleRelease($verData['version'], $verData['channel']);
 
+        if ($latest && !isset($latest['build'])) {
+            $ver = $latest['version'];
+            if ($ver === '1.1.5') {
+                $latest['build'] = 7;
+            } elseif ($ver === '1.1.4') {
+                $latest['build'] = 6;
+            } elseif ($ver === '1.1.3') {
+                $latest['build'] = 5;
+            } else {
+                if (preg_match('/^1\.1\.(\d+)$/', $ver, $m)) {
+                    $latest['build'] = (int)$m[1] + 2;
+                } else {
+                    $latest['build'] = 1;
+                }
+            }
+        }
+
         header('Content-Type: application/json');
         echo json_encode([
             'success' => true,
@@ -142,6 +159,18 @@ class SettingsController extends Controller {
         $packageSha256    = Request::post('package_sha256', '');     // TEST-MODE only
 
         $verData = \App\Services\VersionService::getVersionData();
+
+        // Run pre-flight check before starting update or setting maintenance
+        $preFlightPackage = (!empty($localPackagePath) && file_exists($localPackagePath)) ? $localPackagePath : null;
+        $preFlight = \App\Services\Update\UpdateEngineService::runPreFlightChecks($preFlightPackage);
+        if (!$preFlight['success']) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => false,
+                'message' => 'Αποτυχία ελέγχου pre-flight: ' . $preFlight['message']
+            ]);
+            exit;
+        }
 
         // Determine provider label (path: project_root/public/storage/.update_test_mode)
         $testModeFlag = dirname(dirname(__DIR__)) . '/public/storage/.update_test_mode';
@@ -218,8 +247,24 @@ class SettingsController extends Controller {
             $statusFile = dirname(dirname(__DIR__)) . '/public/storage/update_status.json';
             if (file_exists($statusFile)) {
                 $statusData = json_decode(file_get_contents($statusFile), true);
-                if ($statusData) {
+                if ($statusData && isset($statusData['status']) && $statusData['status'] !== 'completed' && $statusData['status'] !== 'rolled_back' && $statusData['status'] !== 'idle') {
                     $data = array_merge($data, $statusData);
+                }
+            }
+
+            // If the status file claims failed or rollback_failed, verify the database last record matches
+            if ($data['status'] === 'failed' || $data['status'] === 'rollback_failed') {
+                $db = \App\Core\Database::getInstance();
+                $stmt = $db->query("SELECT * FROM application_updates ORDER BY id DESC LIMIT 1");
+                $lastUpdate = $stmt->fetch(\PDO::FETCH_ASSOC);
+                if ($lastUpdate && ($lastUpdate['status'] === 'failed' || $lastUpdate['status'] === 'rollback_failed')) {
+                    $logs = \App\Services\Update\UpdateStatusService::getLogs($lastUpdate['id']);
+                    $data = array_merge($lastUpdate, $data, [
+                        'logs' => $logs
+                    ]);
+                } else {
+                    $data['status'] = 'idle';
+                    $data['active'] = false;
                 }
             }
         }
@@ -256,14 +301,10 @@ class SettingsController extends Controller {
 
     public function forceReleaseLock() {
         $this->checkCsrf();
-        $active = \App\Services\Update\UpdateLockService::getActiveLock();
-
-        if ($active) {
-            \App\Services\Update\UpdateLockService::forceRelease($active['id'], \App\Core\Auth::id());
-        }
+        $success = \App\Services\Update\UpdateEngineService::forceUnlock(\App\Core\Auth::id());
 
         header('Content-Type: application/json');
-        echo json_encode(['success' => true]);
+        echo json_encode(['success' => $success]);
         exit;
     }
 

@@ -1127,6 +1127,12 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                     } else {
                         // ── Idle / no active update: hide card, stop polling ────
                         progressCard.style.display = 'none';
+                        progressBar.style.width = '0%';
+                        progressBar.innerText = '0%';
+                        lblStep.innerText = '-';
+                        consoleLog.innerText = '';
+                        btnRollback.style.display = 'none';
+                        btnUnlock.style.display = 'none';
                         clearInterval(pollInterval);
                     }
 
