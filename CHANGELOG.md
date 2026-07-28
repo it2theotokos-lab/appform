@@ -2,6 +2,12 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.7-Stable] - 2026-07-28
+
+### Fixed
+- **Production Update Package Download**: Integrated active `ReleaseProvider` and `downloadAsset()` in update startup sequence to resolve missing package ZIP on production environments before background worker dispatch.
+- **Update Verification**: Enforced package existence, positive size validation, and SHA-256 integrity verification before starting update workflow, with automatic rollbacks and cleanups.
+
 ## [1.1.6-Stable] - 2026-07-28
 
 ### Added

@@ -126,7 +126,9 @@ class SettingsController extends Controller {
 
         if ($latest && !isset($latest['build'])) {
             $ver = $latest['version'];
-            if ($ver === '1.1.6') {
+            if ($ver === '1.1.7') {
+                $latest['build'] = 9;
+            } elseif ($ver === '1.1.6') {
                 $latest['build'] = 8;
             } elseif ($ver === '1.1.5') {
                 $latest['build'] = 7;
@@ -187,20 +189,85 @@ class SettingsController extends Controller {
             'provider'        => $providerLabel
         ]);
 
+        $storageDir = dirname(dirname(__DIR__)) . '/public/storage';
+        $packagePath = $storageDir . '/update_package_' . $updateId . '.zip';
+
         // TEST-MODE: if a local package path is supplied, pre-stage it so the engine finds it.
         // The engine expects the package at public/storage/update_package_{id}.zip
         // OR at update['package_path'] in DB.
         if ($localPackagePath && file_exists($localPackagePath)) {
-            $storageDir = dirname(dirname(__DIR__)) . '/public/storage';
-            $stagedPath = $storageDir . '/update_package_' . $updateId . '.zip';
-            copy($localPackagePath, $stagedPath);
+            copy($localPackagePath, $packagePath);
 
             // Write path + sha256 to DB so engine skips download
             $db = \App\Core\Database::getInstance();
             $stmt = $db->prepare(
                 "UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?"
             );
-            $stmt->execute([$stagedPath, $packageSha256 ?: null, $updateId]);
+            $stmt->execute([$packagePath, $packageSha256 ?: null, $updateId]);
+        } else {
+            // Production Flow: Download the package first
+            try {
+                if ($providerLabel === 'local_test') {
+                    $provider = new \App\Services\Update\LocalReleaseProvider();
+                } else {
+                    $provider = new \App\Services\Update\GitHubReleaseProvider();
+                }
+
+                \App\Services\Update\UpdateStatusService::updateState($updateId, \App\Services\Update\UpdateStateMachine::STATE_CHECKING_RELEASE, 'check_release');
+
+                $latest = $provider->getLatestCompatibleRelease($verData['version'], $channel);
+                if (!$latest || $latest['version'] !== $targetVersion) {
+                    throw new \Exception("Δεν βρέθηκε συμβατό πακέτο αναβάθμισης για την έκδοση {$targetVersion}.");
+                }
+
+                // Download the asset
+                \App\Services\Update\UpdateStatusService::updateState($updateId, \App\Services\Update\UpdateStateMachine::STATE_DOWNLOADING, 'download_package');
+                
+                $downloaded = $provider->downloadAsset($latest['package_url'], $packagePath);
+                if (!$downloaded || !file_exists($packagePath) || filesize($packagePath) === 0) {
+                    if (file_exists($packagePath)) {
+                        unlink($packagePath);
+                    }
+                    throw new \Exception("Αποτυχία λήψης του πακέτου αναβάθμισης από το URL: " . $latest['package_url']);
+                }
+
+                // Verify checksum if provided
+                if (!empty($latest['sha256'])) {
+                    $actualHash = hash_file('sha256', $packagePath);
+                    if (!hash_equals($latest['sha256'], $actualHash)) {
+                        if (file_exists($packagePath)) {
+                            unlink($packagePath);
+                        }
+                        throw new \Exception("Σφάλμα επαλήθευσης Checksum. Αναμενόμενο: {$latest['sha256']}, Λήφθηκε: {$actualHash}");
+                    }
+                }
+
+                // Write path + sha256 to DB so engine uses it
+                $db = \App\Core\Database::getInstance();
+                $stmt = $db->prepare(
+                    "UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?"
+                );
+                $stmt->execute([$packagePath, $latest['sha256'] ?? null, $updateId]);
+
+                \App\Services\Update\UpdateStatusService::appendLog($updateId, 'download_package', 'info', "Επιτυχής λήψη και επαλήθευση του πακέτου αναβάθμισης.");
+
+            } catch (\Throwable $e) {
+                // If download or checksum verification fails, mark update as failed and throw/return
+                \App\Services\Update\UpdateStatusService::markFailure($updateId, 'UPDATE_PIPELINE_ERROR', $e->getMessage());
+                // Turn off maintenance mode if it was somehow toggled
+                \App\Services\Update\UpdateEngineService::setMaintenanceState(false);
+                
+                if (file_exists($packagePath)) {
+                    unlink($packagePath);
+                }
+
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Αποτυχία προετοιμασίας πακέτου αναβάθμισης: ' . $e->getMessage()
+                ]);
+                exit;
+            }
         }
 
         $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
