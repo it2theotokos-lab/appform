@@ -31,8 +31,8 @@ class JobQueueService {
         // Synchronous inline execution for immediate delivery
         try {
             if (class_exists($jobClass)) {
-                $job = new $jobClass($jobId, $payload);
-                $db->prepare("UPDATE jobs SET status = 'processing', attempts = 1, reserved_at = NOW() WHERE id = ?")->execute([$jobId]);
+                $job = new $jobClass($payload, $jobId);
+                $db->prepare("UPDATE jobs SET status = 'processing', attempts = 1, started_at = NOW() WHERE id = ?")->execute([$jobId]);
                 $success = $job->handle();
                 if ($success) {
                     $db->prepare("UPDATE jobs SET status = 'completed', completed_at = NOW() WHERE id = ?")->execute([$jobId]);

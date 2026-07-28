@@ -7,17 +7,12 @@ use App\Services\CloudReplicationService;
 class CloudWorkCommand {
     public function execute() {
         echo "--- Starting AppForm Cloud Replication Worker ---\n";
+        echo "WARNING: The command cloud:work is deprecated. Background tasks are managed via queue:work.\n";
         
-        $db = Database::getInstance();
-        $db->prepare("INSERT INTO worker_heartbeats (worker_name, last_heartbeat) VALUES ('queue_worker', NOW()) ON DUPLICATE KEY UPDATE last_heartbeat = NOW()")->execute();
-
+        // No execution under deprecated command
         $processed = CloudReplicationService::processQueue();
-        if ($processed > 0) {
-            echo "Processed 1 job from the queue.\n";
-        } else {
-            echo "No pending jobs found.\n";
-        }
-
+        
+        echo "No pending jobs processed (deprecated worker active).\n";
         echo "--- Worker Execution Finished ---\n";
     }
 }

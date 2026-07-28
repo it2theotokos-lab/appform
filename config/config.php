@@ -38,6 +38,11 @@ $default = [
         'logs' => __DIR__ . '/../public/storage/logs/app.log',
         'private_uploads' => __DIR__ . '/../public/storage/private_uploads',
         'exports' => __DIR__ . '/../public/storage/exports',
+    ],
+    'queue' => [
+        'sync' => true,
+        'cloud_upload_timeout' => 1800,
+        'worker_heartbeat_timeout' => 300,
     ]
 ];
 

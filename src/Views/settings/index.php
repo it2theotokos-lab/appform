@@ -612,14 +612,14 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                                            !empty(\App\Models\SystemSetting::getVal('google_redirect_uri'));
                         if (isset($tokensByProvider['googledrive'])):
                             $tok = $tokensByProvider['googledrive'];
-                            $isExpired = strtotime($tok['expires_at']) < time();
+                            $isExpired = empty($tok['expires_at']) || strtotime($tok['expires_at']) < time();
                             $statusText = $isExpired ? 'Απαιτεί επανασύνδεση' : 'Συνδεδεμένο';
                             $statusColor = $isExpired ? 'text-warning' : 'text-success';
                         ?>
                             <div class="text-start mb-3 p-3 rounded border" style="background:var(--color-bg);border-color:var(--color-border);">
                                 <p class="mb-1 text-muted small">Κατάσταση: <span class="<?= $statusColor ?> font-bold"><?= $statusText ?></span></p>
                                 <p class="mb-1 text-muted small">Λογαριασμός: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['connected_account'] ?? 'N/A') ?></span></p>
-                                <p class="mb-1 text-muted small">Σύνδεση: <span style="color:var(--color-text);"><?= date('d/m/Y H:i', strtotime($tok['last_connected_at'])) ?></span></p>
+                                <p class="mb-1 text-muted small">Σύνδεση: <span style="color:var(--color-text);"><?= $tok['last_connected_at'] ? date('d/m/Y H:i', strtotime($tok['last_connected_at'])) : 'N/A' ?></span></p>
                                 <p class="mb-0 text-muted small">Φάκελος: <span style="color:var(--color-text);"><?= htmlspecialchars($tok['destination_folder'] ?? '/AppForm-Backups/') ?></span></p>
                             </div>
                             <div class="d-flex gap-2">

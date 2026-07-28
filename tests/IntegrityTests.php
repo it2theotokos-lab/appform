@@ -50,7 +50,11 @@ assert(empty($foundMockTokens), "Test 4 Failed: Mock access token found in sourc
 echo "Test 4 Passed: Hardcoded mock OAuth tokens are completely removed.\n";
 
 // 5. Connection test returns fake success
+$dbTemp = \App\Core\Database::getInstance();
+$dbTemp->beginTransaction();
+$dbTemp->query("DELETE FROM oauth_tokens WHERE provider = 'googledrive'");
 $testRes = \App\Services\CloudBackupService::testConnection('googledrive');
+$dbTemp->rollBack();
 assert($testRes['success'] === false, "Test 5 Failed: connection test returned success without tokens.");
 echo "Test 5 Passed: Connection test fails appropriately when no credentials/tokens exist.\n";
 
