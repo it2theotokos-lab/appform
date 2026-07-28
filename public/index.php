@@ -281,6 +281,7 @@ $router->post('/admin/settings/plugins/{key}/disable', [\App\Controllers\PluginC
 $router->get('/admin/settings/updates', [\App\Controllers\SettingsController::class, 'showUpdates'], ['auth', 'permission:updates.view']);
 $router->post('/admin/settings/updates/check', [\App\Controllers\SettingsController::class, 'checkUpdates'], ['auth', 'permission:updates.manage']);
 $router->post('/admin/settings/updates/start', [\App\Controllers\SettingsController::class, 'startUpdate'], ['auth', 'permission:updates.manage']);
+$router->post('/admin/settings/updates/local', [\App\Controllers\SettingsController::class, 'localUpdate'], ['auth', 'permission:updates.manage']);
 $router->get('/admin/settings/updates/status', [\App\Controllers\SettingsController::class, 'getStatus'], ['auth', 'permission:updates.view']);
 $router->post('/admin/settings/updates/rollback', [\App\Controllers\SettingsController::class, 'rollbackUpdate'], ['auth', 'permission:updates.rollback']);
 $router->post('/admin/settings/updates/force-release', [\App\Controllers\SettingsController::class, 'forceReleaseLock'], ['auth', 'permission:updates.manage']);

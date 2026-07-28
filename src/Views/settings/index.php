@@ -959,6 +959,23 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                 </div>
             </div>
 
+            <!-- Local Update from ZIP Panel -->
+            <?php if (\App\Core\Auth::hasPermission('updates.manage')): ?>
+            <div class="card p-3 mb-4" style="background:var(--color-surface);border-color:var(--color-border);">
+                <h6 class="border-bottom pb-2 mb-3" style="color:var(--color-text);border-color:var(--color-border)!important;"><i class="fa-solid fa-file-zipper me-2 text-info"></i> Τοπική Αναβάθμιση από Αρχείο</h6>
+                <div class="alert alert-warning small">
+                    <i class="fa-solid fa-triangle-exclamation me-1"></i> ΠΡΟΣΟΧΗ: Δέχεται μόνο επίσημα incremental update ZIPs (π.χ. AppForm-1.1.11-update.zip). Μην ανεβάζετε το full installation ZIP.
+                </div>
+                <form id="form-local-update" action="/admin/settings/updates/local" method="POST" enctype="multipart/form-data">
+                    <?= \App\Core\Csrf::field() ?>
+                    <div class="mb-3">
+                        <input type="file" name="local_zip" id="inp-local-zip" class="form-control form-control-sm" accept=".zip" required>
+                    </div>
+                    <button type="submit" id="btn-local-update" class="btn btn-info btn-sm text-white"><i class="fa-solid fa-upload me-1"></i> Έναρξη Τοπικής Αναβάθμισης</button>
+                </form>
+            </div>
+            <?php endif; ?>
+
             <!-- Execution Console Log / Real-time Progress Bar -->
             <div id="update-progress-card" class="card p-3 mb-4" style="display:none;background:var(--color-surface);border-color:var(--color-border);">
                 <h6 class="mb-3" style="color:var(--color-text);"><i class="fa-solid fa-gear fa-spin me-2 text-warning"></i> Πρόοδος Εγκατάστασης</h6>
@@ -1067,6 +1084,45 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                         } else {
                             alert('Αποτυχία εκκίνησης αναβάθμισης.');
                         }
+                    });
+                });
+            }
+
+            // Handle Local Update Form
+            const formLocalUpdate = document.getElementById('form-local-update');
+            if (formLocalUpdate) {
+                formLocalUpdate.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    if (!confirm('Είστε σίγουροι ότι θέλετε να ξεκινήσετε την τοπική αναβάθμιση; Η διαδικασία δεν μπορεί να διακοπεί.')) {
+                        return;
+                    }
+                    const btnLocal = document.getElementById('btn-local-update');
+                    btnLocal.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i> Μεταφόρτωση...';
+                    btnLocal.disabled = true;
+
+                    const formData = new FormData(formLocalUpdate);
+
+                    fetch('/admin/settings/updates/local', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        btnLocal.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Έναρξη Τοπικής Αναβάθμισης';
+                        btnLocal.disabled = false;
+                        if (data.success) {
+                            alert('Η μεταφόρτωση ολοκληρώθηκε και η διαδικασία εγκατάστασης ξεκίνησε.');
+                            progressCard.style.display = 'block';
+                            startPolling();
+                        } else {
+                            alert('Σφάλμα μεταφόρτωσης: ' + (data.message || 'Άγνωστο σφάλμα.'));
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        btnLocal.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Έναρξη Τοπικής Αναβάθμισης';
+                        btnLocal.disabled = false;
+                        alert('Σφάλμα δικτύου κατά την εκκίνηση της τοπικής αναβάθμισης.');
                     });
                 });
             }

@@ -280,6 +280,96 @@ class SettingsController extends Controller {
         exit;
     }
 
+    public function localUpdate() {
+        $this->checkCsrf();
+
+        if (empty($_FILES['local_zip']) || $_FILES['local_zip']['error'] !== UPLOAD_ERR_OK) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Αποτυχία μεταφόρτωσης του αρχείου.']);
+            exit;
+        }
+
+        $tmpPath = $_FILES['local_zip']['tmp_name'];
+        $name = $_FILES['local_zip']['name'];
+
+        if (!str_ends_with(strtolower($name), '.zip')) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Μόνο αρχεία ZIP επιτρέπονται.']);
+            exit;
+        }
+
+        $validation = \App\Services\Update\PackageValidatorService::validatePackage($tmpPath);
+        if (!$validation['success']) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Μη έγκυρο package: ' . $validation['message']]);
+            exit;
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($tmpPath) === true) {
+            $manifestStr = $zip->getFromName('manifest.json');
+            $zip->close();
+            if ($manifestStr) {
+                $manifest = json_decode($manifestStr, true);
+                if (($manifest['package_type'] ?? '') !== 'update') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Προσοχή: Μόνο Incremental Updates (AppForm-*-update.zip) επιτρέπονται, όχι Full Installations.']);
+                    exit;
+                }
+                $targetVersion = $manifest['version'] ?? 'unknown';
+                $buildNumber = $manifest['build'] ?? 1;
+            } else {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Λείπει το manifest.json']);
+                exit;
+            }
+        }
+
+        $preFlight = \App\Services\Update\UpdateEngineService::runPreFlightChecks($tmpPath);
+        if (!$preFlight['success']) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Αποτυχία ελέγχου pre-flight: ' . $preFlight['message']]);
+            exit;
+        }
+
+        $verData = \App\Services\VersionService::getVersionData();
+        $updateId = \App\Services\Update\UpdateStatusService::createUpdateRecord([
+            'release_version' => $targetVersion,
+            'build_number'    => $buildNumber,
+            'release_channel' => 'stable',
+            'previous_version' => $verData['version'],
+            'previous_build'  => $verData['build'],
+            'provider'        => 'local_upload'
+        ]);
+
+        $storageDir = dirname(dirname(__DIR__)) . '/public/storage';
+        $packagePath = $storageDir . '/update_package_' . $updateId . '.zip';
+
+        if (!move_uploaded_file($tmpPath, $packagePath)) {
+            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'UPLOAD_FAILED', 'Αποτυχία μετακίνησης του αρχείου ZIP.');
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Αποτυχία αποθήκευσης του αρχείου στο σύστημα.']);
+            exit;
+        }
+
+        $packageSha256 = hash_file('sha256', $packagePath);
+        $db = \App\Core\Database::getInstance();
+        $stmt = $db->prepare("UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?");
+        $stmt->execute([$packagePath, $packageSha256, $updateId]);
+
+        \App\Services\Update\UpdateStatusService::updateState($updateId, \App\Services\Update\UpdateStateMachine::STATE_DOWNLOADING, 'download_package');
+        \App\Services\Update\UpdateStatusService::appendLog($updateId, 'download_package', 'info', "Επιτυχής λήψη (τοπικό upload) και επαλήθευση του πακέτου. SHA-256: {$packageSha256}");
+
+        $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success'   => $started,
+            'update_id' => $updateId
+        ]);
+        exit;
+    }
+
     public function getStatus() {
         // If a specific update_id is requested, return that record directly.
         // This avoids stale-data issues when multiple update records exist.
