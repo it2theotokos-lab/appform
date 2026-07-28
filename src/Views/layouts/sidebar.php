@@ -291,7 +291,7 @@ if (!function_exists('hasActiveChild')) {
         <!-- User mini-profile -->
         <div class="d-flex align-items-center gap-2 mb-3 px-2">
             <div class="user-avatar" style="width:32px;height:32px;font-size:0.75rem;padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;" aria-hidden="true">
-                <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(__DIR__)) . '/public' . $user['avatar_path'])): ?>
+                <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(dirname(__DIR__))) . '/public' . $user['avatar_path'])): ?>
                     <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
                 <?php else: ?>
                     <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>

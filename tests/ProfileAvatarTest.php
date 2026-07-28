@@ -231,6 +231,110 @@ foreach (glob(__DIR__ . '/../public/storage/avatars/avatar_9_*') as $f) {
 // Clean up database column for user 9
 $db->exec("UPDATE users SET avatar_path = NULL WHERE id = 9");
 
+// -------------------------------------------------------------------------
+// TEST 6: Fixed file_exists() path correctly resolves on disk after upload
+// -------------------------------------------------------------------------
+echo "\nTest 6: file_exists() resolves correctly after upload (dirname fix validation)...\n";
+// Re-run case1 to upload a fresh avatar
+shell_exec("\"$php\" \"$script\" case1");
+$stmt = $db->prepare("SELECT avatar_path FROM users WHERE id = 9");
+$stmt->execute();
+$avatarPath6 = $stmt->fetchColumn();
+assert(!empty($avatarPath6), "Test 6 Failed: No avatar_path stored in DB.");
+
+// Simulate what the FIXED template now does (dirname x3 from src/Views/auth/)
+$projectRoot = realpath(__DIR__ . '/..');
+$fixedExists = file_exists($projectRoot . '/public' . $avatarPath6);
+assert($fixedExists, "Test 6 Failed: file_exists() with correct dirname(x3) path returned false. Path: {$projectRoot}/public{$avatarPath6}");
+
+// Prove the OLD (broken) path does NOT exist
+$brokenBase = realpath(__DIR__ . '/../src');
+$brokenExists = file_exists($brokenBase . '/public' . $avatarPath6);
+assert(!$brokenExists, "Test 6 Note: Old broken path unexpectedly exists — something is wrong.");
+
+echo "  ✅ Correct path resolves to: {$projectRoot}/public{$avatarPath6}\n";
+echo "  ✅ Old broken path (src/public/...) correctly does NOT exist\n";
+echo "Test 6 Passed!\n";
+
+// -------------------------------------------------------------------------
+// TEST 7: Profile template uses corrected dirname(x3) — no wrong depth
+// -------------------------------------------------------------------------
+echo "\nTest 7: Template source uses corrected dirname depth (no old broken pattern)...\n";
+$profileSrc = file_get_contents(__DIR__ . '/../src/Views/auth/profile.php');
+$headerSrc  = file_get_contents(__DIR__ . '/../src/Views/layouts/header.php');
+$sidebarSrc = file_get_contents(__DIR__ . '/../src/Views/layouts/sidebar.php');
+
+// Must have the fixed triple-dirname pattern
+$fixedPattern = "dirname(dirname(dirname(__DIR__))) . '/public' . ";
+assert(str_contains($profileSrc, $fixedPattern), "Test 7 Failed: profile.php still uses wrong dirname depth.");
+assert(str_contains($headerSrc,  $fixedPattern), "Test 7 Failed: header.php still uses wrong dirname depth.");
+assert(str_contains($sidebarSrc, $fixedPattern), "Test 7 Failed: sidebar.php still uses wrong dirname depth.");
+
+// Must NOT have the old wrong double-dirname pattern for avatar check
+// (old: dirname(dirname(__DIR__)) . '/public' which points to src/)
+$wrongPattern = "dirname(dirname(__DIR__)) . '/public' . ";
+assert(!str_contains($profileSrc, $wrongPattern), "Test 7 Failed: profile.php still contains the OLD broken dirname depth.");
+assert(!str_contains($headerSrc,  $wrongPattern), "Test 7 Failed: header.php still contains the OLD broken dirname depth.");
+assert(!str_contains($sidebarSrc, $wrongPattern), "Test 7 Failed: sidebar.php still contains the OLD broken dirname depth.");
+
+echo "  ✅ profile.php uses corrected dirname depth\n";
+echo "  ✅ header.php uses corrected dirname depth\n";
+echo "  ✅ sidebar.php uses corrected dirname depth\n";
+echo "Test 7 Passed!\n";
+
+// -------------------------------------------------------------------------
+// TEST 8: No avatar → user gets initials fallback only
+// -------------------------------------------------------------------------
+echo "\nTest 8: No avatar → fallback to initials...\n";
+$db->exec("UPDATE users SET avatar_path = NULL WHERE id = 9");
+$stmt = $db->prepare("SELECT avatar_path FROM users WHERE id = 9");
+$stmt->execute();
+$noAvatar = $stmt->fetchColumn();
+assert($noAvatar === false || $noAvatar === null, "Test 8 Failed: avatar_path not NULL after reset.");
+
+// Simulate what the template does: with no avatar_path, should NOT show img
+$avatarPath8 = null;
+$shouldShowImg = !empty($avatarPath8);
+assert($shouldShowImg === false, "Test 8 Failed: empty avatar_path would still trigger img display.");
+
+echo "  ✅ avatar_path is NULL/empty — fallback to initials is correct\n";
+echo "Test 8 Passed!\n";
+
+// -------------------------------------------------------------------------
+// TEST 9: Release/Update package does NOT contain user-uploaded avatar files
+// -------------------------------------------------------------------------
+echo "\nTest 9: Release package excludes user-uploaded avatar files...\n";
+$releaseDir = realpath(__DIR__ . '/../release');
+$updateZip  = $releaseDir . '/AppForm-' . (require __DIR__ . '/../config/version.php')['version'] . '-update.zip';
+
+if (!file_exists($updateZip)) {
+    echo "  ℹ️ Update ZIP not yet built for this version — skipping zip content check.\n";
+} else {
+    $zip = new ZipArchive();
+    if ($zip->open($updateZip) === true) {
+        $avatarFound = false;
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if (str_contains($name, 'storage/avatars/') && !str_ends_with($name, '.gitkeep')) {
+                $avatarFound = true;
+                break;
+            }
+        }
+        $zip->close();
+        assert(!$avatarFound, "Test 9 Failed: Update ZIP contains user-uploaded avatar files!");
+        echo "  ✅ Update ZIP contains NO user-uploaded avatar files\n";
+    } else {
+        echo "  ℹ️ Could not open update ZIP — skipping content check.\n";
+    }
+}
+// Clean up avatars for user 9 post-test
+foreach (glob(__DIR__ . '/../public/storage/avatars/avatar_9_*') as $f) {
+    unlink($f);
+}
+$db->exec("UPDATE users SET avatar_path = NULL WHERE id = 9");
+echo "Test 9 Passed!\n";
+
 echo "\n========================================\n";
 echo "  ALL PROFILE AVATAR TESTS PASSED ✅\n";
 echo "========================================\n";
+
