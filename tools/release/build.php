@@ -70,7 +70,8 @@ $exclusions = [
 $runtimeDirs = [
     'public/storage/document_final_pdfs',
     'public/storage/document_signatures',
-    'public/storage/logs'
+    'public/storage/logs',
+    'public/storage/avatars'
 ];
 
 // 3. Build Full Clean-Install ZIP
