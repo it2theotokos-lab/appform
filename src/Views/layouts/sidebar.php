@@ -290,8 +290,12 @@ if (!function_exists('hasActiveChild')) {
     <div class="sidebar-footer">
         <!-- User mini-profile -->
         <div class="d-flex align-items-center gap-2 mb-3 px-2">
-            <div class="user-avatar" style="width:32px;height:32px;font-size:0.75rem;" aria-hidden="true">
-                <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+            <div class="user-avatar" style="width:32px;height:32px;font-size:0.75rem;padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;" aria-hidden="true">
+                <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(__DIR__)) . '/public' . $user['avatar_path'])): ?>
+                    <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                <?php else: ?>
+                    <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+                <?php endif; ?>
             </div>
             <div style="min-width:0;flex:1">
                 <div style="font-size:0.8125rem;font-weight:600;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">

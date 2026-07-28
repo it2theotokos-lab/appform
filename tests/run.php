@@ -59,7 +59,8 @@ $testFiles = [
     'ReleaseCompletenessTest.php',
     'IntegrityTests.php',
     'SettingsUpdateRegressionTest.php',
-    'UpdateDownloadTest.php'
+    'UpdateDownloadTest.php',
+    'ProfileAvatarTest.php'
 ];
 
 $failed = false;

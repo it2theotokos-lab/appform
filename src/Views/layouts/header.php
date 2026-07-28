@@ -60,8 +60,13 @@ $currentPref = 'system'; // will be overridden by JS
             </div>
             <div class="dropdown">
                 <button class="user-avatar" data-bs-toggle="dropdown" aria-expanded="false"
-                        aria-label="Μενού χρήστη — <?= \App\Core\View::escape($user['full_name'] ?? '') ?>">
-                    <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+                        aria-label="Μενού χρήστη — <?= \App\Core\View::escape($user['full_name'] ?? '') ?>"
+                        style="padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(__DIR__)) . '/public' . $user['avatar_path'])): ?>
+                        <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    <?php else: ?>
+                        <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+                    <?php endif; ?>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li>
