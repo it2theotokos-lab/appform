@@ -126,7 +126,9 @@ class SettingsController extends Controller {
 
         if ($latest && !isset($latest['build'])) {
             $ver = $latest['version'];
-            if ($ver === '1.1.5') {
+            if ($ver === '1.1.6') {
+                $latest['build'] = 8;
+            } elseif ($ver === '1.1.5') {
                 $latest['build'] = 7;
             } elseif ($ver === '1.1.4') {
                 $latest['build'] = 6;

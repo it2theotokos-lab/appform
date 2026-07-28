@@ -2,6 +2,14 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.6-Stable] - 2026-07-28
+
+### Added
+- **Cloud Backup Fixes**: Integrated with the central Enterprise Job Queue for isolated upload tasks.
+- **Stale Sync Lock Handling**: Added timeouts and worker heartbeats to detect and clear stale replication locks.
+- **Resumable Chunks**: Real cURL-based resumable uploads to Google Drive with folder resolution and integrity checks (MD5/SHA-256).
+- **Database Migrations**: Applied safe migrations 027 and 028 for schema updates.
+
 ## [1.1.5-Stable] - 2026-07-27
 
 ### Fixed
