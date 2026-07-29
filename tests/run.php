@@ -25,7 +25,7 @@ $testFiles = [
     'RepositoryValidationTest.php',
     'FormSchemaValidationTest.php',
     'FormVersioningTest.php',
-    'FormRendererTest.php',
+    'FormFieldsRendererTest.php',
     'FormAccessTest.php',
     'SubmissionAccessTest.php',
     'VersionProviderTest.php',
