@@ -225,6 +225,17 @@ class FormRenderer {
     this.container.appendChild(formEl);
   }
 
+  findFieldByKey(key) {
+    if (!this.schema || !this.schema.sections) return null;
+    for (const sec of this.schema.sections) {
+      if (sec.fields) {
+        const found = sec.fields.find(f => f.key === key);
+        if (found) return found;
+      }
+    }
+    return null;
+  }
+
   initAutocomplete(inputEl) {
     if (typeof Awesomplete === 'undefined') {
       console.warn('Awesomplete is not loaded');
@@ -281,7 +292,6 @@ class FormRenderer {
       const data = currentItemData[selectedValue];
       
       if (data && mappings) {
-         // mappings format: repo_field:form_field, ...
          const mapPairs = mappings.split(',').map(m => m.trim()).filter(m => m !== '');
          const formEl = inputEl.closest('form');
          if (formEl) {
@@ -290,10 +300,7 @@ class FormRenderer {
                 if (parts.length === 2) {
                     const rField = parts[0].trim();
                     const fField = parts[1].trim();
-                    // Find the field in form
-                    // We look by name attributes which correspond to field.id
-                    // First we need to find the field definition by key to get its id
-                    const fieldDef = this.schema.fields.find(f => f.key === fField);
+                    const fieldDef = this.findFieldByKey(fField);
                     if (fieldDef && data[rField] !== undefined) {
                         const targetInput = formEl.querySelector(`[name="${fieldDef.id}"]`);
                         if (targetInput) {
@@ -315,12 +322,13 @@ class FormRenderer {
 
     const repo1Id = inputEl.dataset.repo1;
     const repo2Id = inputEl.dataset.repo2 || '';
-    const valueField = inputEl.dataset.valueField;
+    const search1 = inputEl.dataset.search1 || 'label';
+    const search2 = inputEl.dataset.search2 || 'label';
 
-    if (!repo1Id || !valueField) return;
+    if (!repo1Id) return;
 
     try {
-        const res = await fetch(`/api/repositories/tags?repo1=${repo1Id}&repo2=${repo2Id}&value_field=${valueField}`, {
+        const res = await fetch(`/api/repositories/tags?repo1=${repo1Id}&repo2=${repo2Id}&search1=${search1}&search2=${search2}`, {
             headers: {
                'Authorization': `Bearer ${localStorage.getItem('token')}`
             }

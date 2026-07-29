@@ -2,6 +2,16 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.14-Stable] - 2026-07-29
+
+### Added
+- **Structured Repositories**: Repositories now support dynamic JSON columns definition (`columns_json`) in addition to default `value` and `label`, enabling multi-column configuration.
+- **Repository Builder UI**: Replaced existing Repository Form with a structured Columns Manager and Data Grid editor.
+- **Form Builder Fields**:
+  - Extracted Auto-complete properties into Dynamic Mappings configuration, allowing users to map repository column values into different fields upon selection.
+  - Enhanced Multi-Select Repository Tags UI to search from multiple customizable columns and multiple repos.
+- **Database**: Added migration `031_repository_columns.sql` to support new JSON mappings.
+
 ## [1.1.13-Stable] - 2026-07-29
 
 ### Fixed

@@ -45,10 +45,34 @@ class RepositoryController extends Controller {
         $validated = $this->validate($data, [
             'name' => ['required'],
             'slug' => ['required'],
-            'data_json' => ['required', 'json']
+            'data_json' => ['required', 'json'],
+            'columns_json' => []
         ]);
 
-        // Validate JSON Structure
+        // Validate Columns JSON if present
+        $columnsJson = null;
+        if (!empty($validated['columns_json'])) {
+            $cols = json_decode($validated['columns_json'], true);
+            if (!is_array($cols)) {
+                Session::flash('error', 'Το Columns JSON πρέπει να είναι πίνακας.');
+                $this->back();
+            }
+            $keys = [];
+            foreach ($cols as $col) {
+                if (empty($col['key']) || empty($col['label'])) {
+                    Session::flash('error', 'Κάθε στήλη πρέπει να έχει key και label.');
+                    $this->back();
+                }
+                if (in_array($col['key'], $keys)) {
+                    Session::flash('error', 'Το machine key στήλης πρέπει να είναι μοναδικό. Βρέθηκε διπλότυπο: ' . $col['key']);
+                    $this->back();
+                }
+                $keys[] = $col['key'];
+            }
+            $columnsJson = json_encode($cols, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Validate Data JSON Structure
         $decoded = json_decode($validated['data_json'], true);
         if (!is_array($decoded)) {
             Session::flash('error', 'Το JSON πρέπει να είναι πίνακας (Array root).');
@@ -57,7 +81,7 @@ class RepositoryController extends Controller {
 
         foreach ($decoded as $item) {
             if (!isset($item['value']) || !isset($item['label'])) {
-                Session::flash('error', 'Κάθε αντικείμενο στο JSON πρέπει να περιέχει "value" και "label".');
+                Session::flash('error', 'Κάθε εγγραφή στο JSON πρέπει να περιέχει "value" και "label" οπωσδήποτε (Machine Key/Label).');
                 $this->back();
             }
         }
@@ -71,14 +95,15 @@ class RepositoryController extends Controller {
         }
 
         $stmt = $db->prepare("
-            INSERT INTO repositories (name, slug, description, data_json, is_active, created_by)
-            VALUES (?, ?, ?, ?, 1, ?)
+            INSERT INTO repositories (name, slug, description, data_json, columns_json, is_active, created_by)
+            VALUES (?, ?, ?, ?, ?, 1, ?)
         ");
         $stmt->execute([
             $validated['name'],
             strtolower($validated['slug']),
             $data['description'] ?? '',
             $validated['data_json'],
+            $columnsJson,
             Auth::id()
         ]);
 
@@ -118,10 +143,34 @@ class RepositoryController extends Controller {
 
         $validated = $this->validate($data, [
             'name' => ['required'],
-            'data_json' => ['required', 'json']
+            'data_json' => ['required', 'json'],
+            'columns_json' => []
         ]);
 
-        // Validate JSON Structure
+        // Validate Columns JSON if present
+        $columnsJson = null;
+        if (!empty($validated['columns_json'])) {
+            $cols = json_decode($validated['columns_json'], true);
+            if (!is_array($cols)) {
+                Session::flash('error', 'Το Columns JSON πρέπει να είναι πίνακας.');
+                $this->back();
+            }
+            $keys = [];
+            foreach ($cols as $col) {
+                if (empty($col['key']) || empty($col['label'])) {
+                    Session::flash('error', 'Κάθε στήλη πρέπει να έχει key και label.');
+                    $this->back();
+                }
+                if (in_array($col['key'], $keys)) {
+                    Session::flash('error', 'Το machine key στήλης πρέπει να είναι μοναδικό. Βρέθηκε διπλότυπο: ' . $col['key']);
+                    $this->back();
+                }
+                $keys[] = $col['key'];
+            }
+            $columnsJson = json_encode($cols, JSON_UNESCAPED_UNICODE);
+        }
+
+        // Validate Data JSON Structure
         $decoded = json_decode($validated['data_json'], true);
         if (!is_array($decoded)) {
             Session::flash('error', 'Το JSON πρέπει να είναι πίνακας (Array root).');
@@ -130,20 +179,21 @@ class RepositoryController extends Controller {
 
         foreach ($decoded as $item) {
             if (!isset($item['value']) || !isset($item['label'])) {
-                Session::flash('error', 'Κάθε αντικείμενο στο JSON πρέπει να περιέχει "value" και "label".');
+                Session::flash('error', 'Κάθε εγγραφή στο JSON πρέπει να περιέχει "value" και "label".');
                 $this->back();
             }
         }
 
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            UPDATE repositories SET name = ?, description = ?, data_json = ?
+            UPDATE repositories SET name = ?, description = ?, data_json = ?, columns_json = ?
             WHERE id = ?
         ");
         $stmt->execute([
             $validated['name'],
             $data['description'] ?? '',
             $validated['data_json'],
+            $columnsJson,
             $id
         ]);
 
@@ -261,9 +311,10 @@ class RepositoryController extends Controller {
     public function apiTags() {
         $repo1Id = $_GET['repo1'] ?? null;
         $repo2Id = $_GET['repo2'] ?? null;
-        $valueField = $_GET['value_field'] ?? null;
+        $search1 = $_GET['search1'] ?? 'label';
+        $search2 = $_GET['search2'] ?? 'label';
         
-        if (!$repo1Id || !$valueField) {
+        if (!$repo1Id) {
             header('Content-Type: application/json');
             echo json_encode([]);
             exit;
@@ -276,8 +327,8 @@ class RepositoryController extends Controller {
             $data = json_decode($repo1['data_json'], true);
             if (is_array($data)) {
                 foreach ($data as $item) {
-                    if (isset($item[$valueField])) {
-                        $tags[] = (string)$item[$valueField];
+                    if (isset($item[$search1])) {
+                        $tags[] = (string)$item[$search1];
                     }
                 }
             }
@@ -289,8 +340,8 @@ class RepositoryController extends Controller {
                 $data = json_decode($repo2['data_json'], true);
                 if (is_array($data)) {
                     foreach ($data as $item) {
-                        if (isset($item[$valueField])) {
-                            $tags[] = (string)$item[$valueField];
+                        if (isset($item[$search2])) {
+                            $tags[] = (string)$item[$search2];
                         }
                     }
                 }

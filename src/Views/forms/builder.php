@@ -366,25 +366,32 @@
                 <div class="d-none" id="repoAutoGroup">
                     <div class="mb-2">
                         <label class="form-label small">Source Repository</label>
-                        <select class="form-select form-select-sm" id="propRepoAutoSourceId">
+                        <select class="form-select form-select-sm" id="propRepoAutoSourceId" onchange="updateRepoAutoDropdowns()">
                             <option value="">Επιλέξτε Repository...</option>
-                            <?php foreach ($repositories as $repo): ?>
-                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php foreach ($repositories as $repo): 
+                                $cols = empty($repo['columns_json']) ? '[]' : $repo['columns_json'];
+                            ?>
+                                <option value="<?= $repo['id'] ?>" data-columns='<?= \App\Core\View::escape($cols) ?>'><?= \App\Core\View::escape($repo['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small">Πεδίο Αναζήτησης (Search Field in Repo)</label>
-                        <input type="text" class="form-control form-control-sm" id="propRepoAutoSearchField" placeholder="π.χ. email ή vat">
+                        <label class="form-label small">Πεδίο Αναζήτησης (Search Field)</label>
+                        <select class="form-select form-select-sm" id="propRepoAutoSearchField">
+                            <option value="label">Display Label (label)</option>
+                        </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small">Πεδίο Τιμής (Value Field in Repo)</label>
-                        <input type="text" class="form-control form-control-sm" id="propRepoAutoValueField" placeholder="π.χ. email">
+                        <label class="form-label small">Πεδίο Εμφάνισης (Display Field)</label>
+                        <select class="form-select form-select-sm" id="propRepoAutoValueField">
+                            <option value="label">Display Label (label)</option>
+                        </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small">Αντιστοιχίσεις (Mappings: repo_field:form_field, ...)</label>
-                        <input type="text" class="form-control form-control-sm" id="propRepoAutoMappings" placeholder="π.χ. vat:vat_number, name:full_name">
-                        <small class="text-muted" style="font-size: 10px;">Θα γεμίζει αυτόματα αυτά τα πεδία της φόρμας με τις τιμές από το επιλεγμένο record.</small>
+                        <label class="form-label small">Αντιστοιχίσεις (Mappings)</label>
+                        <div id="propRepoAutoMappingsContainer" class="d-flex flex-column gap-2 mb-2"></div>
+                        <button type="button" class="btn btn-outline-info btn-xs w-100" onclick="addRepoAutoMapping()"><i class="fa-solid fa-plus me-1"></i> Προσθήκη Mapping</button>
+                        <small class="text-muted d-block mt-1" style="font-size: 10px;">Θα γεμίζει αυτόματα αυτά τα πεδία της φόρμας με τις τιμές από το επιλεγμένο record.</small>
                     </div>
                 </div>
 
@@ -392,25 +399,37 @@
                 <div class="d-none" id="repoTagsGroup">
                     <div class="mb-2">
                         <label class="form-label small">Source Repository 1 (Υποχρεωτικό)</label>
-                        <select class="form-select form-select-sm" id="propRepoTagsSource1">
+                        <select class="form-select form-select-sm" id="propRepoTagsSource1" onchange="updateRepoTagsDropdowns(1)">
                             <option value="">Επιλέξτε Repository...</option>
-                            <?php foreach ($repositories as $repo): ?>
-                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php foreach ($repositories as $repo): 
+                                $cols = empty($repo['columns_json']) ? '[]' : $repo['columns_json'];
+                            ?>
+                                <option value="<?= $repo['id'] ?>" data-columns='<?= \App\Core\View::escape($cols) ?>'><?= \App\Core\View::escape($repo['name']) ?></option>
                             <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Πεδίο Αναζήτησης/Εμφάνισης 1</label>
+                        <select class="form-select form-select-sm" id="propRepoTagsSearch1">
+                            <option value="label">Display Label (label)</option>
                         </select>
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Source Repository 2 (Προαιρετικό)</label>
-                        <select class="form-select form-select-sm" id="propRepoTagsSource2">
+                        <select class="form-select form-select-sm" id="propRepoTagsSource2" onchange="updateRepoTagsDropdowns(2)">
                             <option value="">Επιλέξτε Repository 2...</option>
-                            <?php foreach ($repositories as $repo): ?>
-                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php foreach ($repositories as $repo): 
+                                $cols = empty($repo['columns_json']) ? '[]' : $repo['columns_json'];
+                            ?>
+                                <option value="<?= $repo['id'] ?>" data-columns='<?= \App\Core\View::escape($cols) ?>'><?= \App\Core\View::escape($repo['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small">Πεδίο Τιμής (Value Field in Repos)</label>
-                        <input type="text" class="form-control form-control-sm" id="propRepoTagsValueField" placeholder="π.χ. title ή name">
+                        <label class="form-label small">Πεδίο Αναζήτησης/Εμφάνισης 2</label>
+                        <select class="form-select form-select-sm" id="propRepoTagsSearch2">
+                            <option value="label">Display Label (label)</option>
+                        </select>
                     </div>
                 </div>
 
@@ -939,14 +958,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (field.type === 'repository_autocomplete') {
             document.getElementById('repoAutoGroup').classList.remove('d-none');
             document.getElementById('propRepoAutoSourceId').value = field.repoAutoSourceId || '';
-            document.getElementById('propRepoAutoSearchField').value = field.repoAutoSearchField || '';
-            document.getElementById('propRepoAutoValueField').value = field.repoAutoValueField || '';
-            document.getElementById('propRepoAutoMappings').value = field.repoAutoMappings || '';
+            
+            updateRepoAutoDropdowns();
+            
+            document.getElementById('propRepoAutoSearchField').value = field.repoAutoSearchField || 'label';
+            document.getElementById('propRepoAutoValueField').value = field.repoAutoValueField || 'label';
+            
+            renderRepoAutoMappings(field.repoAutoMappings || '');
+            
         } else if (field.type === 'repository_tags') {
             document.getElementById('repoTagsGroup').classList.remove('d-none');
             document.getElementById('propRepoTagsSource1').value = field.repoTagsSource1 || '';
             document.getElementById('propRepoTagsSource2').value = field.repoTagsSource2 || '';
-            document.getElementById('propRepoTagsValueField').value = field.repoTagsValueField || '';
+            
+            updateRepoTagsDropdowns(1);
+            updateRepoTagsDropdowns(2);
+            
+            document.getElementById('propRepoTagsSearch1').value = field.repoTagsSearch1 || 'label';
+            if (field.repoTagsSource2) {
+                document.getElementById('propRepoTagsSearch2').value = field.repoTagsSearch2 || 'label';
+            }
         }
 
         // Bind Conditional Logic
@@ -1200,13 +1231,24 @@ document.addEventListener('DOMContentLoaded', () => {
             field.dynamicSourceId = document.getElementById('propDynamicSourceId').value;
         } else if (field.type === 'repository_autocomplete') {
             field.repoAutoSourceId = document.getElementById('propRepoAutoSourceId').value;
-            field.repoAutoSearchField = document.getElementById('propRepoAutoSearchField').value.trim();
-            field.repoAutoValueField = document.getElementById('propRepoAutoValueField').value.trim();
-            field.repoAutoMappings = document.getElementById('propRepoAutoMappings').value.trim();
+            field.repoAutoSearchField = document.getElementById('propRepoAutoSearchField').value;
+            field.repoAutoValueField = document.getElementById('propRepoAutoValueField').value;
+            
+            // Collect mappings
+            const mappingRows = document.querySelectorAll('.repo-mapping-row');
+            let maps = [];
+            mappingRows.forEach(r => {
+                const rField = r.querySelector('.map-repo-field').value;
+                const fField = r.querySelector('.map-form-field').value;
+                if (rField && fField) maps.push(`${rField}:${fField}`);
+            });
+            field.repoAutoMappings = maps.join(',');
+            
         } else if (field.type === 'repository_tags') {
             field.repoTagsSource1 = document.getElementById('propRepoTagsSource1').value;
             field.repoTagsSource2 = document.getElementById('propRepoTagsSource2').value;
-            field.repoTagsValueField = document.getElementById('propRepoTagsValueField').value.trim();
+            field.repoTagsSearch1 = document.getElementById('propRepoTagsSearch1').value;
+            field.repoTagsSearch2 = document.getElementById('propRepoTagsSearch2').value;
         }
 
         // Apply Conditional Logic
@@ -1308,5 +1350,114 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // Helper functions for Repository Auto/Tags fields
+    window.updateRepoAutoDropdowns = function() {
+        const select = document.getElementById('propRepoAutoSourceId');
+        const selected = select.options[select.selectedIndex];
+        if (!selected || !selected.value) return;
+
+        const colsStr = selected.getAttribute('data-columns');
+        const cols = colsStr ? JSON.parse(colsStr) : [];
+        const allCols = [{key: 'label', label: 'Display Label (label)'}, {key: 'value', label: 'Machine Key (value)'}, ...cols];
+        
+        const searchSelect = document.getElementById('propRepoAutoSearchField');
+        const valueSelect = document.getElementById('propRepoAutoValueField');
+        
+        const currentSearch = searchSelect.value;
+        const currentValue = valueSelect.value;
+        
+        searchSelect.innerHTML = '';
+        valueSelect.innerHTML = '';
+        
+        allCols.forEach(c => {
+            searchSelect.innerHTML += `<option value="${c.key}">${c.label} (${c.key})</option>`;
+            valueSelect.innerHTML += `<option value="${c.key}">${c.label} (${c.key})</option>`;
+        });
+        
+        if (currentSearch) searchSelect.value = currentSearch;
+        if (currentValue) valueSelect.value = currentValue;
+    };
+
+    window.updateRepoTagsDropdowns = function(index) {
+        const select = document.getElementById(`propRepoTagsSource${index}`);
+        const selected = select.options[select.selectedIndex];
+        if (!selected || !selected.value) return;
+
+        const colsStr = selected.getAttribute('data-columns');
+        const cols = colsStr ? JSON.parse(colsStr) : [];
+        const allCols = [{key: 'label', label: 'Display Label (label)'}, {key: 'value', label: 'Machine Key (value)'}, ...cols];
+        
+        const searchSelect = document.getElementById(`propRepoTagsSearch${index}`);
+        const currentSearch = searchSelect.value;
+        
+        searchSelect.innerHTML = '';
+        
+        allCols.forEach(c => {
+            searchSelect.innerHTML += `<option value="${c.key}">${c.label} (${c.key})</option>`;
+        });
+        
+        if (currentSearch) searchSelect.value = currentSearch;
+    };
+
+    window.renderRepoAutoMappings = function(mapsStr) {
+        const container = document.getElementById('propRepoAutoMappingsContainer');
+        container.innerHTML = '';
+        if (!mapsStr) return;
+        const maps = mapsStr.split(',');
+        maps.forEach(m => {
+            const parts = m.split(':');
+            if (parts.length === 2) {
+                addRepoAutoMapping(parts[0], parts[1]);
+            }
+        });
+    };
+
+    window.addRepoAutoMapping = function(rVal = '', fVal = '') {
+        const select = document.getElementById('propRepoAutoSourceId');
+        const selected = select.options[select.selectedIndex];
+        let allCols = [{key: 'label', label: 'label'}, {key: 'value', label: 'value'}];
+        if (selected && selected.value) {
+            const colsStr = selected.getAttribute('data-columns');
+            const cols = colsStr ? JSON.parse(colsStr) : [];
+            allCols = [...allCols, ...cols];
+        }
+
+        const container = document.getElementById('propRepoAutoMappingsContainer');
+        const row = document.createElement('div');
+        row.className = 'repo-mapping-row d-flex gap-1 align-items-center bg-dark bg-opacity-25 p-1 rounded';
+        
+        let repoSelectOpts = '';
+        allCols.forEach(c => {
+            const sel = (c.key === rVal) ? 'selected' : '';
+            repoSelectOpts += `<option value="${c.key}" ${sel}>${c.label}</option>`;
+        });
+        
+        // Build form fields dropdown
+        let formFieldsOpts = '<option value="">Επιλέξτε...</option>';
+        schema.sections.forEach(sec => {
+            if (sec.fields) {
+                sec.fields.forEach(f => {
+                    if (['text', 'email', 'phone', 'number', 'date', 'hidden'].includes(f.type)) {
+                        const sel = (f.key === fVal) ? 'selected' : '';
+                        formFieldsOpts += `<option value="${f.key}" ${sel}>${f.label}</option>`;
+                    }
+                });
+            }
+        });
+
+        row.innerHTML = `
+            <select class="form-select form-select-sm map-repo-field" style="width: 45%;">
+                ${repoSelectOpts}
+            </select>
+            <i class="fa-solid fa-arrow-right mx-1 text-muted" style="font-size: 10px;"></i>
+            <select class="form-select form-select-sm map-form-field" style="width: 45%;">
+                ${formFieldsOpts}
+            </select>
+            <button type="button" class="btn btn-outline-danger btn-sm px-2 py-0" onclick="this.parentElement.remove()"><i class="fa-solid fa-times"></i></button>
+        `;
+        container.appendChild(row);
+    };
+
 });
 </script>
