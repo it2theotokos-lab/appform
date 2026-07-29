@@ -112,6 +112,8 @@ $router->put('/admin/repositories/{id}/edit', [\App\Controllers\RepositoryContro
 $router->post('/admin/repositories/{id}/toggle-status', [\App\Controllers\RepositoryController::class, 'toggleStatus'], ['auth', 'permission:repositories.manage']);
 $router->delete('/admin/repositories/{id}/delete', [\App\Controllers\RepositoryController::class, 'delete'], ['auth', 'permission:repositories.manage']);
 $router->get('/admin/repositories/{id}', [\App\Controllers\RepositoryController::class, 'preview'], ['auth', 'permission:repositories.manage']);
+$router->get('/api/repositories/autocomplete', [\App\Controllers\RepositoryController::class, 'apiAutocomplete'], ['auth']);
+$router->get('/api/repositories/tags', [\App\Controllers\RepositoryController::class, 'apiTags'], ['auth']);
 
 // Forms CRUD & Builder
 $router->get('/admin/dashboard', [\App\Controllers\DashboardController::class, 'index'], ['auth']);
@@ -240,6 +242,7 @@ $router->post('/admin/submissions/{uuid}/delete', [\App\Controllers\SubmissionCo
 // Profile Management
 $router->get('/admin/profile', [\App\Controllers\AuthController::class, 'showProfile'], ['auth']);
 $router->post('/admin/profile', [\App\Controllers\AuthController::class, 'updateProfile'], ['auth']);
+$router->post('/admin/profile/avatar/remove', [\App\Controllers\AuthController::class, 'removeAvatar'], ['auth']);
 $router->post('/admin/profile/change-password', [\App\Controllers\AuthController::class, 'updatePassword'], ['auth']);
 
 // Navigation Menus Builder

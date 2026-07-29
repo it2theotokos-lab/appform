@@ -152,6 +152,45 @@ class FormRenderer {
           formGroup.appendChild(inputEl);
           break;
 
+        case 'repository_autocomplete':
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.className = 'form-control';
+          inputEl.name = field.id;
+          inputEl.placeholder = field.placeholder || 'Αναζήτηση...';
+          if (field.required) inputEl.required = true;
+          
+          inputEl.dataset.repoId = field.repoAutoSourceId;
+          inputEl.dataset.searchField = field.repoAutoSearchField;
+          inputEl.dataset.valueField = field.repoAutoValueField;
+          inputEl.dataset.mappings = field.repoAutoMappings;
+          
+          formGroup.appendChild(inputEl);
+          
+          setTimeout(() => {
+              this.initAutocomplete(inputEl);
+          }, 0);
+          break;
+
+        case 'repository_tags':
+          inputEl = document.createElement('input');
+          inputEl.type = 'text';
+          inputEl.className = 'form-control';
+          inputEl.name = field.id;
+          inputEl.placeholder = field.placeholder || 'Επιλέξτε tags...';
+          if (field.required) inputEl.required = true;
+          
+          inputEl.dataset.repo1 = field.repoTagsSource1;
+          inputEl.dataset.repo2 = field.repoTagsSource2;
+          inputEl.dataset.valueField = field.repoTagsValueField;
+          
+          formGroup.appendChild(inputEl);
+          
+          setTimeout(() => {
+              this.initTagify(inputEl);
+          }, 0);
+          break;
+
         default:
           break;
       }
@@ -184,6 +223,126 @@ class FormRenderer {
     });
 
     this.container.appendChild(formEl);
+  }
+
+  initAutocomplete(inputEl) {
+    if (typeof Awesomplete === 'undefined') {
+      console.warn('Awesomplete is not loaded');
+      return;
+    }
+
+    const repoId = inputEl.dataset.repoId;
+    const searchField = inputEl.dataset.searchField;
+    const valueField = inputEl.dataset.valueField;
+    const mappings = inputEl.dataset.mappings;
+
+    if (!repoId || !searchField) return;
+
+    const awesomplete = new Awesomplete(inputEl, {
+      minChars: 2,
+      maxItems: 15,
+      autoFirst: true
+    });
+
+    let currentItemData = {};
+
+    inputEl.addEventListener('input', async (e) => {
+      const val = e.target.value;
+      if (val.length < 2) return;
+
+      try {
+        const res = await fetch(`/api/repositories/autocomplete?repo_id=${repoId}&search_field=${searchField}&query=${encodeURIComponent(val)}`, {
+          headers: {
+             'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        if (res.ok) {
+           const data = await res.json();
+           const list = data.map(item => {
+               return {
+                  label: item[searchField],
+                  value: item[valueField] || item[searchField],
+                  originalData: item
+               };
+           });
+           currentItemData = {};
+           list.forEach(i => {
+               currentItemData[i.value] = i.originalData;
+           });
+           awesomplete.list = list;
+        }
+      } catch (err) {
+         console.error('Autocomplete fetch failed', err);
+      }
+    });
+
+    inputEl.addEventListener('awesomplete-selectcomplete', (e) => {
+      const selectedValue = e.text.value;
+      const data = currentItemData[selectedValue];
+      
+      if (data && mappings) {
+         // mappings format: repo_field:form_field, ...
+         const mapPairs = mappings.split(',').map(m => m.trim()).filter(m => m !== '');
+         const formEl = inputEl.closest('form');
+         if (formEl) {
+            mapPairs.forEach(pair => {
+                const parts = pair.split(':');
+                if (parts.length === 2) {
+                    const rField = parts[0].trim();
+                    const fField = parts[1].trim();
+                    // Find the field in form
+                    // We look by name attributes which correspond to field.id
+                    // First we need to find the field definition by key to get its id
+                    const fieldDef = this.schema.fields.find(f => f.key === fField);
+                    if (fieldDef && data[rField] !== undefined) {
+                        const targetInput = formEl.querySelector(`[name="${fieldDef.id}"]`);
+                        if (targetInput) {
+                            targetInput.value = data[rField];
+                        }
+                    }
+                }
+            });
+         }
+      }
+    });
+  }
+
+  async initTagify(inputEl) {
+    if (typeof Tagify === 'undefined') {
+      console.warn('Tagify is not loaded');
+      return;
+    }
+
+    const repo1Id = inputEl.dataset.repo1;
+    const repo2Id = inputEl.dataset.repo2 || '';
+    const valueField = inputEl.dataset.valueField;
+
+    if (!repo1Id || !valueField) return;
+
+    try {
+        const res = await fetch(`/api/repositories/tags?repo1=${repo1Id}&repo2=${repo2Id}&value_field=${valueField}`, {
+            headers: {
+               'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        
+        let whitelist = [];
+        if (res.ok) {
+            whitelist = await res.json();
+        }
+
+        new Tagify(inputEl, {
+            whitelist: whitelist,
+            dropdown: {
+                maxItems: 20,
+                classname: "tags-look",
+                enabled: 0,
+                closeOnSelect: false
+            }
+        });
+    } catch (err) {
+        console.error('Tagify initialization failed', err);
+    }
   }
 
   async handleFormSubmit(formEl, status) {

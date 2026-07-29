@@ -214,4 +214,93 @@ class RepositoryController extends Controller {
         echo $repo['data_json'];
         exit;
     }
+
+    public function apiAutocomplete() {
+        $repoId = $_GET['repo_id'] ?? null;
+        $searchField = $_GET['search_field'] ?? null;
+        $query = $_GET['query'] ?? '';
+
+        if (!$repoId || !$searchField) {
+            header('Content-Type: application/json');
+            echo json_encode([]);
+            exit;
+        }
+
+        $repo = Repository::findById((int)$repoId);
+        if (!$repo || !$repo['is_active']) {
+            header('Content-Type: application/json');
+            echo json_encode([]);
+            exit;
+        }
+
+        $data = json_decode($repo['data_json'], true);
+        if (!is_array($data)) {
+            header('Content-Type: application/json');
+            echo json_encode([]);
+            exit;
+        }
+
+        $results = [];
+        $queryLower = mb_strtolower($query);
+
+        foreach ($data as $item) {
+            if (isset($item[$searchField])) {
+                $itemVal = mb_strtolower((string)$item[$searchField]);
+                if ($queryLower === '' || mb_strpos($itemVal, $queryLower) !== false) {
+                    $results[] = $item;
+                    if (count($results) >= 20) break;
+                }
+            }
+        }
+
+        header('Content-Type: application/json');
+        echo json_encode($results, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    public function apiTags() {
+        $repo1Id = $_GET['repo1'] ?? null;
+        $repo2Id = $_GET['repo2'] ?? null;
+        $valueField = $_GET['value_field'] ?? null;
+        
+        if (!$repo1Id || !$valueField) {
+            header('Content-Type: application/json');
+            echo json_encode([]);
+            exit;
+        }
+        
+        $tags = [];
+        
+        $repo1 = Repository::findById((int)$repo1Id);
+        if ($repo1 && $repo1['is_active']) {
+            $data = json_decode($repo1['data_json'], true);
+            if (is_array($data)) {
+                foreach ($data as $item) {
+                    if (isset($item[$valueField])) {
+                        $tags[] = (string)$item[$valueField];
+                    }
+                }
+            }
+        }
+        
+        if ($repo2Id) {
+            $repo2 = Repository::findById((int)$repo2Id);
+            if ($repo2 && $repo2['is_active']) {
+                $data = json_decode($repo2['data_json'], true);
+                if (is_array($data)) {
+                    foreach ($data as $item) {
+                        if (isset($item[$valueField])) {
+                            $tags[] = (string)$item[$valueField];
+                        }
+                    }
+                }
+            }
+        }
+        
+        $tags = array_values(array_unique($tags));
+        
+        header('Content-Type: application/json');
+        echo json_encode($tags, JSON_UNESCAPED_UNICODE);
+        exit;
+    }
 }

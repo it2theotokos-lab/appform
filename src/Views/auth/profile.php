@@ -15,15 +15,25 @@
     <div class="col-md-7">
         <div class="glass-panel p-4">
             <h5 class="font-heading text-white mb-4"><i class="fa-solid fa-user-gear me-2 text-primary"></i> Προσωπικά Στοιχεία</h5>
+            <form id="removeAvatarForm" action="/admin/profile/avatar/remove" method="POST" style="display: none;">
+                <?= \App\Core\Csrf::field() ?>
+            </form>
             <form action="/admin/profile" method="POST" enctype="multipart/form-data">
                 <?= \App\Core\Csrf::field() ?>
 
                 <div class="mb-4 d-flex align-items-center gap-3">
-                    <div class="user-avatar" style="width:64px;height:64px;font-size:1.5rem;padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                    <div class="d-flex flex-column gap-2 align-items-center">
+                        <div class="user-avatar" style="width:64px;height:64px;font-size:1.5rem;padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(dirname(__DIR__))) . '/public' . $user['avatar_path'])): ?>
+                                <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                            <?php else: ?>
+                                <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+                            <?php endif; ?>
+                        </div>
                         <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(dirname(__DIR__))) . '/public' . $user['avatar_path'])): ?>
-                            <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-                        <?php else: ?>
-                            <?= substr(strtoupper($user['username'] ?? 'U'), 0, 2) ?>
+                            <button type="button" class="btn btn-outline-danger btn-sm px-2 py-1" style="font-size: 0.75rem;" onclick="if(confirm('Είστε σίγουροι ότι θέλετε να διαγράψετε τη φωτογραφία προφίλ σας;')){ document.getElementById('removeAvatarForm').submit(); }">
+                                Αφαίρεση
+                            </button>
                         <?php endif; ?>
                     </div>
                     <div>

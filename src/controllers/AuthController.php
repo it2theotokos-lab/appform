@@ -180,4 +180,35 @@ class AuthController extends Controller {
         Session::flash('success', 'Ο κωδικός πρόσβασης άλλαξε επιτυχώς.');
         $this->redirect('/dashboard');
     }
+    public function removeAvatar() {
+        if (!Auth::check()) {
+            $this->redirect('/login');
+            return;
+        }
+        $this->checkCsrf();
+
+        $db = \App\Core\Database::getInstance();
+        $userId = Auth::id();
+
+        $stmtUser = $db->prepare("SELECT avatar_path FROM users WHERE id = ?");
+        $stmtUser->execute([$userId]);
+        $oldAvatar = $stmtUser->fetchColumn();
+
+        if ($oldAvatar) {
+            $oldFile = dirname(dirname(__DIR__)) . '/public' . $oldAvatar;
+            if (file_exists($oldFile)) {
+                @unlink($oldFile);
+            }
+            
+            $stmt = $db->prepare("UPDATE users SET avatar_path = NULL WHERE id = ?");
+            $stmt->execute([$userId]);
+            
+            $_SESSION['user']['avatar_path'] = null;
+            Session::flash('success', 'Η φωτογραφία προφίλ αφαιρέθηκε επιτυχώς.');
+        } else {
+            Session::flash('error', 'Δεν βρέθηκε φωτογραφία προφίλ για διαγραφή.');
+        }
+
+        $this->redirect('/admin/profile');
+    }
 }

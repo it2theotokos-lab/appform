@@ -62,6 +62,8 @@
                             <button class="btn btn-outline-primary btn-sm text-start palette-item" data-type="likert"><i class="fa-solid fa-list-check me-2"></i> Κλίμακα Likert</button>
                             <button class="btn btn-outline-primary btn-sm text-start palette-item" data-type="nps"><i class="fa-solid fa-gauge-high me-2"></i> Net Promoter Score (NPS)</button>
                             <button class="btn btn-outline-primary btn-sm text-start palette-item" data-type="dynamic_select"><i class="fa-solid fa-database me-2"></i> Dynamic Select</button>
+                            <button class="btn btn-outline-primary btn-sm text-start palette-item" data-type="repository_autocomplete"><i class="fa-solid fa-search me-2"></i> Autocomplete από Repository</button>
+                            <button class="btn btn-outline-primary btn-sm text-start palette-item" data-type="repository_tags"><i class="fa-solid fa-tags me-2"></i> Tags από Repository</button>
                         </div>
                     </div>
                 </div>
@@ -357,6 +359,58 @@
                                 <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
+                    </div>
+                </div>
+
+                <!-- Repository Autocomplete properties -->
+                <div class="d-none" id="repoAutoGroup">
+                    <div class="mb-2">
+                        <label class="form-label small">Source Repository</label>
+                        <select class="form-select form-select-sm" id="propRepoAutoSourceId">
+                            <option value="">Επιλέξτε Repository...</option>
+                            <?php foreach ($repositories as $repo): ?>
+                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Πεδίο Αναζήτησης (Search Field in Repo)</label>
+                        <input type="text" class="form-control form-control-sm" id="propRepoAutoSearchField" placeholder="π.χ. email ή vat">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Πεδίο Τιμής (Value Field in Repo)</label>
+                        <input type="text" class="form-control form-control-sm" id="propRepoAutoValueField" placeholder="π.χ. email">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Αντιστοιχίσεις (Mappings: repo_field:form_field, ...)</label>
+                        <input type="text" class="form-control form-control-sm" id="propRepoAutoMappings" placeholder="π.χ. vat:vat_number, name:full_name">
+                        <small class="text-muted" style="font-size: 10px;">Θα γεμίζει αυτόματα αυτά τα πεδία της φόρμας με τις τιμές από το επιλεγμένο record.</small>
+                    </div>
+                </div>
+
+                <!-- Repository Tags properties -->
+                <div class="d-none" id="repoTagsGroup">
+                    <div class="mb-2">
+                        <label class="form-label small">Source Repository 1 (Υποχρεωτικό)</label>
+                        <select class="form-select form-select-sm" id="propRepoTagsSource1">
+                            <option value="">Επιλέξτε Repository...</option>
+                            <?php foreach ($repositories as $repo): ?>
+                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Source Repository 2 (Προαιρετικό)</label>
+                        <select class="form-select form-select-sm" id="propRepoTagsSource2">
+                            <option value="">Επιλέξτε Repository 2...</option>
+                            <?php foreach ($repositories as $repo): ?>
+                                <option value="<?= $repo['id'] ?>"><?= \App\Core\View::escape($repo['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Πεδίο Τιμής (Value Field in Repos)</label>
+                        <input type="text" class="form-control form-control-sm" id="propRepoTagsValueField" placeholder="π.χ. title ή name">
                     </div>
                 </div>
 
@@ -771,6 +825,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const consentGroup = document.getElementById('consentGroup');
         const currencyGroup = document.getElementById('currencyGroup');
         const htmlBlockGroup = document.getElementById('htmlBlockGroup');
+        const repoAutoGroup = document.getElementById('repoAutoGroup');
+        const repoTagsGroup = document.getElementById('repoTagsGroup');
 
         dsGroup.classList.add('d-none');
         fileGroup.classList.add('d-none');
@@ -783,6 +839,8 @@ document.addEventListener('DOMContentLoaded', () => {
         consentGroup.classList.add('d-none');
         currencyGroup.classList.add('d-none');
         htmlBlockGroup.classList.add('d-none');
+        repoAutoGroup.classList.add('d-none');
+        repoTagsGroup.classList.add('d-none');
 
         // Manage Default Values Group visibility based on type
         const hasDataSrc = ['select', 'radio', 'checkbox'].includes(field.type);
@@ -878,6 +936,17 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (field.type === 'dynamic_select') {
             document.getElementById('dynamicSelectGroup').classList.remove('d-none');
             document.getElementById('propDynamicSourceId').value = field.dynamicSourceId || '';
+        } else if (field.type === 'repository_autocomplete') {
+            document.getElementById('repoAutoGroup').classList.remove('d-none');
+            document.getElementById('propRepoAutoSourceId').value = field.repoAutoSourceId || '';
+            document.getElementById('propRepoAutoSearchField').value = field.repoAutoSearchField || '';
+            document.getElementById('propRepoAutoValueField').value = field.repoAutoValueField || '';
+            document.getElementById('propRepoAutoMappings').value = field.repoAutoMappings || '';
+        } else if (field.type === 'repository_tags') {
+            document.getElementById('repoTagsGroup').classList.remove('d-none');
+            document.getElementById('propRepoTagsSource1').value = field.repoTagsSource1 || '';
+            document.getElementById('propRepoTagsSource2').value = field.repoTagsSource2 || '';
+            document.getElementById('propRepoTagsValueField').value = field.repoTagsValueField || '';
         }
 
         // Bind Conditional Logic
@@ -1129,6 +1198,15 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else if (field.type === 'dynamic_select') {
             field.dynamicSourceId = document.getElementById('propDynamicSourceId').value;
+        } else if (field.type === 'repository_autocomplete') {
+            field.repoAutoSourceId = document.getElementById('propRepoAutoSourceId').value;
+            field.repoAutoSearchField = document.getElementById('propRepoAutoSearchField').value.trim();
+            field.repoAutoValueField = document.getElementById('propRepoAutoValueField').value.trim();
+            field.repoAutoMappings = document.getElementById('propRepoAutoMappings').value.trim();
+        } else if (field.type === 'repository_tags') {
+            field.repoTagsSource1 = document.getElementById('propRepoTagsSource1').value;
+            field.repoTagsSource2 = document.getElementById('propRepoTagsSource2').value;
+            field.repoTagsValueField = document.getElementById('propRepoTagsValueField').value.trim();
         }
 
         // Apply Conditional Logic
