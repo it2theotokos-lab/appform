@@ -1106,7 +1106,17 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                         method: 'POST',
                         body: formData
                     })
-                    .then(res => res.json())
+                    .then(async res => {
+                        if (!res.ok) {
+                            let msg = `HTTP Σφάλμα ${res.status}`;
+                            try {
+                                const errData = await res.json();
+                                msg = errData.message || msg;
+                            } catch (e) {}
+                            throw new Error(msg);
+                        }
+                        return res.json();
+                    })
                     .then(data => {
                         btnLocal.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Έναρξη Τοπικής Αναβάθμισης';
                         btnLocal.disabled = false;
@@ -1122,7 +1132,7 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                         console.error(err);
                         btnLocal.innerHTML = '<i class="fa-solid fa-upload me-1"></i> Έναρξη Τοπικής Αναβάθμισης';
                         btnLocal.disabled = false;
-                        alert('Σφάλμα δικτύου κατά την εκκίνηση της τοπικής αναβάθμισης.');
+                        alert('Σφάλμα: ' + err.message);
                     });
                 });
             }

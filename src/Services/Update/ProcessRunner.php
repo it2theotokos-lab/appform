@@ -78,18 +78,21 @@ class ProcessRunner {
 
         if (!$phpPath) {
             Logger::log("[ProcessRunner] ABORT: No PHP CLI executable found. Cannot spawn worker for update #{$updateId}.");
+            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'WORKER_SPAWN_FAILED', 'Απέτυχε η εύρεση του PHP CLI.');
             return false;
         }
 
         // Verify php.exe is not a FastCGI binary
         if (stripos(PHP_OS, 'WIN') === 0 && stristr($phpPath, 'php-cgi')) {
             Logger::log("[ProcessRunner] ABORT: Resolved path is php-cgi.exe, refusing to use as CLI: {$phpPath}");
+            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'WORKER_SPAWN_FAILED', 'Βρέθηκε php-cgi αντί για php CLI.');
             return false;
         }
 
         $workerScript = realpath(__DIR__ . '/../../../tools/release/worker.php');
         if (!$workerScript) {
             Logger::log("[ProcessRunner] ABORT: worker.php not found at expected path.");
+            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'WORKER_SPAWN_FAILED', 'Δεν βρέθηκε το script worker.php.');
             return false;
         }
 
@@ -149,15 +152,14 @@ class ProcessRunner {
             ];
             $process2 = proc_open($cmd2, $descriptors2, $pipes2, $workingDir, null, ['bypass_shell' => true, 'create_process_group' => true]);
             if (is_resource($process2)) {
-                // Register shutdown to eventually reap the handle — but DON'T call proc_close() now
-                register_shutdown_function(static function() use ($process2) {
-                    if (is_resource($process2)) @proc_close($process2);
-                });
-                Logger::log("[ProcessRunner] Fallback proc_open launched (fire-and-forget)");
+                // DO NOT register shutdown to reap the handle with proc_close()
+                // because it blocks the FastCGI process and drops the TCP connection
+                Logger::log("[ProcessRunner] Fallback proc_open launched (fire-and-forget without proc_close)");
                 return true;
             }
 
             Logger::log("[ProcessRunner] ABORT: All spawn methods failed for update #{$updateId}.");
+            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'WORKER_SPAWN_FAILED', 'Απέτυχε η εκκίνηση του background worker.');
             return false;
 
         } else {

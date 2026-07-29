@@ -2,6 +2,12 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.13-Stable] - 2026-07-29
+
+### Fixed
+- **Worker Detach**: Removed blocking `proc_close` in `ProcessRunner` fallback, allowing the FastCGI process to terminate cleanly and avoiding HTTP timeout errors during updates.
+- **Update Error Handling**: Enhanced UI diagnostics and fetch error handling for Local Update (e.g. CSRF invalidation, invalid ZIP pre-flight failures) to properly report errors instead of a generic "Network error".
+
 ## [1.1.7-Stable] - 2026-07-28
 
 ### Fixed
