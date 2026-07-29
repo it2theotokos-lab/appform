@@ -182,6 +182,8 @@ class FormRenderer {
           
           inputEl.dataset.repo1 = field.repoTagsSource1;
           inputEl.dataset.repo2 = field.repoTagsSource2;
+          inputEl.dataset.search1 = field.repoTagsSearch1 || 'label';
+          inputEl.dataset.search2 = field.repoTagsSearch2 || 'label';
           inputEl.dataset.valueField = field.repoTagsValueField;
           
           formGroup.appendChild(inputEl);

@@ -13,6 +13,14 @@
     <link href="/assets/css/style.css" rel="stylesheet">
     <link href="/assets/css/responsive.css" rel="stylesheet">
 
+    <!-- Awesomplete Autocomplete -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
+
+    <!-- Tagify Tags Select -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" />
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+
     <!-- Theme: apply before render to avoid FOUC -->
     <script>
       (function(){

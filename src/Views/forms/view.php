@@ -380,6 +380,34 @@
                                          </select>
                                          <?php break; ?>
 
+                                     <?php case 'repository_autocomplete': ?>
+                                         <input type="text" class="form-control repository-autocomplete-field" 
+                                                id="<?= $f['key'] ?>" 
+                                                name="<?= $f['key'] ?>"
+                                                placeholder="<?= \App\Core\View::escape($f['placeholder'] ?? 'Αναζήτηση...') ?>"
+                                                value="<?= \App\Core\View::escape($oldVal) ?>"
+                                                data-repo-id="<?= $f['repoAutoSourceId'] ?? '' ?>"
+                                                data-search-field="<?= $f['repoAutoSearchField'] ?? 'label' ?>"
+                                                data-value-field="<?= $f['repoAutoValueField'] ?? 'label' ?>"
+                                                data-mappings="<?= \App\Core\View::escape($f['repoAutoMappings'] ?? '') ?>"
+                                                <?= ($f['required'] ?? false) ? 'required' : '' ?>
+                                                <?= $readonlyAttr ?>>
+                                         <?php break; ?>
+
+                                     <?php case 'repository_tags': ?>
+                                         <input type="text" class="form-control repository-tags-field" 
+                                                id="<?= $f['key'] ?>" 
+                                                name="<?= $f['key'] ?>"
+                                                placeholder="<?= \App\Core\View::escape($f['placeholder'] ?? 'Επιλέξτε tags...') ?>"
+                                                value="<?= \App\Core\View::escape($oldVal) ?>"
+                                                data-repo1="<?= $f['repoTagsSource1'] ?? '' ?>"
+                                                data-repo2="<?= $f['repoTagsSource2'] ?? '' ?>"
+                                                data-search1="<?= $f['repoTagsSearch1'] ?? 'label' ?>"
+                                                data-search2="<?= $f['repoTagsSearch2'] ?? 'label' ?>"
+                                                <?= ($f['required'] ?? false) ? 'required' : '' ?>
+                                                <?= $readonlyAttr ?>>
+                                         <?php break; ?>
+
                                      <?php case 'page_break': ?>
                                          <?php break; ?>
 
@@ -461,6 +489,103 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Autocomplete mapping updates
+    function initAutocomplete(inputEl) {
+        if (typeof Awesomplete === 'undefined') return;
+        const repoId = inputEl.dataset.repoId;
+        const searchField = inputEl.dataset.searchField;
+        const valueField = inputEl.dataset.valueField;
+        const mappings = inputEl.dataset.mappings;
+        if (!repoId || !searchField) return;
+
+        const awesomplete = new Awesomplete(inputEl, {
+            minChars: 2,
+            maxItems: 15,
+            autoFirst: true
+        });
+
+        let currentItemData = {};
+
+        inputEl.addEventListener('input', async (e) => {
+            const val = e.target.value;
+            if (val.length < 2) return;
+            try {
+                const res = await fetch(`/api/repositories/autocomplete?repo_id=${repoId}&search_field=${searchField}&query=${encodeURIComponent(val)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = data.map(item => {
+                        return {
+                            label: item[searchField],
+                            value: item[valueField] || item[searchField],
+                            originalData: item
+                        };
+                    });
+                    currentItemData = {};
+                    list.forEach(i => {
+                        currentItemData[i.value] = i.originalData;
+                    });
+                    awesomplete.list = list;
+                }
+            } catch (err) {
+                console.error('Autocomplete fetch failed', err);
+            }
+        });
+
+        inputEl.addEventListener('awesomplete-selectcomplete', (e) => {
+            const selectedValue = e.text.value;
+            const data = currentItemData[selectedValue];
+            if (data && mappings) {
+                const mapPairs = mappings.split(',').map(m => m.trim()).filter(m => m !== '');
+                mapPairs.forEach(pair => {
+                    const parts = pair.split(':');
+                    if (parts.length === 2) {
+                        const rField = parts[0].trim();
+                        const fField = parts[1].trim();
+                        if (data[rField] !== undefined) {
+                            const targetInput = document.getElementById(fField);
+                            if (targetInput) {
+                                targetInput.value = data[rField];
+                                targetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                                targetInput.dispatchEvent(new Event('change', { bubbles: true }));
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    async function initTagify(inputEl) {
+        if (typeof Tagify === 'undefined') return;
+        const repo1Id = inputEl.dataset.repo1;
+        const repo2Id = inputEl.dataset.repo2 || '';
+        const search1 = inputEl.dataset.search1 || 'label';
+        const search2 = inputEl.dataset.search2 || 'label';
+        if (!repo1Id) return;
+        try {
+            const res = await fetch(`/api/repositories/tags?repo1=${repo1Id}&repo2=${repo2Id}&search1=${search1}&search2=${search2}`);
+            let whitelist = [];
+            if (res.ok) {
+                whitelist = await res.json();
+            }
+            new Tagify(inputEl, {
+                whitelist: whitelist,
+                dropdown: {
+                    maxItems: 20,
+                    classname: "tags-look",
+                    enabled: 0,
+                    closeOnSelect: false
+                }
+            });
+        } catch (err) {
+            console.error('Tagify initialization failed', err);
+        }
+    }
+
+    // Initialize all autocomplete and tags fields on load
+    document.querySelectorAll('.repository-autocomplete-field').forEach(initAutocomplete);
+    document.querySelectorAll('.repository-tags-field').forEach(initTagify);
 
     function getFieldValue(key) {
         const fieldDef = fieldsMap[key];
