@@ -281,93 +281,135 @@ class SettingsController extends Controller {
     }
 
     public function localUpdate() {
-        $this->checkCsrf();
+        // Always return JSON — wrap everything so HTTP 500 is impossible.
+        try {
+            $this->checkCsrfJson();
 
-        if (empty($_FILES['local_zip']) || $_FILES['local_zip']['error'] !== UPLOAD_ERR_OK) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Αποτυχία μεταφόρτωσης του αρχείου.']);
-            exit;
-        }
+            if (empty($_FILES['local_zip']) || $_FILES['local_zip']['error'] !== UPLOAD_ERR_OK) {
+                $uploadErr = $_FILES['local_zip']['error'] ?? -1;
+                self::jsonResponse(false, 'Αποτυχία μεταφόρτωσης του αρχείου. (PHP upload error: ' . $uploadErr . ')');
+            }
 
-        $tmpPath = $_FILES['local_zip']['tmp_name'];
-        $name = $_FILES['local_zip']['name'];
+            $tmpPath = $_FILES['local_zip']['tmp_name'];
+            $name    = $_FILES['local_zip']['name'];
 
-        if (!str_ends_with(strtolower($name), '.zip')) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Μόνο αρχεία ZIP επιτρέπονται.']);
-            exit;
-        }
+            if (!str_ends_with(strtolower($name), '.zip')) {
+                self::jsonResponse(false, 'Μόνο αρχεία ZIP επιτρέπονται.');
+            }
 
-        $validation = \App\Services\Update\PackageValidatorService::validatePackage($tmpPath);
-        if (!$validation['success']) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Μη έγκυρο package: ' . $validation['message']]);
-            exit;
-        }
+            // ── 1. Security & structure validation (no GitHub call) ────────
+            $validation = \App\Services\Update\PackageValidatorService::validatePackage($tmpPath);
+            if (!$validation['success']) {
+                self::jsonResponse(false, 'Μη έγκυρο package: ' . $validation['message']);
+            }
 
-        $zip = new \ZipArchive();
-        if ($zip->open($tmpPath) === true) {
+            // ── 2. Read manifest from ZIP ─────────────────────────────────
+            $zip = new \ZipArchive();
+            if ($zip->open($tmpPath) !== true) {
+                self::jsonResponse(false, 'Αδυναμία ανοίγματος του ZIP αρχείου.');
+            }
             $manifestStr = $zip->getFromName('manifest.json');
             $zip->close();
-            if ($manifestStr) {
-                $manifest = json_decode($manifestStr, true);
-                if (($manifest['package_type'] ?? '') !== 'update') {
-                    header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Προσοχή: Μόνο Incremental Updates (AppForm-*-update.zip) επιτρέπονται, όχι Full Installations.']);
-                    exit;
-                }
-                $targetVersion = $manifest['version'] ?? 'unknown';
-                $buildNumber = $manifest['build'] ?? 1;
-            } else {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'Λείπει το manifest.json']);
-                exit;
+
+            if (!$manifestStr) {
+                self::jsonResponse(false, 'Λείπει το manifest.json από το ZIP.');
             }
+
+            $manifest = json_decode($manifestStr, true);
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                self::jsonResponse(false, 'Το manifest.json δεν είναι έγκυρο JSON.');
+            }
+
+            if (($manifest['package_type'] ?? '') !== 'update') {
+                self::jsonResponse(false, 'Προσοχή: Μόνο Incremental Updates (AppForm-*-update.zip) επιτρέπονται, όχι Full Installations.');
+            }
+
+            $targetVersion = $manifest['version'] ?? 'unknown';
+            $buildNumber   = (int)($manifest['build'] ?? 1);
+
+            // ── 3. Local-only pre-flight checks (no GitHub, no cURL) ─────
+            $preFlight = \App\Services\Update\UpdateEngineService::runPreFlightChecks($tmpPath, true);
+            if (!$preFlight['success']) {
+                self::jsonResponse(false, 'Αποτυχία ελέγχου pre-flight: ' . $preFlight['message']);
+            }
+
+            // ── 4. Create the DB update record ───────────────────────────
+            $verData  = \App\Services\VersionService::getVersionData();
+            $updateId = \App\Services\Update\UpdateStatusService::createUpdateRecord([
+                'release_version'  => $targetVersion,
+                'build_number'     => $buildNumber,
+                'release_channel'  => 'stable',
+                'previous_version' => $verData['version'],
+                'previous_build'   => $verData['build'],
+                'provider'         => 'local_upload'
+            ]);
+
+            // ── 5. Move uploaded file atomically to canonical storage path ─
+            $storageDir  = dirname(dirname(__DIR__)) . '/public/storage';
+            $packagePath = $storageDir . '/update_package_' . $updateId . '.zip';
+
+            if (!move_uploaded_file($tmpPath, $packagePath)) {
+                \App\Services\Update\UpdateStatusService::markFailure($updateId, 'UPLOAD_FAILED', 'Αποτυχία μετακίνησης του αρχείου ZIP στο storage.');
+                self::jsonResponse(false, 'Αποτυχία αποθήκευσης του αρχείου στο σύστημα.');
+            }
+
+            // ── 6. Record SHA-256 and package path ───────────────────────
+            $packageSha256 = hash_file('sha256', $packagePath);
+            $db   = \App\Core\Database::getInstance();
+            $stmt = $db->prepare("UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?");
+            $stmt->execute([$packagePath, $packageSha256, $updateId]);
+
+            // ── 7. Advance to waiting_for_lock (valid from pending) ──────
+            //    NOTE: pending → downloading is INVALID per the state machine.
+            //    The correct first worker-controlled state is waiting_for_lock.
+            \App\Services\Update\UpdateStatusService::updateState(
+                $updateId,
+                \App\Services\Update\UpdateStateMachine::STATE_WAITING_FOR_LOCK,
+                'upload_staged'
+            );
+            \App\Services\Update\UpdateStatusService::appendLog(
+                $updateId,
+                'upload_staged',
+                'info',
+                "Επιτυχής τοπικό upload και επαλήθευση πακέτου. SHA-256: {$packageSha256}"
+            );
+
+            // ── 8. Launch background worker ──────────────────────────────
+            $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
+
+            self::jsonResponse(true, $started ? 'Η αναβάθμιση ξεκίνησε.' : 'Το πακέτο αποθηκεύτηκε αλλά ο worker δεν εκκινήθηκε.', ['update_id' => $updateId]);
+
+        } catch (\App\Core\JsonResponseException $jre) {
+            // Intentional JSON responses (CSRF failure, validation errors, etc.) must
+            // propagate to the Router's catch block so emit() fires correctly.
+            throw $jre;
+        } catch (\Throwable $e) {
+            // Safety net: any truly unexpected exception must never produce HTTP 500.
+            self::jsonResponse(false, 'Κρίσιμο σφάλμα: ' . $e->getMessage());
         }
+    }
 
-        $preFlight = \App\Services\Update\UpdateEngineService::runPreFlightChecks($tmpPath);
-        if (!$preFlight['success']) {
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Αποτυχία ελέγχου pre-flight: ' . $preFlight['message']]);
-            exit;
+    /**
+     * Validates CSRF for JSON endpoints. On failure returns a JSON error instead
+     * of rendering an HTML 419 page (which would confuse JS fetch callers).
+     */
+    private function checkCsrfJson(): void {
+        if (!\App\Core\Csrf::validate()) {
+            self::jsonResponse(false, 'CSRF token άκυρο ή ληγμένο. Ανανεώστε τη σελίδα.');
         }
+    }
 
-        $verData = \App\Services\VersionService::getVersionData();
-        $updateId = \App\Services\Update\UpdateStatusService::createUpdateRecord([
-            'release_version' => $targetVersion,
-            'build_number'    => $buildNumber,
-            'release_channel' => 'stable',
-            'previous_version' => $verData['version'],
-            'previous_build'  => $verData['build'],
-            'provider'        => 'local_upload'
-        ]);
-
-        $storageDir = dirname(dirname(__DIR__)) . '/public/storage';
-        $packagePath = $storageDir . '/update_package_' . $updateId . '.zip';
-
-        if (!move_uploaded_file($tmpPath, $packagePath)) {
-            \App\Services\Update\UpdateStatusService::markFailure($updateId, 'UPLOAD_FAILED', 'Αποτυχία μετακίνησης του αρχείου ZIP.');
-            header('Content-Type: application/json');
-            echo json_encode(['success' => false, 'message' => 'Αποτυχία αποθήκευσης του αρχείου στο σύστημα.']);
-            exit;
-        }
-
-        $packageSha256 = hash_file('sha256', $packagePath);
-        $db = \App\Core\Database::getInstance();
-        $stmt = $db->prepare("UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?");
-        $stmt->execute([$packagePath, $packageSha256, $updateId]);
-
-        \App\Services\Update\UpdateStatusService::updateState($updateId, \App\Services\Update\UpdateStateMachine::STATE_DOWNLOADING, 'download_package');
-        \App\Services\Update\UpdateStatusService::appendLog($updateId, 'download_package', 'info', "Επιτυχής λήψη (τοπικό upload) και επαλήθευση του πακέτου. SHA-256: {$packageSha256}");
-
-        $started = \App\Services\Update\ProcessRunner::runBackgroundWorker($updateId);
-
-        header('Content-Type: application/json');
-        echo json_encode([
-            'success'   => $started,
-            'update_id' => $updateId
-        ]);
-        exit;
+    /**
+     * Emits a JSON response and terminates in production.
+     * In production, the Router catches JsonResponseException and calls emit().
+     * In test contexts, the test helper catches it and reads the payload —
+     * completely avoiding the ob_start/exit race that caused assertion failures.
+     */
+    private static function jsonResponse(bool $success, string $message, array $extra = [], int $status = 200): never {
+        throw new \App\Core\JsonResponseException(
+            array_merge(['success' => $success, 'message' => $message], $extra),
+            $status
+        );
     }
 
     public function getStatus() {

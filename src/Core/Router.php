@@ -69,16 +69,25 @@ class Router {
                 // Run middlewares
                 $this->runMiddlewares($resolvedMiddlewares);
 
-                // Execute handler
+                // Execute handler, catching JsonResponseException for JSON-only endpoints.
+                // Any other exception propagates to App::handleException (500 page).
                 $handler = $route['handler'];
                 if (is_array($handler)) {
                     $controllerName = $handler[0];
                     $actionName = $handler[1];
 
-                    $controller = new $controllerName();
-                    $controller->$actionName($params);
+                    try {
+                        $controller = new $controllerName();
+                        $controller->$actionName($params);
+                    } catch (\App\Core\JsonResponseException $jre) {
+                        $jre->emit(); // sends header + JSON body + exit
+                    }
                 } else if (is_callable($handler)) {
-                    call_user_func_array($handler, [$params]);
+                    try {
+                        call_user_func_array($handler, [$params]);
+                    } catch (\App\Core\JsonResponseException $jre) {
+                        $jre->emit();
+                    }
                 }
                 return;
             }

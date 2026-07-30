@@ -16,9 +16,11 @@ class UpdateEngineService {
 
     /**
      * Runs all pre-flight diagnostic checks to verify system requirements, cURL/SSL, mysqldump, write permissions, and optional package validity.
+     * @param string|null $packagePath Optional path to the ZIP to validate.
+     * @param bool $skipNetworkCheck   When true (local upload), skips the GitHub API cURL test — no network required.
      * Returns an array with 'success' (bool) and 'message' (string).
      */
-    public static function runPreFlightChecks(?string $packagePath = null): array {
+    public static function runPreFlightChecks(?string $packagePath = null, bool $skipNetworkCheck = false): array {
         self::init();
         try {
             // 1. PHP ZipArchive check
@@ -67,40 +69,43 @@ class UpdateEngineService {
             }
 
             // 4. cURL and SSL check with GitHub Release API
-            $token = getenv('GITHUB_TOKEN');
-            if (empty($token)) {
-                $configPath = dirname(__DIR__) . '/../../config/config.local.php';
-                if (file_exists($configPath)) {
-                    $localConfig = include $configPath;
-                    $token = $localConfig['updates']['github_token'] ?? null;
+            //    Skipped for local/manual uploads ($skipNetworkCheck = true).
+            if (!$skipNetworkCheck) {
+                $token = getenv('GITHUB_TOKEN');
+                if (empty($token)) {
+                    $configPath = dirname(__DIR__) . '/../../config/config.local.php';
+                    if (file_exists($configPath)) {
+                        $localConfig = include $configPath;
+                        $token = $localConfig['updates']['github_token'] ?? null;
+                    }
                 }
-            }
 
-            $ch = curl_init("https://api.github.com/repos/dvlachonatsios-dev/appform/releases");
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 12);
-            curl_setopt($ch, CURLOPT_USERAGENT, 'AppForm-Preflight/1.0');
+                $ch = curl_init("https://api.github.com/repos/dvlachonatsios-dev/appform/releases");
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+                curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+                curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+                curl_setopt($ch, CURLOPT_USERAGENT, 'AppForm-Preflight/1.0');
 
-            $headers = ['Accept: application/vnd.github+json'];
-            if (!empty($token)) {
-                $headers[] = "Authorization: token {$token}";
-            }
-            curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                $headers = ['Accept: application/vnd.github+json'];
+                if (!empty($token)) {
+                    $headers[] = "Authorization: token {$token}";
+                }
+                curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
-            $res = curl_exec($ch);
-            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            $curlError = curl_error($ch);
-            curl_close($ch);
+                $res = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                $curlError = curl_error($ch);
+                curl_close($ch);
 
-            if ($res === false) {
-                return ['success' => false, 'message' => 'Αποτυχία σύνδεσης στο GitHub API (cURL SSL): ' . $curlError];
-            }
-            if ($httpCode !== 200) {
-                return ['success' => false, 'message' => 'Το GitHub API επέστρεψε HTTP κωδικό: ' . $httpCode];
+                if ($res === false) {
+                    return ['success' => false, 'message' => 'Αποτυχία σύνδεσης στο GitHub API (cURL SSL): ' . $curlError];
+                }
+                if ($httpCode !== 200) {
+                    return ['success' => false, 'message' => 'Το GitHub API επέστρεψε HTTP κωδικό: ' . $httpCode];
+                }
             }
 
             // 5. Package validation (if file path is provided)
