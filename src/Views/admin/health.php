@@ -28,7 +28,7 @@
         <div class="card p-3 d-flex align-items-center justify-content-between flex-row">
             <div>
                 <h6 class="text-muted small mb-1">Environment</h6>
-                <h4 class="text-white m-0">Production</h4>
+                <h4 class="text-white m-0"><?= ucfirst(\App\Core\App::$config['app']['env'] ?? 'production') ?></h4>
             </div>
             <div class="text-info"><i class="fa-solid fa-server fa-2x"></i></div>
         </div>
