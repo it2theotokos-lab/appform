@@ -23,6 +23,7 @@ $testFiles = [
     'UserModelTest.php',
     'RolePermissionTest.php',
     'RepositoryValidationTest.php',
+    'RepositoryCreationTest.php',
     'FormSchemaValidationTest.php',
     'FormVersioningTest.php',
     'FormFieldsRendererTest.php',

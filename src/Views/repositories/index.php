@@ -30,11 +30,12 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="data_json" class="form-label">Επιλογές (JSON Format)</label>
-                    <textarea class="form-control font-monospace" id="data_json" name="data_json" rows="8" required placeholder='[
+                    <label for="data_json" class="form-label">Προαιρετικό Import Επιλογών από JSON</label>
+                    <textarea class="form-control font-monospace" id="data_json" name="data_json" rows="8" placeholder='[
   {"value": "it", "label": "Πληροφορική"},
   {"value": "hr", "label": "Ανθρώπινο Δυναμικό"}
 ]'></textarea>
+                    <div class="form-text">Αφήστε κενό για να δημιουργηθεί κενό Repository. Θα μπορείτε να προσθέσετε στήλες και εγγραφές από τον Repository Editor.</div>
                 </div>
 
                 <button type="submit" class="btn btn-premium w-100 py-2">Δημιουργία Repository <i class="fa-solid fa-plus ms-2" aria-hidden="true"></i></button>
