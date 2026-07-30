@@ -2,6 +2,12 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.19-Stable] - 2026-07-30
+
+### Fixed
+- **Manual/Local Update State Transition (BUG-3)**: The `localUpdate()` controller was prematurely transitioning the update record to `waiting_for_lock` before launching the background worker. The worker then attempted the same `waiting_for_lock → waiting_for_lock` transition, which is explicitly invalid in the state machine, causing a crash immediately after a successful upload and SHA-256 verification. The controller now leaves the record in `pending` and only appends a diagnostic log entry. The worker (`UpdateEngineService::runUpdate()`) is now the sole owner of the `waiting_for_lock` transition, ensuring exactly one `pending → waiting_for_lock` transition per update cycle.
+- **Worker Pre-flight for Local Uploads**: `UpdateEngineService::runUpdate()` now correctly skips the GitHub network check when the provider is `local_upload`, consistent with the controller's `runPreFlightChecks(skipNetworkCheck=true)` call.
+
 ## [1.1.14-Stable] - 2026-07-29
 
 ### Added

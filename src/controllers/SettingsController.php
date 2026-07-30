@@ -359,19 +359,14 @@ class SettingsController extends Controller {
             $stmt = $db->prepare("UPDATE application_updates SET package_path = ?, package_sha256 = ? WHERE id = ?");
             $stmt->execute([$packagePath, $packageSha256, $updateId]);
 
-            // ── 7. Advance to waiting_for_lock (valid from pending) ──────
-            //    NOTE: pending → downloading is INVALID per the state machine.
-            //    The correct first worker-controlled state is waiting_for_lock.
-            \App\Services\Update\UpdateStatusService::updateState(
-                $updateId,
-                \App\Services\Update\UpdateStateMachine::STATE_WAITING_FOR_LOCK,
-                'upload_staged'
-            );
+            // ── 7. Log staging success — leave record in 'pending' ───────
+            //    The worker is the sole owner of the waiting_for_lock transition.
+            //    Doing it here caused: waiting_for_lock → waiting_for_lock (invalid).
             \App\Services\Update\UpdateStatusService::appendLog(
                 $updateId,
                 'upload_staged',
                 'info',
-                "Επιτυχής τοπικό upload και επαλήθευση πακέτου. SHA-256: {$packageSha256}"
+                "Επιτυχής τοπικό upload και επαλήθευση πακέτου. SHA-256: {$packageSha256}. Αναμονή worker."
             );
 
             // ── 8. Launch background worker ──────────────────────────────

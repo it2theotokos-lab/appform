@@ -143,9 +143,11 @@ class UpdateEngineService {
         $root = realpath(dirname(__DIR__) . '/../../');
         $storageDir = $root . '/public/storage';
 
-        // Run pre-flight checks as fallback
+        // Run pre-flight checks as fallback.
+        // Skip the GitHub network check for local uploads — no network required.
         $packagePath = !empty($update['package_path']) && file_exists($update['package_path']) ? $update['package_path'] : null;
-        $preflight = self::runPreFlightChecks($packagePath);
+        $isLocalUpload = ($update['provider'] ?? '') === 'local_upload';
+        $preflight = self::runPreFlightChecks($packagePath, $isLocalUpload);
         if (!$preflight['success']) {
             throw new \Exception("Pre-flight check failed: " . $preflight['message']);
         }
