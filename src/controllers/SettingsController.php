@@ -1374,7 +1374,7 @@ class SettingsController extends Controller {
 
         // Delete old logo file if exists
         $db       = Database::getInstance();
-        $oldStmt  = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $oldStmt  = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_logo_path'");
         $oldStmt->execute();
         $oldPath  = $oldStmt->fetchColumn();
         if ($oldPath) {
@@ -1387,9 +1387,9 @@ class SettingsController extends Controller {
         // Persist new path in system_settings (relative to public/)
         $relativePath = 'storage/logos/' . $filename;
         $upsert = $db->prepare("
-            INSERT INTO system_settings (`key`, `value`, `description`, `is_public`)
-            VALUES ('app_logo_path', ?, 'Custom application logo path', 0)
-            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
+            INSERT INTO system_settings (setting_key, setting_value, setting_type, is_public)
+            VALUES ('app_logo_path', ?, 'string', 0)
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
         ");
         $upsert->execute([$relativePath]);
 
@@ -1406,7 +1406,7 @@ class SettingsController extends Controller {
         $this->checkCsrf();
 
         $db      = Database::getInstance();
-        $stmt    = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $stmt    = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_logo_path'");
         $stmt->execute();
         $oldPath = $stmt->fetchColumn();
 
@@ -1417,7 +1417,7 @@ class SettingsController extends Controller {
             }
         }
 
-        $clear = $db->prepare("UPDATE system_settings SET `value` = '' WHERE `key` = 'app_logo_path'");
+        $clear = $db->prepare("UPDATE system_settings SET setting_value = '' WHERE setting_key = 'app_logo_path'");
         $clear->execute();
 
         $this->logAudit('settings.logo.deleted', 'system_settings', null, []);
