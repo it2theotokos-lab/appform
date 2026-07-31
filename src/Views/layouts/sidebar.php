@@ -211,7 +211,7 @@ if (!function_exists('hasActiveChild')) {
     $customLogoPath = '';
     try {
         $db = \App\Core\Database::getInstance();
-        $logoStmt = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $logoStmt = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_logo_path'");
         $logoStmt->execute();
         $customLogoPath = (string)($logoStmt->fetchColumn() ?? '');
     } catch (\Throwable $e) {

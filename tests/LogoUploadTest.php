@@ -3,13 +3,17 @@
  * LogoUploadTest.php — v1.1.20 Build 22
  *
  * Tests for the Logo Upload feature:
- * - Migration 032_app_logo.sql exists
+ * - Migration 032_app_logo.sql exists and uses CORRECT column names
  * - Storage directory exists
- * - SettingsController methods exist
+ * - SettingsController methods exist and use correct column names
  * - Routes are registered in index.php
  * - Build exclusions include logos dir
- * - Sidebar uses custom logo logic
+ * - Sidebar uses custom logo logic with correct column names
  * - Settings index includes logo UI
+ *
+ * Column-name regression tests (T1c/T1d/T1e, T8c/T8d, T13/T14/T15):
+ * Guard against SQLSTATE[42S22] caused by using `key`/`value`/`description`
+ * instead of `setting_key`/`setting_value` per the canonical schema in 004_phase4.sql.
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -26,7 +30,20 @@ assert(
     strpos($migrationContent, 'app_logo_path') !== false,
     "Test 1b Failed: Migration must insert 'app_logo_path' key."
 );
-echo "Test 1 Passed: Migration 032_app_logo.sql exists and contains correct key.\n";
+// ── Regression tests for BUG-4: wrong column names caused SQLSTATE[42S22] ──────
+assert(
+    strpos($migrationContent, 'setting_key') !== false,
+    "Test 1c FAILED: Migration must use 'setting_key' column (not '`key`'). BUG-4 regression."
+);
+assert(
+    strpos($migrationContent, 'setting_value') !== false,
+    "Test 1d FAILED: Migration must use 'setting_value' column (not '`value`'). BUG-4 regression."
+);
+assert(
+    strpos($migrationContent, '`key`') === false,
+    "Test 1e FAILED: Migration must NOT use backtick-quoted `key` — this is not a column in system_settings. BUG-4 regression."
+);
+echo "Test 1 Passed: Migration 032_app_logo.sql exists with correct column names (setting_key/setting_value).\n";
 
 // ── Test 2: Storage logos directory exists ────────────────────────────────────
 $logosDir = $projectRoot . '/public/storage/logos';
@@ -89,7 +106,15 @@ assert(
     strpos($sidebarContent, 'hasCustomLogo') !== false,
     "Test 8b Failed: sidebar.php must have \$hasCustomLogo conditional."
 );
-echo "Test 8 Passed: Sidebar contains custom logo resolution logic.\n";
+assert(
+    strpos($sidebarContent, 'setting_value') !== false,
+    "Test 8c FAILED: sidebar.php must SELECT 'setting_value' (not 'value'). BUG-4 regression."
+);
+assert(
+    strpos($sidebarContent, 'setting_key') !== false,
+    "Test 8d FAILED: sidebar.php must query WHERE setting_key (not backtick `key`). BUG-4 regression."
+);
+echo "Test 8 Passed: Sidebar contains custom logo logic with correct column names.\n";
 
 // ── Test 9: Settings index contains logo upload UI ────────────────────────────
 $settingsIndexFile = $projectRoot . '/src/Views/settings/index.php';
@@ -126,5 +151,24 @@ assert(
 );
 echo "Test 12 Passed: Old logo cleanup (unlink) is implemented.\n";
 
-echo "\n✓ All Logo Upload Tests Passed!\n";
+// ── Tests 13-15: SettingsController column-name regression (BUG-4) ───────────
+assert(
+    strpos($controllerContent, '`key`') === false,
+    "Test 13 FAILED: SettingsController must NOT use backtick `key` in any query. BUG-4 regression."
+);
+echo "Test 13 Passed: SettingsController has no backtick `key` column reference.\n";
+
+assert(
+    strpos($controllerContent, "WHERE setting_key = 'app_logo_path'") !== false,
+    "Test 14 FAILED: SettingsController must query WHERE setting_key = 'app_logo_path'. BUG-4 regression."
+);
+echo "Test 14 Passed: SettingsController queries use correct 'setting_key' column.\n";
+
+assert(
+    strpos($controllerContent, 'setting_value') !== false,
+    "Test 15 FAILED: SettingsController must use 'setting_value' column (not 'value'). BUG-4 regression."
+);
+echo "Test 15 Passed: SettingsController queries use correct 'setting_value' column.\n";
+
+echo "\n✓ All Logo Upload Tests Passed! (15 tests)\n";
 return true;
