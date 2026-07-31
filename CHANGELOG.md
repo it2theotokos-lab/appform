@@ -2,7 +2,17 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.21-Stable] - 2026-07-31
+
+### Fixed
+- **BUG-4 Corrective Release (Clean Install)**: This release supersedes v1.1.20 for new installations. Migration `032_app_logo.sql` used non-existent column names (`` `key` ``, `` `value` ``, `` `description` ``). Corrected to `setting_key`, `setting_value` per the canonical `system_settings` schema (`004_phase4.sql`). Same column-name fixes applied to `SettingsController::uploadLogo()` (2 queries), `SettingsController::deleteLogo()` (2 queries), and `sidebar.php` (1 query).
+
+### Tests
+- `MigrationTest_032.php` (25 tests — A through I): migration SQL syntax, canonical column names, INSERT IGNORE idempotency, upgrade-from-v1.1.19 safety, controller/sidebar column correctness, no legacy refs.
+- `LogoUploadTest.php` (15 tests), `LanguageTest.php` (9 tests), `SettingsNavTest.php` (8 tests) — all pass.
+
 ## [1.1.20-Stable] - 2026-07-31
+
 
 ### Added
 - **Language Selector (EL/EN)**: New `Lang` service with 200+ translation keys. Global `__()` helper registered at bootstrap. Language toggle (ΕΛ / EN) buttons added to the header. Session-persisted locale preference. All sidebar section titles, settings tabs, header dropdown items, footer, and UI labels are now translatable.
