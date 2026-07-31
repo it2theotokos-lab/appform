@@ -19,6 +19,8 @@ class HelpService {
         if (str_starts_with($uri, '/notifications')) return 'notifications';
         if (str_starts_with($uri, '/admin/analytics')) return 'analytics';
         if (str_starts_with($uri, '/admin/audit')) return 'audit';
+        if (str_starts_with($uri, '/admin/pdf-designer')) return 'pdf_designer';
+        if (str_starts_with($uri, '/admin/files')) return 'files';
         if (str_starts_with($uri, '/admin/settings')) return 'settings';
 
         return 'dashboard';

@@ -1,6 +1,6 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-bell text-primary me-2"></i> Οδηγίες: Ειδοποιήσεις</h5>
-<p>Ιστορικό ειδοποιήσεων συστήματος και ενημερώσεων εγκρίσεων.</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-bell text-primary me-2"></i> <?= __('Instructions: Notifications') ?></h5>
+<p><?= __('System notification history and approval update alerts.') ?></p>
 <ul>
-    <li><strong>Ανάγνωση:</strong> Σημειώστε ειδοποιήσεις ως διαβασμένες.</li>
-    <li><strong>Ενέργειες:</strong> Μεταβείτε άμεσα στο σχετικό έγγραφο ή εργασία.</li>
+    <li><strong><?= __('Mark as Read:') ?></strong> <?= __('Mark individual or all notifications as read.') ?></li>
+    <li><strong><?= __('Actions:') ?></strong> <?= __('Navigate directly to the related document or task.') ?></li>
 </ul>

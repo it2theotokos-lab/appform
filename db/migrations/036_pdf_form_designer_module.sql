@@ -1,0 +1,9 @@
+-- Migration 036: PDF Form Designer module table
+CREATE TABLE IF NOT EXISTS `form_pdf_designs` (
+    `id` INT AUTO_INCREMENT PRIMARY KEY,
+    `form_id` INT NOT NULL UNIQUE,
+    `design_json` LONGTEXT NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (`form_id`) REFERENCES `forms`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

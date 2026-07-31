@@ -7,7 +7,7 @@ class Router {
 
     public function add(string $method, string $path, $handler, array $middlewares = [], string $name = '') {
         // Convert route parameters from {id} or {slug} to regular expressions
-        $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_\-]+)', $path);
+        $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '(?P<$1>[a-zA-Z0-9_\-\.]+)', $path);
         $pattern = '#^' . $pattern . '$#';
 
         $route = [

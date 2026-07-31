@@ -1,8 +1,23 @@
 <div class="mb-4">
     <a href="/dashboard" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> Πίσω στο Portal</a>
     <h3 class="font-heading text-white">Υποβολή #<?= $submission['id'] ?></h3>
-    <small class="text-muted">Φόρμα: <?= htmlspecialchars($submission['form_title']) ?> (Έκδοση v<?= $submission['form_version_id'] ?>)</small>
+    <small class="text-muted"><?= __('Form') ?>: <?= htmlspecialchars($submission['form_title']) ?> (v<?= $submission['form_version_id'] ?>)</small>
 </div>
+
+<?php 
+$hasDesign = \App\Models\PdfDesign::getByFormId((int)$submission['form_id']);
+if ($hasDesign): 
+?>
+    <div class="mb-4 d-flex gap-2 flex-wrap">
+        <a href="/documents/submissions/<?= (int)$submission['id'] ?>/pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+            <i class="fa-solid fa-eye me-1"></i> <?= __('View PDF') ?>
+        </a>
+        <a href="/documents/submissions/<?= (int)$submission['id'] ?>/pdf?mode=download" class="btn btn-danger btn-sm">
+            <i class="fa-solid fa-file-arrow-down me-1"></i> <?= __('Download PDF') ?>
+        </a>
+    </div>
+<?php endif; ?>
+
 
 <div class="row g-4">
     <div class="col-md-8">

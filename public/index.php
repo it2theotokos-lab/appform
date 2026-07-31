@@ -120,6 +120,14 @@ $router->get('/admin/files/{id}/preview', [\App\Controllers\FileSharingControlle
 $router->get('/admin/files/{id}/download', [\App\Controllers\FileSharingController::class, 'download'], ['auth']);
 $router->post('/admin/files/{id}/delete', [\App\Controllers\FileSharingController::class, 'destroy'], ['auth']);
 
+// PDF Form Designer Module
+$router->get('/admin/pdf-designer', [\App\Controllers\PdfDesignerController::class, 'index'], ['auth', 'permission:forms.manage']);
+$router->get('/admin/pdf-designer/editor/{formId}', [\App\Controllers\PdfDesignerController::class, 'edit'], ['auth', 'permission:forms.manage']);
+$router->post('/admin/pdf-designer/editor/{formId}/save', [\App\Controllers\PdfDesignerController::class, 'save'], ['auth', 'permission:forms.manage']);
+$router->post('/admin/pdf-designer/upload-image', [\App\Controllers\PdfDesignerController::class, 'uploadImage'], ['auth', 'permission:forms.manage']);
+$router->get('/admin/pdf-designer/assets/{filename}', [\App\Controllers\PdfDesignerController::class, 'serveAsset'], ['auth']);
+$router->get('/documents/submissions/{id}/pdf', [\App\Controllers\PdfDesignerController::class, 'generateSubmissionPdf'], ['auth']);
+
 // Roles CRUD
 $router->get('/admin/roles', [\App\Controllers\RoleController::class, 'index'], ['auth', 'permission:roles.manage']);
 $router->post('/admin/roles', [\App\Controllers\RoleController::class, 'store'], ['auth', 'permission:roles.manage']);

@@ -39,13 +39,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (res.success && res.html) {
                     helpContent.innerHTML = res.html;
                 } else {
-                    helpContent.innerHTML = '<p class="text-muted">Δεν υπάρχει διαθέσιμο περιεχόμενο βοήθειας για αυτή τη σελίδα.</p>';
+                    helpContent.innerHTML = '<p class="text-muted">' + '<?= __('No help instructions available for this page.') ?>' + '</p>';
                 }
                 helpModal.style.display = 'flex';
                 helpModal.classList.add('is-visible');
             })
             .catch(e => {
-                helpContent.innerHTML = '<p class="text-muted">Δεν υπάρχει διαθέσιμο περιεχόμενο βοήθειας για αυτή τη σελίδα.</p>';
+                helpContent.innerHTML = '<p class="text-muted">' + '<?= __('No help instructions available for this page.') ?>' + '</p>';
                 helpModal.style.display = 'flex';
                 helpModal.classList.add('is-visible');
             });

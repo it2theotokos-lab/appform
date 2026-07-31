@@ -31,7 +31,8 @@ if ($roleSlug === 'administrator') {
         [
             'title' => __('Forms'),
             'items' => [
-                ['label' => __('Forms'),              'route' => '/admin/forms',         'icon' => 'fa-solid fa-file-invoice'],
+                ['label' => __('Form Builder'),       'route' => '/admin/forms',         'icon' => 'fa-solid fa-wpforms', 'permission' => 'forms.manage'],
+                ['label' => __('PDF Form Designer'),  'route' => '/admin/pdf-designer',  'icon' => 'fa-solid fa-file-pdf', 'permission' => 'forms.manage'],
                 ['label' => __('Document Templates'), 'route' => '/admin/document-templates', 'icon' => 'fa-solid fa-file-pdf', 'permission' => 'document_templates.view'],
                 ['label' => __('Workflow Design'),    'route' => '/admin/workflows',     'icon' => 'fa-solid fa-diagram-project'],
                 ['label' => __('Navigation'),         'route' => '/admin/menus',         'icon' => 'fa-solid fa-bars'],

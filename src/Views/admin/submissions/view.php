@@ -4,6 +4,21 @@
     <small class="text-muted">Υποβλήθηκε από: <strong><?= htmlspecialchars($submission['submitter_name']) ?></strong> | Φόρμα: <?= htmlspecialchars($submission['form_title']) ?></small>
 </div>
 
+<?php 
+$hasDesign = \App\Models\PdfDesign::getByFormId((int)$submission['form_id']);
+if ($hasDesign): 
+?>
+    <div class="mb-4 d-flex gap-2 flex-wrap">
+        <a href="/documents/submissions/<?= (int)$submission['id'] ?>/pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+            <i class="fa-solid fa-eye me-1"></i> <?= __('View PDF') ?>
+        </a>
+        <a href="/documents/submissions/<?= (int)$submission['id'] ?>/pdf?mode=download" class="btn btn-danger btn-sm">
+            <i class="fa-solid fa-file-arrow-down me-1"></i> <?= __('Download PDF') ?>
+        </a>
+    </div>
+<?php endif; ?>
+
+
 <?php if ($error = \App\Core\Session::flash('error')): ?>
     <div class="alert alert-danger"><?= \App\Core\View::escape($error) ?></div>
 <?php endif; ?>

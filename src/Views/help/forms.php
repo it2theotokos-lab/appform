@@ -1,6 +1,8 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-file-invoice text-primary me-2"></i> Οδηγίες: Σχεδιασμός Φορμών</h5>
-<p>Δημιουργία και επεξεργασία των φορμών εισαγωγής στοιχείων χρηστών.</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-file-invoice text-primary me-2"></i> <?= __('Instructions: Form Design') ?></h5>
+<p><?= __('Create and edit data entry forms for users.') ?></p>
 <ul>
-    <li><strong>Visual Builder:</strong> Σύρετε και αποθέστε πεδία (text, select, signature κλπ).</li>
-    <li><strong>Έκδοση Φόρμας:</strong> Διατήρηση ιστορικού εκδόσεων και ενεργοποίηση της επιθυμητής.</li>
+    <li><strong><?= __('Visual Builder:') ?></strong> <?= __('Drag and drop fields (text, select, signature, etc.) onto the form canvas.') ?></li>
+    <li><strong><?= __('Form Versions:') ?></strong> <?= __('Maintain a version history and activate the desired version.') ?></li>
+    <li><strong><?= __('Publish:') ?></strong> <?= __('Publish the form to make it available to users for submission.') ?></li>
+    <li><strong><?= __('PDF Design:') ?></strong> <?= __('Link a PDF designer template to generate submission PDFs automatically.') ?></li>
 </ul>

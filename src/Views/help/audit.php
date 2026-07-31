@@ -1,6 +1,6 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> Οδηγίες: Καταγραφές Ασφαλείας (Audit Logs)</h5>
-<p>Πλήρες ιστορικό ενεργειών ασφαλείας και αλλαγών στο σύστημα (Audit trail).</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-clock-rotate-left text-primary me-2"></i> <?= __('Instructions: Audit Logs') ?></h5>
+<p><?= __('Complete history of security actions and system changes (audit trail).') ?></p>
 <ul>
-    <li><strong>Στοιχεία Καταγραφής:</strong> Ποιος χρήστης έκανε την ενέργεια, πότε, από ποια IP και με ποια δεδομένα.</li>
-    <li><strong>Αναζήτηση:</strong> Αναζητήστε συγκεκριμένα συμβάντα.</li>
+    <li><strong><?= __('Log Entry Details:') ?></strong> <?= __('Which user performed the action, when, from which IP and with what data.') ?></li>
+    <li><strong><?= __('Search:') ?></strong> <?= __('Search for specific events in the audit log.') ?></li>
 </ul>

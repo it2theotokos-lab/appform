@@ -1,6 +1,6 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-square-check text-primary me-2"></i> Οδηγίες: Εργασίες Έγκρισης (Workflow Tasks)</h5>
-<p>Διαχείριση των εκκρεμών εργασιών αναθεώρησης και υπογραφών.</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-square-check text-primary me-2"></i> <?= __('Instructions: Workflow Tasks') ?></h5>
+<p><?= __('Manage pending review and signature tasks.') ?></p>
 <ul>
-    <li><strong>Εξέταση:</strong> Προβολή στοιχείων εγγράφου και ιστορικού.</li>
-    <li><strong>Αποφάσεις:</strong> Έγκριση (Approve), Επιστροφή (Return) ή Απόρριψη (Reject).</li>
+    <li><strong><?= __('Review:') ?></strong> <?= __('View document details and history.') ?></li>
+    <li><strong><?= __('Decisions:') ?></strong> <?= __('Approve, Return or Reject.') ?></li>
 </ul>

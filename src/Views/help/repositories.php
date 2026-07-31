@@ -1,6 +1,6 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-database text-primary me-2"></i> Οδηγίες: Repositories Δεδομένων</h5>
-<p>Διαχείριση των πηγών δεδομένων (Repositories) που συνδέονται με τα πεδία των φορμών.</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-database text-primary me-2"></i> <?= __('Instructions: Data Repositories') ?></h5>
+<p><?= __('Manage the data sources (Repositories) connected to form fields.') ?></p>
 <ul>
-    <li><strong>Σύνδεση SQL:</strong> Ορισμός ερωτημάτων λήψης εξωτερικών στοιχείων.</li>
-    <li><strong>Στατικά Δεδομένα:</strong> Μεταφόρτωση JSON αρχείων με σταθερές λίστες επιλογών.</li>
+    <li><strong><?= __('SQL Connection:') ?></strong> <?= __('Define queries to fetch external data for dynamic dropdowns.') ?></li>
+    <li><strong><?= __('Static Data:') ?></strong> <?= __('Upload JSON files with fixed option lists.') ?></li>
 </ul>
