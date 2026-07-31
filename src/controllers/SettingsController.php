@@ -1313,4 +1313,116 @@ class SettingsController extends Controller {
         Session::flash('success', 'Ο κανόνας ειδοποίησης συστήματος ενημερώθηκε.');
         $this->redirect('/admin/settings?tab=global_notifications');
     }
+
+    // ── Logo Upload ────────────────────────────────────────────────────────────
+
+    /**
+     * POST /admin/settings/logo/upload
+     * Accepts JPG, PNG, WEBP · max 2 MB.
+     * Stores file in public/storage/logos/ and saves relative path in system_settings.
+     */
+    public function uploadLogo(): void {
+        $this->checkCsrf();
+
+        if (empty($_FILES['logo_file']) || $_FILES['logo_file']['error'] !== UPLOAD_ERR_OK) {
+            Session::flash('error', __('Logo upload failed. Please try again.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        $file    = $_FILES['logo_file'];
+        $maxSize = 2 * 1024 * 1024; // 2 MB
+
+        // Size check
+        if ($file['size'] > $maxSize) {
+            Session::flash('error', __('File too large. Maximum allowed size is 2 MB.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Extension whitelist
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            Session::flash('error', __('Invalid file type. Only JPG, PNG and WEBP are allowed.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Server-side MIME validation via GD
+        $imgInfo = @getimagesize($file['tmp_name']);
+        $allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!$imgInfo || !in_array($imgInfo['mime'], $allowedMimes, true)) {
+            Session::flash('error', __('Invalid image content (server-side validation failed).'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Build unique filename & destination
+        $storageDir = dirname(__DIR__, 2) . '/public/storage/logos/';
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
+        }
+
+        $filename = 'app_logo_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $dest     = $storageDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $dest)) {
+            Session::flash('error', __('Logo upload failed. Please try again.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Delete old logo file if exists
+        $db       = Database::getInstance();
+        $oldStmt  = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $oldStmt->execute();
+        $oldPath  = $oldStmt->fetchColumn();
+        if ($oldPath) {
+            $oldFile = dirname(__DIR__, 2) . '/public/' . ltrim($oldPath, '/');
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        // Persist new path in system_settings (relative to public/)
+        $relativePath = 'storage/logos/' . $filename;
+        $upsert = $db->prepare("
+            INSERT INTO system_settings (`key`, `value`, `description`, `is_public`)
+            VALUES ('app_logo_path', ?, 'Custom application logo path', 0)
+            ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)
+        ");
+        $upsert->execute([$relativePath]);
+
+        $this->logAudit('settings.logo.uploaded', 'system_settings', null, ['file' => $filename]);
+        Session::flash('success', __('Logo uploaded successfully.'));
+        $this->redirect('/admin/settings?tab=general');
+    }
+
+    /**
+     * POST /admin/settings/logo/delete
+     * Removes the custom logo file and clears the system_settings entry.
+     */
+    public function deleteLogo(): void {
+        $this->checkCsrf();
+
+        $db      = Database::getInstance();
+        $stmt    = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $stmt->execute();
+        $oldPath = $stmt->fetchColumn();
+
+        if ($oldPath) {
+            $oldFile = dirname(__DIR__, 2) . '/public/' . ltrim($oldPath, '/');
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        $clear = $db->prepare("UPDATE system_settings SET `value` = '' WHERE `key` = 'app_logo_path'");
+        $clear->execute();
+
+        $this->logAudit('settings.logo.deleted', 'system_settings', null, []);
+        Session::flash('success', __('Logo deleted successfully.'));
+        $this->redirect('/admin/settings?tab=general');
+    }
 }
+

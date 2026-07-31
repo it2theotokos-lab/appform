@@ -1,12 +1,14 @@
 <?php
 use App\Core\Auth;
 use App\Services\NotificationService;
+use App\Services\Lang;
 
 $user        = Auth::user();
 $userId      = Auth::id();
 $unreadCount = $userId ? NotificationService::getUnreadCount($userId) : 0;
 $currentPref = 'system'; // will be overridden by JS
-?>
+$currentLang = Lang::locale();
+
 <header class="app-header" role="banner">
     <!-- Left: mobile toggle + page title -->
     <div class="header-left">
@@ -24,28 +26,46 @@ $currentPref = 'system'; // will be overridden by JS
 
         <!-- Global Help Info Button -->
         <?php $helpCtx = \App\Services\HelpService::resolveContext(); ?>
-        <button class="btn-icon" onclick="openGlobalHelp('<?= htmlspecialchars($helpCtx) ?>')" title="Οδηγίες Χρήσης" aria-label="Οδηγίες Χρήσης">
+        <button class="btn-icon" onclick="openGlobalHelp('<?= htmlspecialchars($helpCtx) ?>')" title="<?= __('Usage Guide') ?>" aria-label="<?= __('Usage Guide') ?>">
             <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
         </button>
 
+        <!-- Language Selector -->
+        <form action="/admin/set-language" method="POST" id="lang-switcher-form" style="display:inline-flex;margin:0;">
+            <?= \App\Core\Csrf::field() ?>
+            <input type="hidden" name="redirect" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/') ?>">
+            <div class="lang-switcher" role="group" aria-label="Language / Γλώσσα">
+                <button type="submit" name="lang" value="el"
+                        class="lang-btn <?= $currentLang === 'el' ? 'active' : '' ?>"
+                        title="Ελληνικά" aria-pressed="<?= $currentLang === 'el' ? 'true' : 'false' ?>">
+                    ΕΛ
+                </button>
+                <button type="submit" name="lang" value="en"
+                        class="lang-btn <?= $currentLang === 'en' ? 'active' : '' ?>"
+                        title="English" aria-pressed="<?= $currentLang === 'en' ? 'true' : 'false' ?>">
+                    EN
+                </button>
+            </div>
+        </form>
+
         <!-- Theme Switcher -->
-        <div class="theme-switcher" role="group" aria-label="Επιλογή θέματος">
+        <div class="theme-switcher" role="group" aria-label="<?= __("Select theme") ?>">
             <button class="theme-btn" data-theme-value="light"
-                    title="Light Theme" aria-label="Φωτεινό θέμα" aria-pressed="false">
+                    title="Light Theme" aria-label="<?= __('Light Theme') ?>" aria-pressed="false">
                 <i class="fa-solid fa-sun" aria-hidden="true"></i>
             </button>
             <button class="theme-btn" data-theme-value="dark"
-                    title="Dark Theme" aria-label="Σκοτεινό θέμα" aria-pressed="false">
+                    title="Dark Theme" aria-label="<?= __('Dark Theme') ?>" aria-pressed="false">
                 <i class="fa-solid fa-moon" aria-hidden="true"></i>
             </button>
             <button class="theme-btn" data-theme-value="system"
-                    title="System Theme" aria-label="Θέμα συστήματος" aria-pressed="false">
+                    title="System Theme" aria-label="<?= __('System Theme') ?>" aria-pressed="false">
                 <i class="fa-solid fa-desktop" aria-hidden="true"></i>
             </button>
         </div>
 
         <!-- Notifications bell -->
-        <a href="/notifications" class="btn-icon" title="Ειδοποιήσεις" aria-label="<?= $unreadCount > 0 ? "$unreadCount αδιάβαστες ειδοποιήσεις" : 'Ειδοποιήσεις' ?>">
+        <a href="/notifications" class="btn-icon" title="<?= __('Notifications') ?>" aria-label="<?= $unreadCount > 0 ? "$unreadCount " . __('unread notifications') : __('Notifications') ?>">
             <i class="fa-solid fa-bell" aria-hidden="true"></i>
             <?php if ($unreadCount > 0): ?>
                 <span class="notif-dot" aria-hidden="true"></span>
@@ -81,12 +101,12 @@ $currentPref = 'system'; // will be overridden by JS
                     </li>
                     <li>
                         <a class="dropdown-item" href="/admin/profile">
-                            <i class="fa-solid fa-user-circle" aria-hidden="true"></i> Το Προφίλ μου
+                            <i class="fa-solid fa-user-circle" aria-hidden="true"></i> <?= __('My Profile') ?>
                         </a>
                     </li>
                     <li>
                         <a class="dropdown-item" href="/notifications">
-                            <i class="fa-solid fa-bell" aria-hidden="true"></i> Ειδοποιήσεις
+                            <i class="fa-solid fa-bell" aria-hidden="true"></i> <?= __('Notifications') ?>
                             <?php if ($unreadCount > 0): ?>
                                 <span class="badge bg-danger ms-auto"><?= $unreadCount ?></span>
                             <?php endif; ?>
@@ -97,7 +117,7 @@ $currentPref = 'system'; // will be overridden by JS
                         <form action="/logout" method="POST">
                             <?= \App\Core\Csrf::field() ?>
                             <button type="submit" class="dropdown-item text-danger">
-                                <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> Αποσύνδεση
+                                <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i> <?= __('Logout') ?>
                             </button>
                         </form>
                     </li>

@@ -4,7 +4,8 @@
             &copy; <?= date('Y') ?> AppForm v<?= \App\Services\VersionService::getVersionString() ?> &mdash; R&D by DVlachonatsios for Theotokos I.T. Department
         </p>
         <p class="mb-0" style="font-size:0.75rem;color:var(--color-text-muted);">
-            <span id="footer-env" style="display:none;" class="badge-status-draft badge" title="Περιβάλλον">dev</span>
+            <span id="footer-env" style="display:none;" class="badge-status-draft badge" title="<?= __('System') ?>">dev</span>
         </p>
     </div>
 </footer>
+

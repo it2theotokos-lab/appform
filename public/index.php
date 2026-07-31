@@ -73,6 +73,13 @@ $app = new App\Core\App();
 // Core Session Start
 \App\Core\Session::init();
 
+// ── Global translation helper ────────────────────────────────────────────────
+if (!function_exists('__')) {
+    function __(string $key, array $replace = []): string {
+        return \App\Services\Lang::get($key, $replace);
+    }
+}
+
 // Router config initialization
 $router = App\Core\App::$router;
 
@@ -290,6 +297,10 @@ $router->post('/admin/settings/updates/rollback', [\App\Controllers\SettingsCont
 $router->post('/admin/settings/updates/force-release', [\App\Controllers\SettingsController::class, 'forceReleaseLock'], ['auth', 'permission:updates.manage']);
 $router->get('/admin/settings/updates/logs/download', [\App\Controllers\SettingsController::class, 'downloadDiagnosticLogs'], ['auth', 'permission:updates.view']);
 
+// ── Logo Management ────────────────────────────────────────────────────────────
+$router->post('/admin/settings/logo/upload', [\App\Controllers\SettingsController::class, 'uploadLogo'], ['auth', 'permission:settings.manage']);
+$router->post('/admin/settings/logo/delete', [\App\Controllers\SettingsController::class, 'deleteLogo'], ['auth', 'permission:settings.manage']);
+
 // Audit Logs
 $router->get('/admin/audit', [\App\Controllers\AuditController::class, 'index'], ['auth', 'permission:audit.view']);
 
@@ -314,6 +325,19 @@ $router->post('/admin/data-exchange/export', [\App\Controllers\DataExchangeContr
 $router->post('/admin/data-exchange/import', [\App\Controllers\DataExchangeController::class, 'import'], ['auth', 'permission:data_exchange.import']);
 $router->post('/admin/data-exchange/report', [\App\Controllers\DataExchangeController::class, 'generateReport'], ['auth', 'permission:data_exchange.reports']);
 $router->get('/admin/data-exchange/template', [\App\Controllers\DataExchangeController::class, 'downloadTemplate'], ['auth', 'permission:data_exchange.import']);
+
+// ── Language Switcher ──────────────────────────────────────────────────────
+$router->post('/admin/set-language', function() {
+    $lang = $_POST['lang'] ?? 'el';
+    \App\Services\Lang::setLocale($lang);
+    $redirect = $_POST['redirect'] ?? '/';
+    // Sanitise redirect — must be a relative path starting with '/'
+    if (!str_starts_with($redirect, '/') || str_contains($redirect, '://')) {
+        $redirect = '/';
+    }
+    header('Location: ' . $redirect);
+    exit;
+}, ['auth']);
 
 // Fallback home route redirection
 $router->get('/', function() {

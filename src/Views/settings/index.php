@@ -6,8 +6,8 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
 
 <div class="row mb-4 align-items-center">
     <div class="col-md-8">
-        <h1 class="h3 m-0 text-white"><i class="fa-solid fa-gears me-2 text-primary"></i> Κέντρο Διαχείρισης Συστήματος</h1>
-        <p class="text-muted m-0">Διαμόρφωση γενικών παραμέτρων, λήψη αντιγράφων ασφαλείας, ρυθμίσεις SMTP και demo data.</p>
+        <h1 class="h3 m-0 text-white"><i class="fa-solid fa-gears me-2 text-primary"></i> <?= __('System Management Center') ?></h1>
+        <p class="text-muted m-0"><?= __('Configure general parameters, backups, SMTP settings and demo data.') ?></p>
     </div>
 </div>
 
@@ -34,12 +34,13 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
 <div class="card p-4">
     <?php if ($activeTab === 'general'): ?>
         <div>
-            <h4 class="text-white mb-2"><i class="fa-solid fa-sliders text-primary me-2"></i> Γενικές Ρυθμίσεις</h4>
-            <p class="text-muted mb-4">Διαμόρφωση βασικών παραμέτρων λειτουργίας της πύλης.</p>
+            <h4 class="text-white mb-2"><i class="fa-solid fa-sliders text-primary me-2"></i> <?= __('General Settings') ?></h4>
+            <p class="text-muted mb-4"><?= __('Configure basic portal operation parameters.') ?></p>
 
             <form action="/admin/settings/update" method="POST" style="max-width: 600px;">
                 <?= \App\Core\Csrf::field() ?>
                 <?php foreach ($settings as $set): ?>
+                    <?php if ($set['setting_key'] === 'app_logo_path') continue; // rendered separately ?>
                     <div class="mb-3">
                         <label for="<?= $set['setting_key'] ?>" class="form-label text-white text-capitalize">
                             <?php
@@ -53,12 +54,74 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                             ?>
                         </label>
                         <input type="text" class="form-control" id="<?= $set['setting_key'] ?>" name="<?= $set['setting_key'] ?>" value="<?= \App\Core\View::escape($set['setting_value']) ?>">
-                        <small class="text-muted">Καταχωρήστε την τιμή παραμέτρου για το κλειδί <?= htmlspecialchars($set['setting_key']) ?>.</small>
+                        <small class="text-muted"><?= __('Enter the parameter value for key') ?> <?= htmlspecialchars($set['setting_key']) ?>.</small>
                     </div>
                 <?php endforeach; ?>
-                <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-save me-1"></i> Αποθήκευση</button>
+                <button type="submit" class="btn btn-primary mt-3"><i class="fa-solid fa-save me-1"></i> <?= __('Save') ?></button>
             </form>
+
+            <!-- ── Application Logo ──────────────────────────────────────── -->
+            <?php
+            $logoPath = '';
+            foreach ($settings as $set) {
+                if ($set['setting_key'] === 'app_logo_path') {
+                    $logoPath = $set['setting_value'] ?? '';
+                    break;
+                }
+            }
+            $hasLogo = !empty($logoPath) && is_file(dirname(__DIR__, 3) . '/public/' . ltrim($logoPath, '/'));
+            ?>
+            <hr class="border-secondary my-4">
+            <h5 class="text-white mb-1"><i class="fa-solid fa-image text-primary me-2"></i> <?= __('Application Logo') ?></h5>
+            <p class="text-muted small mb-3"><?= __('Upload a custom logo (JPG, PNG, WEBP · max 2 MB). The current default logo is used as fallback.') ?></p>
+
+            <div class="row g-4 align-items-start" style="max-width:700px;">
+                <!-- Current logo preview -->
+                <div class="col-auto">
+                    <div class="border border-secondary rounded p-2 bg-dark text-center" style="min-width:140px;">
+                        <p class="text-muted small mb-2"><?= __('Current Logo') ?></p>
+                        <?php if ($hasLogo): ?>
+                            <img src="/<?= htmlspecialchars($logoPath) ?>?v=<?= time() ?>"
+                                 alt="<?= __('Current Logo') ?>"
+                                 style="max-height:60px;max-width:120px;object-fit:contain;">
+                        <?php else: ?>
+                            <div class="d-flex align-items-center justify-content-center" style="height:60px;width:120px;margin:0 auto;">
+                                <i class="fa-solid fa-cubes-stacked fa-2x text-primary"></i>
+                            </div>
+                            <small class="text-muted d-block mt-1"><?= __('No custom logo is set.') ?></small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Upload form -->
+                <div class="col">
+                    <form action="/admin/settings/logo/upload" method="POST" enctype="multipart/form-data" id="logo-upload-form">
+                        <?= \App\Core\Csrf::field() ?>
+                        <label class="form-label text-white"><?= __('Upload New Logo') ?></label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" name="logo_file" id="logo_file"
+                                   accept=".jpg,.jpeg,.png,.webp"
+                                   aria-label="<?= __('Upload New Logo') ?>">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fa-solid fa-upload me-1"></i> <?= __('Upload') ?>
+                            </button>
+                        </div>
+                        <small class="text-muted">JPG, PNG, WEBP &mdash; max 2 MB</small>
+                    </form>
+
+                    <?php if ($hasLogo): ?>
+                        <form action="/admin/settings/logo/delete" method="POST" class="mt-3"
+                              onsubmit="return confirm('<?= htmlspecialchars(__('Are you sure you want to delete the custom logo and revert to the default?')) ?>')">
+                            <?= \App\Core\Csrf::field() ?>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fa-solid fa-trash me-1"></i> <?= __('Delete Logo') ?>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
+
 
     <?php elseif ($activeTab === 'backup'): ?>
         <div>

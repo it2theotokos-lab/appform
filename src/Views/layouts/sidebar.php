@@ -15,88 +15,88 @@ $menuSections = [];
 if ($roleSlug === 'administrator') {
     $menuSections = [
         [
-            'title' => 'Γενικά',
+            'title' => __('General'),
             'items' => [
-                ['label' => 'Dashboard',          'route' => '/dashboard',          'icon' => 'fa-solid fa-gauge-high'],
+                ['label' => __('Dashboard'),          'route' => '/dashboard',          'icon' => 'fa-solid fa-gauge-high'],
             ]
         ],
         [
-            'title' => 'Διαχείριση',
+            'title' => __('Administration'),
             'items' => [
-                ['label' => 'Χρήστες',            'route' => '/admin/users',         'icon' => 'fa-solid fa-users'],
-                ['label' => 'Ρόλοι',              'route' => '/admin/roles',         'icon' => 'fa-solid fa-user-shield'],
-                ['label' => 'Repositories',        'route' => '/admin/repositories',  'icon' => 'fa-solid fa-database'],
+                ['label' => __('Users'),              'route' => '/admin/users',         'icon' => 'fa-solid fa-users'],
+                ['label' => __('Roles'),              'route' => '/admin/roles',         'icon' => 'fa-solid fa-user-shield'],
+                ['label' => __('Repositories'),       'route' => '/admin/repositories',  'icon' => 'fa-solid fa-database'],
             ]
         ],
         [
-            'title' => 'Φόρμες',
+            'title' => __('Forms'),
             'items' => [
-                ['label' => 'Φόρμες',             'route' => '/admin/forms',         'icon' => 'fa-solid fa-file-invoice'],
-                ['label' => 'Πρότυπα Εγγράφων',   'route' => '/admin/document-templates', 'icon' => 'fa-solid fa-file-pdf', 'permission' => 'document_templates.view'],
-                ['label' => 'Σχεδιασμός Workflow', 'route' => '/admin/workflows',     'icon' => 'fa-solid fa-diagram-project'],
-                ['label' => 'Navigation',          'route' => '/admin/menus',         'icon' => 'fa-solid fa-bars'],
+                ['label' => __('Forms'),              'route' => '/admin/forms',         'icon' => 'fa-solid fa-file-invoice'],
+                ['label' => __('Document Templates'), 'route' => '/admin/document-templates', 'icon' => 'fa-solid fa-file-pdf', 'permission' => 'document_templates.view'],
+                ['label' => __('Workflow Design'),    'route' => '/admin/workflows',     'icon' => 'fa-solid fa-diagram-project'],
+                ['label' => __('Navigation'),         'route' => '/admin/menus',         'icon' => 'fa-solid fa-bars'],
             ]
         ],
         [
-            'title' => 'Workflow',
+            'title' => __('Workflow'),
             'items' => [
-                ['label' => 'Υποβολές',           'route' => '/admin/submissions',   'icon' => 'fa-solid fa-envelope-open-text'],
-                ['label' => 'Notifications',       'route' => '/notifications',       'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
+                ['label' => __('Submissions'),        'route' => '/admin/submissions',   'icon' => 'fa-solid fa-envelope-open-text'],
+                ['label' => __('Notifications'),      'route' => '/notifications',       'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
             ]
         ],
         [
-            'title' => 'Αναφορές',
+            'title' => __('Reports'),
             'items' => [
-                ['label' => 'Analytics',           'route' => '/admin/analytics',     'icon' => 'fa-solid fa-chart-line'],
-                ['label' => 'Εισαγωγές/Εξαγωγές',   'route' => '/admin/data-exchange', 'icon' => 'fa-solid fa-arrow-right-arrow-left', 'permission' => 'data_exchange.view'],
-                ['label' => 'Audit Logs',          'route' => '/admin/audit',         'icon' => 'fa-solid fa-clock-rotate-left', 'permission' => 'audit.view'],
+                ['label' => __('Analytics'),          'route' => '/admin/analytics',     'icon' => 'fa-solid fa-chart-line'],
+                ['label' => __('Imports/Exports'),    'route' => '/admin/data-exchange', 'icon' => 'fa-solid fa-arrow-right-arrow-left', 'permission' => 'data_exchange.view'],
+                ['label' => __('Audit Logs'),         'route' => '/admin/audit',         'icon' => 'fa-solid fa-clock-rotate-left', 'permission' => 'audit.view'],
             ]
         ],
         [
-            'title' => 'Σύστημα',
+            'title' => __('System'),
             'items' => [
-                ['label' => 'Ρυθμίσεις',          'route' => '/admin/settings',      'icon' => 'fa-solid fa-gears', 'permission' => 'settings.manage'],
-                ['label' => 'System Health',      'route' => '/admin/health',        'icon' => 'fa-solid fa-heart-pulse'],
+                ['label' => __('Settings'),           'route' => '/admin/settings',      'icon' => 'fa-solid fa-gears', 'permission' => 'settings.manage'],
+                ['label' => __('System Health'),      'route' => '/admin/health',        'icon' => 'fa-solid fa-heart-pulse'],
             ]
         ],
         [
-            'title' => 'Έγγραφα',
+            'title' => __('Documents'),
             'items' => [
-                ['label' => 'Νέο Έγγραφο',         'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
-                ['label' => 'Τα Πρόχειρά μου',     'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
-                ['label' => 'Οι Υποβολές μου',     'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
-                ['label' => 'Εργασίες Έγκρισης',   'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
+                ['label' => __('New Document'),       'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
+                ['label' => __('My Drafts'),          'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
+                ['label' => __('My Submissions'),     'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
+                ['label' => __('Approval Tasks'),     'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
             ]
         ],
     ];
 } elseif ($roleSlug === 'manager' || $roleSlug === 'reviewer') {
     $menuSections = [
         [
-            'title' => 'Γενικά',
+            'title' => __('General'),
             'items' => [
-                ['label' => 'Dashboard',   'route' => '/dashboard',         'icon' => 'fa-solid fa-gauge-high'],
+                ['label' => __('Dashboard'),   'route' => '/dashboard',         'icon' => 'fa-solid fa-gauge-high'],
             ]
         ],
         [
-            'title' => 'Workflow',
+            'title' => __('Workflow'),
             'items' => [
-                ['label' => 'Υποβολές',   'route' => '/admin/submissions',  'icon' => 'fa-solid fa-envelope-open-text'],
-                ['label' => 'Notifications','route' => '/notifications',     'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
+                ['label' => __('Submissions'),  'route' => '/admin/submissions',  'icon' => 'fa-solid fa-envelope-open-text'],
+                ['label' => __('Notifications'),'route' => '/notifications',      'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
             ]
         ],
         [
-            'title' => 'Αναφορές',
+            'title' => __('Reports'),
             'items' => [
-                ['label' => 'Analytics',   'route' => '/admin/analytics',   'icon' => 'fa-solid fa-chart-line'],
+                ['label' => __('Analytics'),   'route' => '/admin/analytics',   'icon' => 'fa-solid fa-chart-line'],
             ]
         ],
         [
-            'title' => 'Έγγραφα',
+            'title' => __('Documents'),
             'items' => [
-                ['label' => 'Νέο Έγγραφο',         'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
-                ['label' => 'Τα Πρόχειρά μου',     'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
-                ['label' => 'Οι Υποβολές μου',     'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
-                ['label' => 'Εργασίες Έγκρισης',   'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
+                ['label' => __('New Document'),   'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
+                ['label' => __('My Drafts'),      'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
+                ['label' => __('My Submissions'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
+                ['label' => __('Approval Tasks'), 'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
             ]
         ],
     ];
@@ -104,20 +104,20 @@ if ($roleSlug === 'administrator') {
     // Regular user
     $menuSections = [
         [
-            'title' => 'Γενικά',
+            'title' => __('General'),
             'items' => [
-                ['label' => 'Dashboard',                'route' => '/dashboard',      'icon' => 'fa-solid fa-gauge-high'],
-                ['label' => 'Οι Υποβολές Φορμών μου',  'route' => '/my-submissions', 'icon' => 'fa-solid fa-receipt'],
-                ['label' => 'Notifications',            'route' => '/notifications',  'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
+                ['label' => __('Dashboard'),              'route' => '/dashboard',      'icon' => 'fa-solid fa-gauge-high'],
+                ['label' => __('My Form Submissions'),    'route' => '/my-submissions', 'icon' => 'fa-solid fa-receipt'],
+                ['label' => __('Notifications'),          'route' => '/notifications',  'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
             ]
         ],
         [
-            'title' => 'Έγγραφα (PDF)',
+            'title' => __('Documents (PDF)'),
             'items' => [
-                ['label' => 'Νέο Έγγραφο',                 'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
-                ['label' => 'Τα Πρόχειρα Εγγράφων μου',   'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
-                ['label' => 'Τα Υποβληθέντα Έγγραφά μου', 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
-                ['label' => 'Εργασίες Έγκρισης',           'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
+                ['label' => __('New Document'),           'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
+                ['label' => __('My Draft Documents'),     'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
+                ['label' => __('My Submitted Documents'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
+                ['label' => __('Approval Tasks'),         'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
             ]
         ],
     ];
@@ -172,7 +172,7 @@ try {
 
                 if (!empty($dynItems)) {
                     $menuSections[] = [
-                        'title' => 'Συνδέσμοι Πλοήγησης',
+                        'title' => __('Navigation Links'),
                         'items' => $dynItems
                     ];
                 }
@@ -204,14 +204,35 @@ if (!function_exists('hasActiveChild')) {
 }
 ?>
 
-<aside class="sidebar" id="app-sidebar" role="navigation" aria-label="Κύριο μενού">
+<aside class="sidebar" id="app-sidebar" role="navigation" aria-label="<?= __('Main menu') ?>">
     <!-- Logo -->
+    <?php
+    // Resolve custom logo (set via Settings → General → Logo Upload)
+    $customLogoPath = '';
+    try {
+        $db = \App\Core\Database::getInstance();
+        $logoStmt = $db->prepare("SELECT value FROM system_settings WHERE `key` = 'app_logo_path'");
+        $logoStmt->execute();
+        $customLogoPath = (string)($logoStmt->fetchColumn() ?? '');
+    } catch (\Throwable $e) {
+        $customLogoPath = '';
+    }
+    $hasCustomLogo = $customLogoPath !== ''
+        && is_file(dirname(__DIR__, 2) . '/../public/' . ltrim($customLogoPath, '/'));
+    ?>
     <div class="sidebar-header">
-        <a href="/dashboard" class="sidebar-logo" aria-label="AppForm - Αρχική">
-            <div class="sidebar-logo-icon" aria-hidden="true">
-                <i class="fa-solid fa-cubes-stacked"></i>
-            </div>
-            <span class="sidebar-logo-text">App<span>Form</span></span>
+        <a href="/dashboard" class="sidebar-logo" aria-label="<?= __('AppForm - Home') ?>">
+            <?php if ($hasCustomLogo): ?>
+                <img src="/<?= htmlspecialchars($customLogoPath) ?>?v=<?= filemtime(dirname(__DIR__, 2) . '/../public/' . ltrim($customLogoPath, '/')) ?>"
+                     alt="<?= __('Application Logo') ?>"
+                     class="sidebar-custom-logo"
+                     style="max-height:40px;max-width:120px;object-fit:contain;">
+            <?php else: ?>
+                <div class="sidebar-logo-icon" aria-hidden="true">
+                    <i class="fa-solid fa-cubes-stacked"></i>
+                </div>
+                <span class="sidebar-logo-text">App<span>Form</span></span>
+            <?php endif; ?>
         </a>
     </div>
 
@@ -310,9 +331,9 @@ if (!function_exists('hasActiveChild')) {
         <!-- Logout -->
         <form action="/logout" method="POST">
             <?= \App\Core\Csrf::field() ?>
-            <button type="submit" class="sidebar-logout-btn" aria-label="Αποσύνδεση από το σύστημα">
+            <button type="submit" class="sidebar-logout-btn" aria-label="<?= __('Disconnect from the system') ?>">
                 <i class="fa-solid fa-arrow-right-from-bracket" aria-hidden="true"></i>
-                <span>Αποσύνδεση</span>
+                <span><?= __('Logout') ?></span>
             </button>
         </form>
     </div>
