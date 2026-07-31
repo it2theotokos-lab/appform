@@ -2,6 +2,12 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.22-Stable] - 2026-07-31
+
+### Fixed
+- **EL/EN Localization Polish**: Corrected `Lang::get()` dictionary lookup logic for both `el` and `en` locales. Translated all global modals (Confirm, Signature, Help Modal), search input placeholders, and close buttons. Localized contextual help templates (`dashboard.php`, `settings.php`, `users.php`) and added missing workflow status labels (`submitted`, `returned`, etc.) to the dictionary.
+- **Favicon Path Depth & Full Lifecycle Verification**: Fixed incorrect path resolution depth (`dirname(__DIR__, 2)` → `dirname(__DIR__, 3)`) across all layout templates (`app.php`, `guest.php`, `focus.php`, `public.php`). Verified custom favicon upload, persistence, hard-refresh rendering, fallback to default `/assets/img/favicon.ico` on deletion, and confirmed zero impact on Application Logo.
+
 ## [1.1.21-Stable] - 2026-07-31
 
 ### Fixed

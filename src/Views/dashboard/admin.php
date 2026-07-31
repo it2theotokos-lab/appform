@@ -5,7 +5,7 @@
                 <i class="fa-solid fa-file-invoice" aria-hidden="true"></i>
             </div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Συνολικές Φόρμες</div>
+                <div class="stat-card-label"><?= __('Total Forms') ?></div>
                 <div class="stat-card-value"><?= $formsCount ?></div>
             </div>
         </div>
@@ -16,7 +16,7 @@
                 <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
             </div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Υποβολές Χρηστών</div>
+                <div class="stat-card-label"><?= __('User Submissions') ?></div>
                 <div class="stat-card-value"><?= $subsCount ?></div>
             </div>
         </div>
@@ -27,7 +27,7 @@
                 <i class="fa-solid fa-users" aria-hidden="true"></i>
             </div>
             <div class="stat-card-info">
-                <div class="stat-card-label">Εγγεγραμμένοι Χρήστες</div>
+                <div class="stat-card-label"><?= __('Registered Users') ?></div>
                 <div class="stat-card-value"><?= $usersCount ?></div>
             </div>
         </div>
@@ -36,25 +36,25 @@
 
 <div class="card p-4">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-        <h2 class="card-title mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-primary" aria-hidden="true"></i> Πρόσφατες Υποβολές</h2>
-        <a href="/admin/submissions" class="btn btn-premium btn-sm">Προβολή Όλων</a>
+        <h2 class="card-title mb-0"><i class="fa-solid fa-clock-rotate-left me-2 text-primary" aria-hidden="true"></i> <?= __('Recent Submissions') ?></h2>
+        <a href="/admin/submissions" class="btn btn-premium btn-sm"><?= __('View All') ?></a>
     </div>
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Φόρμα</th>
-                    <th>Χρήστης</th>
-                    <th>Ημερομηνία</th>
-                    <th>Κατάσταση</th>
-                    <th class="text-end">Ενέργειες</th>
+                    <th><?= __('Form') ?></th>
+                    <th><?= __('User') ?></th>
+                    <th><?= __('Date') ?></th>
+                    <th><?= __('Status') ?></th>
+                    <th class="text-end"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($latestSubmissions)): ?>
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">Δεν υπάρχουν πρόσφατες υποβολές.</td>
+                        <td colspan="6" class="text-center text-muted py-4"><?= __('No recent submissions found.') ?></td>
                     </tr>
                 <?php else: ?>
                     <?php foreach ($latestSubmissions as $sub): ?>
@@ -70,11 +70,11 @@
                                 elseif ($sub['status'] === 'rejected') $badgeClass = 'badge-status-rejected';
                                 elseif ($sub['status'] === 'under_review') $badgeClass = 'badge-status-pending';
                                 ?>
-                                <span class="<?= $badgeClass ?>"><?= strtoupper($sub['status']) ?></span>
+                                <span class="<?= $badgeClass ?>"><?= strtoupper(__($sub['status'])) ?></span>
                             </td>
                             <td class="text-end">
                                 <a href="/admin/submissions/<?= $sub['id'] ?>" class="btn btn-premium btn-sm">
-                                    <i class="fa-solid fa-eye me-1" aria-hidden="true"></i> Προβολή
+                                    <i class="fa-solid fa-eye me-1" aria-hidden="true"></i> <?= __('View') ?>
                                 </a>
                             </td>
                         </tr>

@@ -7,6 +7,14 @@ if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
 
 new \App\Core\App();
 
+// ── Global translation helper (mirrors public/index.php) ─────────────────────
+// Required so tests that include view files can call __() safely.
+if (!function_exists('__')) {
+    function __(string $key, array $replace = []): string {
+        return \App\Services\Lang::get($key, $replace);
+    }
+}
+
 echo "=========================================\n";
 echo "    AppForm Unified Test Runner          \n";
 echo "=========================================\n\n";

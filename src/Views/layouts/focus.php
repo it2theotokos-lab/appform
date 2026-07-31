@@ -13,6 +13,27 @@
     <link href="/assets/css/style.css" rel="stylesheet">
     <link href="/assets/css/responsive.css" rel="stylesheet">
 
+    <!-- Favicon -->
+    <?php
+    $favPath = '';
+    try {
+        $db = \App\Core\Database::getInstance();
+        $favStmt = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_favicon_path'");
+        $favStmt->execute();
+        $favPath = (string)($favStmt->fetchColumn() ?? '');
+    } catch (\Throwable $e) {
+        $favPath = '';
+    }
+    $hasCustomFavicon = $favPath !== '' && is_file(dirname(__DIR__, 3) . '/public/' . ltrim($favPath, '/'));
+    if ($hasCustomFavicon):
+        $favExt = strtolower(pathinfo($favPath, PATHINFO_EXTENSION));
+        $favType = $favExt === 'png' ? 'image/png' : ($favExt === 'webp' ? 'image/webp' : 'image/x-icon');
+    ?>
+        <link rel="icon" href="/<?= htmlspecialchars($favPath) ?>?v=<?= filemtime(dirname(__DIR__, 3) . '/public/' . ltrim($favPath, '/')) ?>" type="<?= $favType ?>">
+    <?php else: ?>
+        <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon">
+    <?php endif; ?>
+
     <!-- Theme: apply before render to avoid FOUC -->
     <script>
       (function(){

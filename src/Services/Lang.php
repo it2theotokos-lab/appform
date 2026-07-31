@@ -89,6 +89,9 @@ class Lang {
         'Dark Theme'    => ['en' => 'Dark Theme',    'el' => 'Σκοτεινό θέμα'],
         'System Theme'  => ['en' => 'System Theme',  'el' => 'Θέμα συστήματος'],
         'unread notifications'  => ['en' => 'unread notifications',  'el' => 'αδιάβαστες ειδοποιήσεις'],
+        'Accept'     => ['en' => 'Accept',     'el' => 'Αποδοχή'],
+        'Undo'       => ['en' => 'Undo',       'el' => 'Αναίρεση'],
+        'Clear'      => ['en' => 'Clear',      'el' => 'Καθαρισμός'],
 
         // ── Confirm Modal ─────────────────────────────────────────────
         'Action Confirmation'        => ['en' => 'Action Confirmation',        'el' => 'Επιβεβαίωση ενέργειας'],
@@ -100,7 +103,6 @@ class Lang {
             'en' => 'Draw your signature on the surface below using a mouse, touch or stylus.',
             'el' => 'Σχεδιάστε την υπογραφή σας στην παρακάτω επιφάνεια χρησιμοποιώντας το ποντίκι, την αφή ή τη γραφίδα σας.'
         ],
-        'Accept'     => ['en' => 'Accept',     'el' => 'Αποδοχή'],
 
         // ── Settings Tabs ─────────────────────────────────────────────
         'General Settings'        => ['en' => 'General Settings',        'el' => 'Γενικές Ρυθμίσεις'],
@@ -115,6 +117,9 @@ class Lang {
 
         // ── Settings — General panel ──────────────────────────────────
         'System Management Center'    => ['en' => 'System Management Center',    'el' => 'Κέντρο Διαχείρισης Συστήματος'],
+        'Κέντρο Διαχείρισης Συστήματος' => ['en' => 'System Management Center',    'el' => 'Κέντρο Διαχείρισης Συστήματος'],
+        'Διαχείριση Χρηστών'          => ['en' => 'User Management',             'el' => 'Διαχείριση Χρηστών'],
+        'System Health Check'         => ['en' => 'System Health Check',         'el' => 'Έλεγχος Υγείας Συστήματος'],
         'Configure general parameters, backups, SMTP settings and demo data.' => [
             'en' => 'Configure general parameters, backups, SMTP settings and demo data.',
             'el' => 'Διαμόρφωση γενικών παραμέτρων, λήψη αντιγράφων ασφαλείας, ρυθμίσεις SMTP και demo data.'
@@ -124,6 +129,11 @@ class Lang {
             'el' => 'Διαμόρφωση βασικών παραμέτρων λειτουργίας της πύλης.'
         ],
         'Enter the parameter value for key' => ['en' => 'Enter the parameter value for key', 'el' => 'Καταχωρήστε την τιμή παραμέτρου για το κλειδί'],
+        'Application Name'            => ['en' => 'Application Name',            'el' => 'Όνομα Εφαρμογής'],
+        'CSV Delimiter'               => ['en' => 'CSV Delimiter',               'el' => 'Διαχωριστικό CSV'],
+        'Default Language'            => ['en' => 'Default Language',            'el' => 'Προεπιλεγμένη Γλώσσα'],
+        'Records Per Page'            => ['en' => 'Records Per Page',            'el' => 'Εγγραφές ανά Σελίδα'],
+        'Max File Size (MB)'          => ['en' => 'Max File Size (MB)',          'el' => 'Μέγιστο Μέγεθος Αρχείου (MB)'],
 
         // ── Settings — Backup panel ───────────────────────────────────
         'Backup Management'           => ['en' => 'Backup Management',           'el' => 'Διαχείριση Αντιγράφων Ασφαλείας'],
@@ -179,6 +189,35 @@ class Lang {
         ],
         'No custom logo is set.'      => ['en' => 'No custom logo is set.',      'el' => 'Δεν έχει οριστεί custom logo.'],
 
+        // ── Settings — Favicon ────────────────────────────────────────
+        'Application Favicon'         => ['en' => 'Application Favicon',         'el' => 'Favicon Εφαρμογής'],
+        'Upload a custom favicon (ICO, PNG, WEBP · max 2 MB). The default favicon is used as fallback.' => [
+            'en' => 'Upload a custom favicon (ICO, PNG, WEBP · max 2 MB). The default favicon is used as fallback.',
+            'el' => 'Μεταφόρτωση προσαρμοσμένου favicon (ICO, PNG, WEBP · μέγ. 2 MB). Το προεπιλεγμένο favicon χρησιμοποιείται ως fallback.'
+        ],
+        'Current Favicon'             => ['en' => 'Current Favicon',             'el' => 'Τρέχον Favicon'],
+        'Default Favicon'             => ['en' => 'Default Favicon',             'el' => 'Προεπιλεγμένο Favicon'],
+        'Upload New Favicon'          => ['en' => 'Upload New Favicon',          'el' => 'Μεταφόρτωση Νέου Favicon'],
+        'Delete Favicon'              => ['en' => 'Delete Favicon',              'el' => 'Διαγραφή Favicon'],
+        'Are you sure you want to delete the custom favicon and revert to the default?' => [
+            'en' => 'Are you sure you want to delete the custom favicon and revert to the default?',
+            'el' => 'Θέλετε να διαγράψετε το custom favicon και να επαναφέρετε το προεπιλεγμένο;'
+        ],
+        'Favicon uploaded successfully.' => ['en' => 'Favicon uploaded successfully.', 'el' => 'Το favicon μεταφορτώθηκε επιτυχώς.'],
+        'Favicon deleted successfully.'  => ['en' => 'Favicon deleted successfully.',  'el' => 'Το favicon διαγράφηκε επιτυχώς.'],
+        'Invalid file type. Only ICO, PNG and WEBP are allowed for favicon.' => [
+            'en' => 'Invalid file type. Only ICO, PNG and WEBP are allowed for favicon.',
+            'el' => 'Μη έγκυρος τύπος αρχείου. Επιτρέπονται μόνο ICO, PNG και WEBP για το favicon.'
+        ],
+        'Please select a valid favicon file to upload.' => [
+            'en' => 'Please select a valid favicon file to upload.',
+            'el' => 'Παρακαλώ επιλέξτε ένα έγκυρο αρχείο favicon για μεταφόρτωση.'
+        ],
+        'Favicon upload failed. Please try again.' => [
+            'en' => 'Favicon upload failed. Please try again.',
+            'el' => 'Αποτυχία μεταφόρτωσης favicon. Δοκιμάστε ξανά.'
+        ],
+
         // ── Auth / Login ──────────────────────────────────────────────
         'Session timed out. Please log in again.' => [
             'en' => 'Session timed out. Please log in again.',
@@ -206,6 +245,102 @@ class Lang {
         'Disconnect from the system' => ['en' => 'Disconnect from the system', 'el' => 'Αποσύνδεση από το σύστημα'],
         'Main menu'     => ['en' => 'Main menu',     'el' => 'Κύριο μενού'],
         'AppForm - Home' => ['en' => 'AppForm - Home', 'el' => 'AppForm - Αρχική'],
+
+        // ── Dashboard, Users, Health ──────────────────────────────────
+        'Total Forms'            => ['en' => 'Total Forms',            'el' => 'Συνολικές Φόρμες'],
+        'User Submissions'       => ['en' => 'User Submissions',       'el' => 'Υποβολές Χρηστών'],
+        'Registered Users'       => ['en' => 'Registered Users',       'el' => 'Εγγεγραμμένοι Χρήστες'],
+        'Recent Submissions'     => ['en' => 'Recent Submissions',     'el' => 'Πρόσφατες Υποβολές'],
+        'View All'               => ['en' => 'View All',               'el' => 'Προβολή Όλων'],
+        'Form'                   => ['en' => 'Form',                   'el' => 'Φόρμα'],
+        'User'                   => ['en' => 'User',                   'el' => 'Χρήστης'],
+        'Date'                   => ['en' => 'Date',                   'el' => 'Ημερομηνία'],
+        'View'                   => ['en' => 'View',                   'el' => 'Προβολή'],
+        'No recent submissions found.' => ['en' => 'No recent submissions found.', 'el' => 'Δεν υπάρχουν πρόσφατες υποβολές.'],
+        'User Management'        => ['en' => 'User Management',        'el' => 'Διαχείριση Χρηστών'],
+        'Export'                 => ['en' => 'Export',                 'el' => 'Εξαγωγή'],
+        'Org Structure'          => ['en' => 'Org Structure',          'el' => 'Οργανωτική Δομή'],
+        'Add User'               => ['en' => 'Add User',               'el' => 'Προσθήκη Χρήστη'],
+        'Search…'                => ['en' => 'Search…',                'el' => 'Αναζήτηση…'],
+        'All Roles'              => ['en' => 'All Roles',              'el' => 'Όλοι οι Ρόλοι'],
+        'All Statuses'           => ['en' => 'All Statuses',           'el' => 'Όλες οι Καταστάσεις'],
+        'Active'                 => ['en' => 'Active',                 'el' => 'Ενεργός'],
+        'Inactive'               => ['en' => 'Inactive',               'el' => 'Ανενεργός'],
+        'Role'                   => ['en' => 'Role',                   'el' => 'Ρόλος'],
+        'Provider'               => ['en' => 'Provider',               'el' => 'Πάροχος'],
+        'No users found.'        => ['en' => 'No users found.',        'el' => 'Δεν βρέθηκαν χρήστες.'],
+        'System Health Check'    => ['en' => 'System Health Check',    'el' => 'Έλεγχος Υγείας Συστήματος'],
+        'Monitor operational health and status of AppForm subsystems.' => [
+            'en' => 'Monitor operational health and status of AppForm subsystems.',
+            'el' => 'Έλεγχος κατάστασης λειτουργίας των υποσυστημάτων του AppForm.'
+        ],
+        'HEALTHY'                => ['en' => 'HEALTHY',                'el' => 'ΥΓΙΕΣ'],
+        'PHP Version'            => ['en' => 'PHP Version',            'el' => 'Έκδοση PHP'],
+        'Environment'            => ['en' => 'Environment',            'el' => 'Περιβάλλον'],
+        'Subsystems Status'      => ['en' => 'Subsystems Status',      'el' => 'Κατάσταση Υποσυστημάτων'],
+        'Subsystem'              => ['en' => 'Subsystem',              'el' => 'Υποσύστημα'],
+        'Information'            => ['en' => 'Information',            'el' => 'Πληροφορίες'],
+        'Database'               => ['en' => 'Database',               'el' => 'Βάση Δεδομένων'],
+        'Connection successful'  => ['en' => 'Connection successful',  'el' => 'Σύνδεση επιτυχής'],
+        'approved'               => ['en' => 'APPROVED',               'el' => 'ΕΓΚΡΙΘΗΚΕ'],
+        'Available Forms'        => ['en' => 'Available Forms',        'el' => 'Διαθέσιμες Φόρμες'],
+        'Draft Submissions'      => ['en' => 'Draft Submissions',      'el' => 'Πρόχειρες Υποβολές'],
+        'Submitted Forms'        => ['en' => 'Submitted Forms',        'el' => 'Υποβληθείσες Φόρμες'],
+        'Returned for Correction' => ['en' => 'Returned for Correction', 'el' => 'Επιστροφές για Διόρθωση'],
+        'Available Forms for Submission' => ['en' => 'Available Forms for Submission', 'el' => 'Διαθέσιμες Φόρμες προς Υποβολή'],
+        'No forms available at this time.' => ['en' => 'No forms available at this time.', 'el' => 'Δεν υπάρχουν διαθέσιμες φόρμες αυτή τη στιγμή.'],
+        'No description'         => ['en' => 'No description',         'el' => 'Χχωρίς περιγραφή'],
+        'Fill Form'              => ['en' => 'Fill Form',              'el' => 'Συμπλήρωση Φόρμας'],
+        'My Recent Form Submissions' => ['en' => 'My Recent Form Submissions', 'el' => 'Πρόσφατες Υποβολές Φορμών μου'],
+        'View All Submissions'   => ['en' => 'View All Submissions',   'el' => 'Προβολή Όλων των Υποβολών'],
+        'Submission Date'        => ['en' => 'Submission Date',        'el' => 'Ημερομηνία Υποβολής'],
+        'You have not made any submissions yet.' => ['en' => 'You have not made any submissions yet.', 'el' => 'Δεν έχετε κάνει καμία υποβολή ακόμα.'],
+        'submitted'              => ['en' => 'SUBMITTED',              'el' => 'ΥΠΟΒΛΗΘΗΚΕ'],
+        'returned'               => ['en' => 'RETURNED',               'el' => 'ΕΠΙΣΤΡΑΦΗΚΕ'],
+        'in_review'              => ['en' => 'IN REVIEW',              'el' => 'ΥΠΟ ΕΠΙΘΕΩΡΗΣΗ'],
+        'rejected'               => ['en' => 'REJECTED',               'el' => 'ΑΠΟΡΡΙΦΘΗΚΕ'],
+        'pending'                => ['en' => 'PENDING',                'el' => 'ΣΕ ΑΝΑΜΟΝΗ'],
+        'under_review'           => ['en' => 'UNDER REVIEW',           'el' => 'ΥΠΟ ΕΠΙΘΕΩΡΗΣΗ'],
+        'draft'                  => ['en' => 'DRAFT',                  'el' => 'ΠΡΟΧΕΙΡΟ'],
+
+        // ── Users — Action buttons / modals ──────────────────────────
+        'Change Status'              => ['en' => 'Change Status',              'el' => 'Αλλαγή κατάστασης'],
+        'Do you want to change this user\'s status?' => ['en' => 'Do you want to change this user\'s status?', 'el' => 'Θέλετε να αλλάξετε την κατάσταση του χρήστη;'],
+        'Delete User'                => ['en' => 'Delete User',                'el' => 'Διαγραφή χρήστη'],
+        'Deletion is permanent. Do you want to continue?' => ['en' => 'Deletion is permanent. Do you want to continue?', 'el' => 'Η διαγραφή είναι οριστική. Θέλετε να συνεχίσετε;'],
+        'Deactivate'                 => ['en' => 'Deactivate',                 'el' => 'Απενεργοποίηση'],
+        'Activate'                   => ['en' => 'Activate',                   'el' => 'Ενεργοποίηση'],
+        'Page Navigation'            => ['en' => 'Page Navigation',            'el' => 'Πλοήγηση σελίδων'],
+        'Login'                      => ['en' => 'Login',                      'el' => 'Είσοδος'],
+        'User Menu'                  => ['en' => 'User Menu',                  'el' => 'Μενού χρήστη'],
+        'Open menu'                  => ['en' => 'Open menu',                  'el' => 'Άνοιγμα μενού'],
+        'Name'                       => ['en' => 'Name',                       'el' => 'Όνομα'],
+
+        // ── Help Modal ────────────────────────────────────────────────
+        'Search help instructions…'  => ['en' => 'Search help instructions…',  'el' => 'Αναζήτηση στις οδηγίες χρήσης…'],
+        'No help instructions available for this page.' => ['en' => 'No help instructions available for this page.', 'el' => 'Δεν υπάρχουν διαθέσιμες οδηγίες για αυτή τη σελίδα.'],
+        'Instructions: Portal Dashboard' => ['en' => 'Instructions: Portal Dashboard', 'el' => 'Οδηγίες: Dashboard Portal'],
+        'Welcome to the central Dashboard of AppForm application.' => ['en' => 'Welcome to the central Dashboard of AppForm application.', 'el' => 'Καλώς ήρθατε στο κεντρικό Dashboard της εφαρμογής AppForm.'],
+        'Statistics:'                => ['en' => 'Statistics:',                'el' => 'Στατιστικά Στοιχεία:'],
+        'Quickly view your pending tasks and recent submissions.' => ['en' => 'Quickly view your pending tasks and recent submissions.', 'el' => 'Δείτε γρήγορα τις εκκρεμείς εργασίες και τις πρόσφατες υποβολές σας.'],
+        'Notifications:'             => ['en' => 'Notifications:',             'el' => 'Ειδοποιήσεις:'],
+        'Instantly monitor updates for your documents.' => ['en' => 'Instantly monitor updates for your documents.', 'el' => 'Παρακολουθήστε άμεσα ενημερώσεις για τα έγγραφά σας.'],
+        'Instructions: System Management Center' => ['en' => 'Instructions: System Management Center', 'el' => 'Οδηγίες: Κέντρο Διαχείρισης Συστήματος'],
+        'General Settings:'          => ['en' => 'General Settings:',          'el' => 'Γενικές Ρυθμίσεις:'],
+        'Application name, file upload limits etc.' => ['en' => 'Application name, file upload limits etc.', 'el' => 'Όνομα εφαρμογής, όρια αρχείων κλπ.'],
+        'Manual backup creation and integrity check (SHA256).' => ['en' => 'Manual backup creation and integrity check (SHA256).', 'el' => 'Χειροκίνητη λήψη και έλεγχος ακεραιότητας (SHA256).'],
+        'Restore:'                   => ['en' => 'Restore:',                   'el' => 'Επαναφορά (Restore):'],
+        'Restore wizard with checksum integrity validation, mandatory emergency backups and automatic rollback on failure.' => ['en' => 'Restore wizard with checksum integrity validation, mandatory emergency backups and automatic rollback on failure.', 'el' => 'Οδηγός επαναφοράς με checksum integrity validation, mandatory emergency backups και αυτόματο rollback σε περίπτωση αποτυχίας.'],
+        'Demo Data:'                 => ['en' => 'Demo Data:',                 'el' => 'Demo Data:'],
+        'Import or delete sample test data.' => ['en' => 'Import or delete sample test data.', 'el' => 'Εισαγωγή ή διαγραφή εικονικών δεδομένων δοκιμών.'],
+        'SMTP:'                      => ['en' => 'SMTP:',                      'el' => 'SMTP:'],
+        'External mail server configuration.' => ['en' => 'External mail server configuration.', 'el' => 'Ρυθμίσεις εξωτερικού mail server.'],
+        'Instructions: User Management' => ['en' => 'Instructions: User Management', 'el' => 'Οδηγίες: Διαχείριση Χρηστών'],
+        'Manage portal user accounts.' => ['en' => 'Manage portal user accounts.', 'el' => 'Διαχείριση των λογαριασμών χρηστών της πύλης.'],
+        'Create User:'               => ['en' => 'Create User:',               'el' => 'Δημιουργία Χρήστη:'],
+        'Add a new member with a specific role (Administrator, Manager, User).' => ['en' => 'Add a new member with a specific role (Administrator, Manager, User).', 'el' => 'Προσθήκη νέου μέλους με συγκεκριμένο ρόλο (Administrator, Manager, User).'],
+        'Edit & Status:'             => ['en' => 'Edit & Status:',             'el' => 'Επεξεργασία & Κατάσταση:'],
+        'Activate or deactivate accounts.' => ['en' => 'Activate or deactivate accounts.', 'el' => 'Ενεργοποίηση ή απενεργοποίηση λογαριασμών.'],
     ];
 
     /** Return the currently active locale (el|en). */
@@ -231,17 +366,13 @@ class Lang {
     /**
      * Translate a string key.
      *
-     * @param  string $key     The Greek (EL) canonical key string.
+     * @param  string $key     The English canonical key string.
      * @param  array  $replace Optional sprintf-style replacements (unused currently).
      * @return string          Translated string, or $key if no translation found.
      */
     public static function get(string $key, array $replace = []): string {
         $locale = self::locale();
-        if ($locale === 'el') {
-            // EL is canonical — return the key itself (or dict el value)
-            return $key;
-        }
-        // EN: look up translation
+        // Look up from dictionary
         if (isset(self::$dict[$key][$locale])) {
             return self::$dict[$key][$locale];
         }

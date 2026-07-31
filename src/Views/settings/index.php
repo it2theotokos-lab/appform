@@ -45,12 +45,13 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                         <label for="<?= $set['setting_key'] ?>" class="form-label text-white text-capitalize">
                             <?php
                             $label = $set['setting_key'];
-                            if ($label === 'app_name') $label = 'Όνομα Εφαρμογής';
-                            elseif ($label === 'csv_delimiter') $label = 'Διαχωριστικό CSV';
-                            elseif ($label === 'default_locale') $label = 'Προεπιλεγμένη Γλώσσα';
-                            elseif ($label === 'records_per_page') $label = 'Εγγραφές ανά Σελίδα';
-                            elseif ($label === 'upload_max_filesize') $label = 'Μέγιστο Μέγεθος Αρχείου (MB)';
-                            echo htmlspecialchars($label);
+                            if ($label === 'app_name') $label = __('Application Name');
+                            elseif ($label === 'csv_delimiter') $label = __('CSV Delimiter');
+                            elseif ($label === 'default_locale') $label = __('Default Language');
+                            elseif ($label === 'records_per_page') $label = __('Records Per Page');
+                            elseif ($label === 'upload_max_filesize') $label = __('Max File Size (MB)');
+                            else $label = htmlspecialchars($label);
+                            echo $label;
                             ?>
                         </label>
                         <input type="text" class="form-control" id="<?= $set['setting_key'] ?>" name="<?= $set['setting_key'] ?>" value="<?= \App\Core\View::escape($set['setting_value']) ?>">
@@ -120,29 +121,90 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                     <?php endif; ?>
                 </div>
             </div>
+
+            <!-- ── Application Favicon ───────────────────────────────────── -->
+            <?php
+            $faviconPath = '';
+            foreach ($settings as $set) {
+                if ($set['setting_key'] === 'app_favicon_path') {
+                    $faviconPath = $set['setting_value'] ?? '';
+                    break;
+                }
+            }
+            $hasFavicon = !empty($faviconPath) && is_file(dirname(__DIR__, 3) . '/public/' . ltrim($faviconPath, '/'));
+            ?>
+            <hr class="border-secondary my-4">
+            <h5 class="text-white mb-1"><i class="fa-solid fa-icons text-primary me-2"></i> <?= __('Application Favicon') ?></h5>
+            <p class="text-muted small mb-3"><?= __('Upload a custom favicon (ICO, PNG, WEBP · max 2 MB). The default favicon is used as fallback.') ?></p>
+
+            <div class="row g-4 align-items-start" style="max-width:700px;">
+                <!-- Current favicon preview -->
+                <div class="col-auto">
+                    <div class="border border-secondary rounded p-2 bg-dark text-center" style="min-width:140px;">
+                        <p class="text-muted small mb-2"><?= __('Current Favicon') ?></p>
+                        <?php if ($hasFavicon): ?>
+                            <img src="/<?= htmlspecialchars($faviconPath) ?>?v=<?= time() ?>"
+                                 alt="<?= __('Current Favicon') ?>"
+                                 style="max-height:48px;max-width:48px;object-fit:contain;">
+                        <?php else: ?>
+                            <div class="d-flex align-items-center justify-content-center" style="height:48px;width:48px;margin:0 auto;">
+                                <i class="fa-solid fa-icons fa-2x text-primary"></i>
+                            </div>
+                            <small class="text-muted d-block mt-1"><?= __('Default Favicon') ?></small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <!-- Favicon upload form -->
+                <div class="col">
+                    <form action="/admin/settings/favicon/upload" method="POST" enctype="multipart/form-data" id="favicon-upload-form">
+                        <?= \App\Core\Csrf::field() ?>
+                        <label class="form-label text-white"><?= __('Upload New Favicon') ?></label>
+                        <div class="input-group">
+                            <input type="file" class="form-control" name="favicon_file" id="favicon_file"
+                                   accept=".ico,.png,.webp"
+                                   aria-label="<?= __('Upload New Favicon') ?>">
+                            <button type="submit" class="btn btn-outline-primary">
+                                <i class="fa-solid fa-upload me-1"></i> <?= __('Upload') ?>
+                            </button>
+                        </div>
+                        <small class="text-muted">ICO, PNG, WEBP &mdash; max 2 MB</small>
+                    </form>
+
+                    <?php if ($hasFavicon): ?>
+                        <form action="/admin/settings/favicon/delete" method="POST" class="mt-3"
+                              onsubmit="return confirm('<?= htmlspecialchars(__('Are you sure you want to delete the custom favicon and revert to the default?')) ?>')">
+                            <?= \App\Core\Csrf::field() ?>
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fa-solid fa-trash me-1"></i> <?= __('Delete Favicon') ?>
+                            </button>
+                        </form>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
 
 
     <?php elseif ($activeTab === 'backup'): ?>
         <div>
-            <h4 class="text-white mb-2"><i class="fa-solid fa-database text-primary me-2"></i> Διαχείριση Αντιγράφων Ασφαλείας</h4>
-            <p class="text-muted mb-4">Λήψη χειροκίνητων τοπικών αντιγράφων της βάσης δεδομένων και των αποθηκευμένων αρχείων.</p>
+            <h4 class="text-white mb-2"><i class="fa-solid fa-database text-primary me-2"></i> <?= __('Backup Management') ?></h4>
+            <p class="text-muted mb-4"><?= __('Create manual local backups of the database and stored files.') ?></p>
 
             <div class="d-flex gap-2 mb-4">
                 <form action="/admin/settings/backup/create" method="POST">
                     <?= \App\Core\Csrf::field() ?>
                     <input type="hidden" name="backup_type" value="database">
-                    <button type="submit" class="btn btn-outline-success"><i class="fa-solid fa-file-excel me-1"></i> Δημιουργία Backup Βάσης</button>
+                    <button type="submit" class="btn btn-outline-success"><i class="fa-solid fa-file-excel me-1"></i> <?= __('Create Database Backup') ?></button>
                 </form>
                 <form action="/admin/settings/backup/create" method="POST">
                     <?= \App\Core\Csrf::field() ?>
                     <input type="hidden" name="backup_type" value="files">
-                    <button type="submit" class="btn btn-outline-info"><i class="fa-solid fa-file-zipper me-1"></i> Δημιουργία Backup Αρχείων</button>
+                    <button type="submit" class="btn btn-outline-info"><i class="fa-solid fa-file-zipper me-1"></i> <?= __('Create Files Backup') ?></button>
                 </form>
                 <form action="/admin/settings/backup/create" method="POST">
                     <?= \App\Core\Csrf::field() ?>
                     <input type="hidden" name="backup_type" value="full">
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-box-archive me-1"></i> Δημιουργία Πλήρους Backup</button>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-box-archive me-1"></i> <?= __('Create Full Backup') ?></button>
                 </form>
             </div>
 
@@ -150,19 +212,19 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                 <table class="table table-hover mb-0">
                     <thead>
                         <tr class="text-white">
-                            <th>Όνομα</th>
-                            <th>Τύπος</th>
-                            <th>Μέγεθος</th>
-                            <th>Δημιουργήθηκε</th>
-                            <th>Κατάσταση</th>
+                            <th><?= __('Name') ?></th>
+                            <th><?= __('Type') ?></th>
+                            <th><?= __('Size') ?></th>
+                            <th><?= __('Created') ?></th>
+                            <th><?= __('Status') ?></th>
                             <th>SHA256</th>
-                            <th>Ενέργειες</th>
+                            <th><?= __('Actions') ?></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($backups)): ?>
                             <tr>
-                                <td colspan="7" class="text-center text-muted py-4">Δεν βρέθηκαν τοπικά αντίγραφα ασφαλείας.</td>
+                                <td colspan="7" class="text-center text-muted py-4"><?= __('No local backups found.') ?></td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($backups as $b): ?>
@@ -173,20 +235,20 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
                                     <td class="align-middle text-muted"><?= $b['created_at'] ?></td>
                                     <td class="align-middle">
                                         <?php if ($b['status'] === 'completed' || $b['status'] === 'verified'): ?>
-                                            <span class="badge bg-success"><?= $b['status'] === 'verified' ? 'Επαληθεύτηκε' : 'Ολοκληρώθηκε' ?></span>
+                                            <span class="badge bg-success"><?= $b['status'] === 'verified' ? __('Verified') : __('Completed') ?></span>
                                         <?php elseif ($b['status'] === 'failed'): ?>
-                                            <span class="badge bg-danger">Απέτυχε</span>
+                                            <span class="badge bg-danger"><?= __('Failed') ?></span>
                                         <?php else: ?>
-                                            <span class="badge bg-warning text-dark">Σε Αναμονή</span>
+                                            <span class="badge bg-warning text-dark"><?= __('Pending') ?></span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="align-middle text-muted small" style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><?= htmlspecialchars($b['sha256_hash']) ?></td>
                                     <td class="align-middle">
                                         <a href="/admin/settings/backup/<?= (int)$b['id'] ?>/download" class="btn btn-sm btn-outline-info me-1"><i class="fa-solid fa-download"></i></a>
-                                        <a href="/admin/settings/backup/<?= (int)$b['id'] ?>/verify" class="btn btn-sm btn-outline-success me-1" title="Έλεγχος Ακεραιότητας"><i class="fa-solid fa-shield-heart"></i></a>
+                                        <a href="/admin/settings/backup/<?= (int)$b['id'] ?>/verify" class="btn btn-sm btn-outline-success me-1" title="<?= __('Integrity Check') ?>"><i class="fa-solid fa-shield-heart"></i></a>
                                         <form action="/admin/settings/backup/<?= (int)$b['id'] ?>/delete" method="POST" class="d-inline">
                                             <?= \App\Core\Csrf::field() ?>
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Θέλετε να διαγράψετε οριστικά αυτό το backup;')"><i class="fa-solid fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('<?= htmlspecialchars(__('Are you sure you want to permanently delete this backup?')) ?>')"><i class="fa-solid fa-trash"></i></button>
                                         </form>
                                     </td>
                                 </tr>

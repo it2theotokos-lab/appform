@@ -33,6 +33,15 @@ spl_autoload_register(function ($class) {
     }
 });
 
+// ── Global translation helper ────────────────────────────────────────────────
+// IMPORTANT: Must be registered before App::__construct() so that any view
+// rendered during error handling (e.g. errors/500) can call __() safely.
+if (!function_exists('__')) {
+    function __(string $key, array $replace = []): string {
+        return \App\Services\Lang::get($key, $replace);
+    }
+}
+
 // Gatekeeper installation checks
 if (!\App\Services\InstallationService::isInstalled()) {
     \App\Core\Session::init();
@@ -73,12 +82,7 @@ $app = new App\Core\App();
 // Core Session Start
 \App\Core\Session::init();
 
-// ── Global translation helper ────────────────────────────────────────────────
-if (!function_exists('__')) {
-    function __(string $key, array $replace = []): string {
-        return \App\Services\Lang::get($key, $replace);
-    }
-}
+// ── Translation helper registered above (after PSR-4 autoloader) ────────────
 
 // Router config initialization
 $router = App\Core\App::$router;
@@ -300,6 +304,10 @@ $router->get('/admin/settings/updates/logs/download', [\App\Controllers\Settings
 // ── Logo Management ────────────────────────────────────────────────────────────
 $router->post('/admin/settings/logo/upload', [\App\Controllers\SettingsController::class, 'uploadLogo'], ['auth', 'permission:settings.manage']);
 $router->post('/admin/settings/logo/delete', [\App\Controllers\SettingsController::class, 'deleteLogo'], ['auth', 'permission:settings.manage']);
+
+// ── Favicon Management ─────────────────────────────────────────────────────────
+$router->post('/admin/settings/favicon/upload', [\App\Controllers\SettingsController::class, 'uploadFavicon'], ['auth', 'permission:settings.manage']);
+$router->post('/admin/settings/favicon/delete', [\App\Controllers\SettingsController::class, 'deleteFavicon'], ['auth', 'permission:settings.manage']);
 
 // Audit Logs
 $router->get('/admin/audit', [\App\Controllers\AuditController::class, 'index'], ['auth', 'permission:audit.view']);

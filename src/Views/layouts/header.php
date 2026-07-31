@@ -8,15 +8,16 @@ $userId      = Auth::id();
 $unreadCount = $userId ? NotificationService::getUnreadCount($userId) : 0;
 $currentPref = 'system'; // will be overridden by JS
 $currentLang = Lang::locale();
+?>
 
 <header class="app-header" role="banner">
     <!-- Left: mobile toggle + page title -->
     <div class="header-left">
-        <button class="btn-mobile-menu" id="btn-mobile-menu" aria-label="Άνοιγμα μενού" aria-controls="app-sidebar" aria-expanded="false">
+        <button class="btn-mobile-menu" id="btn-mobile-menu" aria-label="<?= __('Open menu') ?>" aria-controls="app-sidebar" aria-expanded="false">
             <i class="fa-solid fa-bars" aria-hidden="true"></i>
         </button>
         <div>
-            <div class="header-page-title"><?= \App\Core\View::escape($title ?? 'AppForm') ?></div>
+            <div class="header-page-title"><?= \App\Core\View::escape(__($title ?? 'AppForm')) ?></div>
             <div class="header-page-subtitle">AppForm Enterprise Portal</div>
         </div>
     </div>
@@ -80,7 +81,7 @@ $currentLang = Lang::locale();
             </div>
             <div class="dropdown">
                 <button class="user-avatar" data-bs-toggle="dropdown" aria-expanded="false"
-                        aria-label="Μενού χρήστη — <?= \App\Core\View::escape($user['full_name'] ?? '') ?>"
+                        aria-label="<?= __('User Menu') ?> — <?= \App\Core\View::escape($user['full_name'] ?? '') ?>"
                         style="padding: 0; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                     <?php if (!empty($user['avatar_path']) && file_exists(dirname(dirname(dirname(__DIR__))) . '/public' . $user['avatar_path'])): ?>
                         <img src="<?= htmlspecialchars($user['avatar_path']) ?>" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">

@@ -37,7 +37,7 @@ class HelpService {
         }
         return [
             'success' => false,
-            'html' => '<p class="text-muted">Δεν υπάρχουν διαθέσιμες οδηγίες για αυτή τη σελίδα.</p>'
+            'html' => '<p class="text-muted">' . __('No help instructions available for this page.') . '</p>'
         ];
     }
 }

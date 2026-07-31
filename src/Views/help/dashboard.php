@@ -1,6 +1,6 @@
-<h5 class="text-white mb-2"><i class="fa-solid fa-gauge-high text-primary me-2"></i> Οδηγίες: Dashboard Portal</h5>
-<p>Καλώς ήρθατε στο κεντρικό Dashboard της εφαρμογής AppForm.</p>
+<h5 class="text-white mb-2"><i class="fa-solid fa-gauge-high text-primary me-2"></i> <?= __('Instructions: Portal Dashboard') ?></h5>
+<p><?= __('Welcome to the central Dashboard of AppForm application.') ?></p>
 <ul>
-    <li><strong>Στατιστικά Στοιχεία:</strong> Δείτε γρήγορα τις εκκρεμείς εργασίες και τις πρόσφατες υποβολές σας.</li>
-    <li><strong>Ειδοποιήσεις:</strong> Παρακολουθήστε άμεσα ενημερώσεις για τα έγγραφά σας.</li>
+    <li><strong><?= __('Statistics:') ?></strong> <?= __('Quickly view your pending tasks and recent submissions.') ?></li>
+    <li><strong><?= __('Notifications:') ?></strong> <?= __('Instantly monitor updates for your documents.') ?></li>
 </ul>

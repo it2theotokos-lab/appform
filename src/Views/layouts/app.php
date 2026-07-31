@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="el" data-theme="light">
+<html lang="<?= \App\Services\Lang::locale() ?>" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= \App\Core\View::escape($title ?? 'AppForm Engine') ?> — AppForm</title>
+    <title><?= \App\Core\View::escape(__($title ?? 'AppForm Engine')) ?> — AppForm</title>
 
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,6 +12,27 @@
     <!-- AppForm Design System -->
     <link href="/assets/css/style.css" rel="stylesheet">
     <link href="/assets/css/responsive.css" rel="stylesheet">
+
+    <!-- Favicon -->
+    <?php
+    $favPath = '';
+    try {
+        $db = \App\Core\Database::getInstance();
+        $favStmt = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_favicon_path'");
+        $favStmt->execute();
+        $favPath = (string)($favStmt->fetchColumn() ?? '');
+    } catch (\Throwable $e) {
+        $favPath = '';
+    }
+    $hasCustomFavicon = $favPath !== '' && is_file(dirname(__DIR__, 3) . '/public/' . ltrim($favPath, '/'));
+    if ($hasCustomFavicon):
+        $favExt = strtolower(pathinfo($favPath, PATHINFO_EXTENSION));
+        $favType = $favExt === 'png' ? 'image/png' : ($favExt === 'webp' ? 'image/webp' : 'image/x-icon');
+    ?>
+        <link rel="icon" href="/<?= htmlspecialchars($favPath) ?>?v=<?= filemtime(dirname(__DIR__, 3) . '/public/' . ltrim($favPath, '/')) ?>" type="<?= $favType ?>">
+    <?php else: ?>
+        <link rel="icon" href="/assets/img/favicon.ico" type="image/x-icon">
+    <?php endif; ?>
 
     <!-- Theme: apply before render to avoid FOUC -->
     <script>
@@ -65,14 +86,14 @@
         <div class="app-modal-backdrop"></div>
         <div class="app-modal-dialog">
             <div class="app-modal-header">
-                <h2 id="app-confirm-title" class="font-heading m-0 text-white" style="font-size: 1.25rem;">Επιβεβαίωση ενέργειας</h2>
+                <h2 id="app-confirm-title" class="font-heading m-0 text-white" style="font-size: 1.25rem;"><?= __('Action Confirmation') ?></h2>
             </div>
             <div class="app-modal-body py-3">
-                <p id="app-confirm-message" class="m-0" style="color: var(--color-text-soft);">Είστε σίγουροι ότι θέλετε να συνεχίσετε;</p>
+                <p id="app-confirm-message" class="m-0" style="color: var(--color-text-soft);"><?= __('Are you sure you want to continue?') ?></p>
             </div>
             <div class="app-modal-actions d-flex justify-content-end gap-2 mt-2">
-                <button type="button" id="app-confirm-cancel" class="btn btn-secondary btn-sm">Ακύρωση</button>
-                <button type="button" id="app-confirm-accept" class="btn btn-danger btn-sm">Επιβεβαίωση</button>
+                <button type="button" id="app-confirm-cancel" class="btn btn-secondary btn-sm"><?= __('Cancel') ?></button>
+                <button type="button" id="app-confirm-accept" class="btn btn-danger btn-sm"><?= __('Confirm') ?></button>
             </div>
         </div>
     </div>
@@ -83,26 +104,26 @@
         <div class="app-modal-dialog" style="max-width: 600px;">
             <div class="app-modal-header">
                 <h2 id="app-signature-title" class="font-heading m-0 text-white" style="font-size: 1.25rem;">
-                    <i class="fa-solid fa-signature text-primary me-2"></i> Ψηφιακή Υπογραφή Εγγράφου
+                    <i class="fa-solid fa-signature text-primary me-2"></i> <?= __('Digital Document Signature') ?>
                 </h2>
             </div>
             <div class="app-modal-body py-3 text-center">
-                <p class="small text-muted mb-3">Σχεδιάστε την υπογραφή σας στην παρακάτω επιφάνεια χρησιμοποιώντας το ποντίκι, την αφή ή τη γραφίδα σας.</p>
+                <p class="small text-muted mb-3"><?= __('Draw your signature on the surface below using a mouse, touch or stylus.') ?></p>
                 <div class="border border-secondary rounded overflow-hidden position-relative mb-3" style="background: var(--color-surface); height: 250px;">
                     <canvas id="signature-modal-canvas" style="display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair;"></canvas>
                 </div>
                 <div class="d-flex gap-2 justify-content-center">
                     <button type="button" id="sig-canvas-undo" class="btn btn-outline-secondary btn-sm">
-                        <i class="fa-solid fa-undo me-1"></i> Undo
+                        <i class="fa-solid fa-undo me-1"></i> <?= __('Undo') ?>
                     </button>
                     <button type="button" id="sig-canvas-clear" class="btn btn-outline-danger btn-sm">
-                        <i class="fa-solid fa-eraser me-1"></i> Clear
+                        <i class="fa-solid fa-eraser me-1"></i> <?= __('Clear') ?>
                     </button>
                 </div>
             </div>
             <div class="app-modal-actions d-flex justify-content-end gap-2 mt-2">
-                <button type="button" id="app-signature-cancel" class="btn btn-secondary btn-sm">Ακύρωση</button>
-                <button type="button" id="signature-accept-btn" class="btn btn-success btn-sm">Αποδοχή</button>
+                <button type="button" id="app-signature-cancel" class="btn btn-secondary btn-sm"><?= __('Cancel') ?></button>
+                <button type="button" id="signature-accept-btn" class="btn btn-success btn-sm"><?= __('Accept') ?></button>
             </div>
         </div>
     </div>

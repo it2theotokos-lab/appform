@@ -1424,5 +1424,121 @@ class SettingsController extends Controller {
         Session::flash('success', __('Logo deleted successfully.'));
         $this->redirect('/admin/settings?tab=general');
     }
+
+    /**
+     * POST /admin/settings/favicon/upload
+     * Validates and processes custom application favicon upload (ICO, PNG, WEBP, max 2 MB).
+     */
+    public function uploadFavicon(): void {
+        $this->checkCsrf();
+
+        if (empty($_FILES['favicon_file']) || $_FILES['favicon_file']['error'] !== UPLOAD_ERR_OK) {
+            Session::flash('error', __('Please select a valid favicon file to upload.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        $file = $_FILES['favicon_file'];
+
+        // Size check (2 MB max)
+        if ($file['size'] > 2 * 1024 * 1024) {
+            Session::flash('error', __('File too large. Maximum allowed size is 2 MB.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Extension check (.ico, .png, .webp)
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        $allowedExts = ['ico', 'png', 'webp'];
+        if (!in_array($ext, $allowedExts, true)) {
+            Session::flash('error', __('Invalid file type. Only ICO, PNG and WEBP are allowed for favicon.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Server-side MIME validation
+        $allowedMimes = [
+            'image/x-icon', 'image/vnd.microsoft.icon', 'image/ico', 'icon/ico',
+            'image/png', 'image/webp'
+        ];
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        // Fallback check for .ico if finfo detects application/octet-stream or image/x-ico
+        $isIco = ($ext === 'ico');
+        if (!$isIco && !in_array($mime, $allowedMimes, true)) {
+            Session::flash('error', __('Invalid image content (server-side validation failed).'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Build unique filename & destination
+        $storageDir = dirname(__DIR__, 2) . '/public/storage/favicons/';
+        if (!is_dir($storageDir)) {
+            mkdir($storageDir, 0755, true);
+        }
+
+        $filename = 'app_favicon_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+        $dest     = $storageDir . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $dest)) {
+            Session::flash('error', __('Favicon upload failed. Please try again.'));
+            $this->redirect('/admin/settings?tab=general');
+            return;
+        }
+
+        // Delete old favicon file if exists
+        $db      = Database::getInstance();
+        $oldStmt = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_favicon_path'");
+        $oldStmt->execute();
+        $oldPath = $oldStmt->fetchColumn();
+        if ($oldPath) {
+            $oldFile = dirname(__DIR__, 2) . '/public/' . ltrim($oldPath, '/');
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        // Persist new path in system_settings
+        $relativePath = 'storage/favicons/' . $filename;
+        $upsert = $db->prepare("
+            INSERT INTO system_settings (setting_key, setting_value, setting_type, is_public)
+            VALUES ('app_favicon_path', ?, 'string', 0)
+            ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)
+        ");
+        $upsert->execute([$relativePath]);
+
+        $this->logAudit('settings.favicon.uploaded', 'system_settings', null, ['file' => $filename]);
+        Session::flash('success', __('Favicon uploaded successfully.'));
+        $this->redirect('/admin/settings?tab=general');
+    }
+
+    /**
+     * POST /admin/settings/favicon/delete
+     * Removes the custom favicon file and clears the system_settings entry.
+     */
+    public function deleteFavicon(): void {
+        $this->checkCsrf();
+
+        $db      = Database::getInstance();
+        $stmt    = $db->prepare("SELECT setting_value FROM system_settings WHERE setting_key = 'app_favicon_path'");
+        $stmt->execute();
+        $oldPath = $stmt->fetchColumn();
+
+        if ($oldPath) {
+            $oldFile = dirname(__DIR__, 2) . '/public/' . ltrim($oldPath, '/');
+            if (is_file($oldFile)) {
+                @unlink($oldFile);
+            }
+        }
+
+        $clear = $db->prepare("UPDATE system_settings SET setting_value = '' WHERE setting_key = 'app_favicon_path'");
+        $clear->execute();
+
+        $this->logAudit('settings.favicon.deleted', 'system_settings', null, []);
+        Session::flash('success', __('Favicon deleted successfully.'));
+        $this->redirect('/admin/settings?tab=general');
+    }
 }
 

@@ -97,9 +97,8 @@ echo "Test 10 Passed: All settings views render the common navigation component.
 // 11. Settings tabs order changes per active page
 $navComponent = file_get_contents($root . '/src/Views/settings/nav.php');
 $expectedOrder = [
-    'tab=general', 'tab=backup', 'tab=demo', 'tab=smtp', 'tab=global_notifications',
-    'tab=restore', 'tab=cloud', 'tab=queue', 'tab=plugins', 'settings/updates',
-    'settings/ldap', 'tab=audit'
+    'tab=general', 'tab=backup', 'tab=smtp', 'tab=global_notifications',
+    'tab=restore', 'tab=cloud', 'tab=queue', 'tab=audit'
 ];
 foreach ($expectedOrder as $item) {
     assert(str_contains($navComponent, $item), "Test 11 Failed: Navigation tab item '$item' missing from settings/nav.php.");

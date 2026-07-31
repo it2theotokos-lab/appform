@@ -4,12 +4,12 @@
     <div class="app-modal-dialog bg-dark border border-secondary rounded p-4" style="max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; position: relative; z-index: 2;">
         
         <div class="app-modal-header d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary">
-            <h4 id="global-help-title" class="text-white class-heading m-0"><i class="fa-solid fa-circle-info text-primary me-2"></i> Οδηγίες Χρήσης</h4>
-            <button type="button" class="btn-close btn-close-white" id="btn-close-global-help" aria-label="Κλείσιμο"></button>
+            <h4 id="global-help-title" class="text-white class-heading m-0"><i class="fa-solid fa-circle-info text-primary me-2"></i> <?= __('Usage Guide') ?></h4>
+            <button type="button" class="btn-close btn-close-white" id="btn-close-global-help" aria-label="<?= __('Close') ?>"></button>
         </div>
 
         <div class="mb-3">
-            <input type="text" id="global-help-search" class="form-control form-control-sm" placeholder="Αναζήτηση στις οδηγίες χρήσης...">
+            <input type="text" id="global-help-search" class="form-control form-control-sm" placeholder="<?= __('Search help instructions…') ?>">
         </div>
 
         <div id="global-help-content" class="text-white-50">
@@ -17,7 +17,7 @@
         </div>
 
         <div class="d-flex justify-content-end gap-2 mt-4 pt-2 border-top border-secondary">
-            <button type="button" class="btn btn-secondary btn-sm" id="btn-close-global-help-footer">Κλείσιμο</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btn-close-global-help-footer"><?= __('Close') ?></button>
         </div>
 
     </div>
