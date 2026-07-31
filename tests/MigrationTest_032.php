@@ -104,7 +104,7 @@ $zipPath = $projectRoot . '/release/AppForm-1.1.21.zip';
 if (file_exists($zipPath)) {
     $zip = new ZipArchive();
     if ($zip->open($zipPath) === true) {
-        $sqlInZip = $zip->getFromName('migrations/032_app_logo.sql');
+        $sqlInZip = $zip->getFromName('db/migrations/032_app_logo.sql');
         $zip->close();
         check('J: ZIP contains 032_app_logo.sql with setting_key',
             $sqlInZip && strpos($sqlInZip, 'setting_key') !== false);
