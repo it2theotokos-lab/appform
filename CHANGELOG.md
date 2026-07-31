@@ -2,6 +2,15 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.23-Stable] - 2026-07-31
+
+### Added
+- **Organizational Structure**: Introduced 2-tier organizational unit hierarchy (`Department` → `Sub-department` / `Team`).
+- **Migration `034_org_structure_and_extra_user_details.sql`**: Added `org_units` table with strict parent constraints and `org_unit_id`, `personal_email`, `corporate_phone`, `mobile_phone`, `internal_phone` columns in `users`.
+- **Org Structure Tree View**: New tree view (`/admin/users/organization`) with quick-action creation modals for Departments, Sub-departments, and Teams.
+- **User Management & Profile Tabs**: Tabbed interface in User Edit page (Basic Info, Organizational Placement, Extra Contact Details). Integrated "Create Team" action and Org Unit column in main User Management table (`/admin/users`).
+- **Tests**: Created `OrgStructureTest.php` (8 automated tests covering unit creation, hierarchy validation, deletion guards, user assignment, and extra contact details storage).
+
 ## [1.1.22-Stable] - 2026-07-31
 
 ### Fixed

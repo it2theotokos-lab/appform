@@ -97,9 +97,12 @@ $router->get('/dashboard', [\App\Controllers\DashboardController::class, 'index'
 
 // --- PHASE 2 ROUTES ---
 
-// Users CRUD
+// Users CRUD & Organization Structure
 $router->get('/admin/users', [\App\Controllers\UserController::class, 'index'], ['auth', 'permission:users.view']);
-$router->get('/admin/users/organization', [\App\Controllers\UserController::class, 'showOrganizationTree'], ['auth', 'permission:users.view']);
+$router->get('/admin/users/organization', [\App\Controllers\OrgStructureController::class, 'index'], ['auth', 'permission:users.view']);
+$router->post('/admin/organization/units', [\App\Controllers\OrgStructureController::class, 'store'], ['auth', 'permission:users.edit']);
+$router->post('/admin/organization/units/{id}/update', [\App\Controllers\OrgStructureController::class, 'update'], ['auth', 'permission:users.edit']);
+$router->post('/admin/organization/units/{id}/delete', [\App\Controllers\OrgStructureController::class, 'destroy'], ['auth', 'permission:users.edit']);
 $router->get('/admin/users/create', [\App\Controllers\UserController::class, 'create'], ['auth', 'permission:users.create']);
 $router->post('/admin/users/create', [\App\Controllers\UserController::class, 'store'], ['auth', 'permission:users.create']);
 $router->get('/admin/users/{id}/edit', [\App\Controllers\UserController::class, 'edit'], ['auth', 'permission:users.edit']);

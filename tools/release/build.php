@@ -73,6 +73,7 @@ $runtimeDirs = [
     'public/storage/logs',
     'public/storage/avatars',
     'public/storage/logos',
+    'public/storage/favicons',
 ];
 
 // 3. Build Full Clean-Install ZIP

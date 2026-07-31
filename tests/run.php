@@ -71,7 +71,8 @@ $testFiles = [
     'UpdateDownloadTest.php',
     'ProfileAvatarTest.php',
     'UpdateMigrationTest.php',
-    'LocalUpdateAcceptanceTest.php'
+    'LocalUpdateAcceptanceTest.php',
+    'OrgStructureTest.php'
 ];
 
 $failed = false;

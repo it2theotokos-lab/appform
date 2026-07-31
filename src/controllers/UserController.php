@@ -42,7 +42,13 @@ class UserController extends Controller {
         $offset = ($page - 1) * $limit;
 
         $db = Database::getInstance();
-        $query = "SELECT u.*, r.name as role_name FROM users u JOIN roles r ON u.role_id = r.id WHERE 1=1";
+        $query = "
+            SELECT u.*, r.name as role_name, o.name as org_unit_name, o.type as org_unit_type 
+            FROM users u 
+            JOIN roles r ON u.role_id = r.id 
+            LEFT JOIN org_units o ON u.org_unit_id = o.id 
+            WHERE 1=1
+        ";
         $params = [];
 
         if (!empty($search)) {
@@ -158,6 +164,7 @@ class UserController extends Controller {
         }
 
         $roles = Role::getAll();
+        $orgUnits = \App\Models\OrgUnit::all();
         $db = Database::getInstance();
         $stmtM = $db->prepare("
             SELECT u.*, r.name as role_name 
@@ -173,6 +180,7 @@ class UserController extends Controller {
             'title' => 'Επεξεργασία Χρήστη',
             'user' => $user,
             'roles' => $roles,
+            'orgUnits' => $orgUnits,
             'managers' => $managers
         ]);
     }
@@ -195,6 +203,36 @@ class UserController extends Controller {
             'role_id' => ['required', 'numeric']
         ]);
 
+        $personalEmail = trim($data['personal_email'] ?? '');
+        $corporatePhone = trim($data['corporate_phone'] ?? '');
+        $mobilePhone = trim($data['mobile_phone'] ?? '');
+        $internalPhone = trim($data['internal_phone'] ?? '');
+        $orgUnitId = !empty($data['org_unit_id']) ? (int)$data['org_unit_id'] : null;
+
+        // Validation for personal email
+        if (!empty($personalEmail) && !filter_var($personalEmail, FILTER_VALIDATE_EMAIL)) {
+            Session::flash('error', __('Invalid personal email format.'));
+            $this->back();
+            return;
+        }
+
+        // Length validation for phones
+        if (strlen($corporatePhone) > 30 || strlen($mobilePhone) > 30 || strlen($internalPhone) > 20) {
+            Session::flash('error', __('Phone numbers exceed maximum allowed length.'));
+            $this->back();
+            return;
+        }
+
+        // Validate org_unit_id if set
+        if ($orgUnitId !== null) {
+            $unit = \App\Models\OrgUnit::find($orgUnitId);
+            if (!$unit) {
+                Session::flash('error', __('Selected organizational unit does not exist.'));
+                $this->back();
+                return;
+            }
+        }
+
         $db = Database::getInstance();
 
         // Check email conflict
@@ -203,6 +241,7 @@ class UserController extends Controller {
         if ($chk->fetchColumn() > 0) {
             Session::flash('errors', ['email' => ['Το email χρησιμοποιείται ήδη.']]);
             $this->back();
+            return;
         }
 
         // Prevent last Administrator role removal
@@ -211,6 +250,7 @@ class UserController extends Controller {
             if ($adminCount <= 1) {
                 Session::flash('error', 'Δεν μπορείτε να αφαιρέσετε τον ρόλο του Administrator από τον τελευταίο ενεργό διαχειριστή.');
                 $this->back();
+                return;
             }
         }
 
@@ -226,7 +266,16 @@ class UserController extends Controller {
         }
 
         $stmt = $db->prepare("
-            UPDATE users SET email = ?, full_name = ?, role_id = ?, manager_id = ?
+            UPDATE users SET 
+                email = ?, 
+                full_name = ?, 
+                role_id = ?, 
+                manager_id = ?,
+                org_unit_id = ?,
+                personal_email = ?,
+                corporate_phone = ?,
+                mobile_phone = ?,
+                internal_phone = ?
             WHERE id = ?
         ");
         $stmt->execute([
@@ -234,10 +283,19 @@ class UserController extends Controller {
             $validated['full_name'],
             $validated['role_id'],
             $managerId,
+            $orgUnitId,
+            $personalEmail ?: null,
+            $corporatePhone ?: null,
+            $mobilePhone ?: null,
+            $internalPhone ?: null,
             $id
         ]);
 
-        $this->logAudit('edit', 'users', $id, ['email' => $validated['email'], 'manager_id' => $managerId]);
+        $this->logAudit('edit', 'users', $id, [
+            'email' => $validated['email'], 
+            'manager_id' => $managerId,
+            'org_unit_id' => $orgUnitId
+        ]);
 
         Session::flash('success', 'Ο χρήστης ενημερώθηκε επιτυχώς.');
         $this->redirect('/admin/users');
