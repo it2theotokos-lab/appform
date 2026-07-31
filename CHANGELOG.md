@@ -2,6 +2,17 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.20-Stable] - 2026-07-31
+
+### Added
+- **Language Selector (EL/EN)**: New `Lang` service with 200+ translation keys. Global `__()` helper registered at bootstrap. Language toggle (ΕΛ / EN) buttons added to the header. Session-persisted locale preference. All sidebar section titles, settings tabs, header dropdown items, footer, and UI labels are now translatable.
+- **Custom Application Logo Upload**: Upload a custom logo (JPG, PNG, WEBP · max 2 MB) via Settings → General. The sidebar renders the custom logo when set and falls back to the default icon+text. Server-side MIME validation via `getimagesize()`. One-click deletion/reset to default. Logo files are excluded from update ZIPs (`public/storage/logos/`).
+- **Migration `032_app_logo.sql`**: Inserts the `app_logo_path` key into `system_settings`.
+- **Tests**: `LanguageTest.php` (9 tests), `LogoUploadTest.php` (12 tests), `SettingsNavTest.php` (8 tests) — all pass.
+
+### Changed
+- **Settings Navigation Cleanup**: Removed the **Demo Data**, **Active Directory / LDAP**, and **Πρόσθετα (Plugins)** tabs from the settings navigation. All remaining tab labels translated with `__()`.
+
 ## [1.1.19-Stable] - 2026-07-30
 
 ### Fixed
