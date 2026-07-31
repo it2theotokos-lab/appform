@@ -10,7 +10,9 @@ All notable changes to **AppForm** will be documented in this file.
 - **Migration `032_app_logo.sql`**: Inserts the `app_logo_path` key into `system_settings`.
 - **Tests**: `LanguageTest.php` (9 tests), `LogoUploadTest.php` (12 tests), `SettingsNavTest.php` (8 tests) — all pass.
 
-### Changed
+### Fixed
+- **BUG-4 — Migration column mismatch (SQLSTATE[42S22])**: `032_app_logo.sql` used non-existent columns `` `key` ``, `` `value` ``, `` `description` `` instead of `setting_key`, `setting_value` (canonical schema from `004_phase4.sql`). The same wrong column names were present in `SettingsController::uploadLogo()` (2 queries), `SettingsController::deleteLogo()` (2 queries), and `sidebar.php` (1 query). All corrected. Added 7 regression tests (T1c/T1d/T1e, T8c/T8d, T13/T14/T15) to `LogoUploadTest.php`.
+
 - **Settings Navigation Cleanup**: Removed the **Demo Data**, **Active Directory / LDAP**, and **Πρόσθετα (Plugins)** tabs from the settings navigation. All remaining tab labels translated with `__()`.
 
 ## [1.1.19-Stable] - 2026-07-30
