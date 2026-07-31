@@ -111,6 +111,15 @@ $router->post('/admin/users/{id}/toggle-status', [\App\Controllers\UserControlle
 $router->post('/admin/users/{id}/reset-password', [\App\Controllers\UserController::class, 'resetPassword'], ['auth', 'permission:users.edit']);
 $router->delete('/admin/users/{id}/delete', [\App\Controllers\UserController::class, 'delete'], ['auth', 'permission:users.delete']);
 
+// File Sharing Module
+$router->get('/admin/files', [\App\Controllers\FileSharingController::class, 'index'], ['auth']);
+$router->post('/admin/files/upload', [\App\Controllers\FileSharingController::class, 'store'], ['auth']);
+$router->get('/admin/files/{id}/manage', [\App\Controllers\FileSharingController::class, 'manage'], ['auth']);
+$router->post('/admin/files/{id}/permissions', [\App\Controllers\FileSharingController::class, 'updatePermissions'], ['auth']);
+$router->get('/admin/files/{id}/preview', [\App\Controllers\FileSharingController::class, 'preview'], ['auth']);
+$router->get('/admin/files/{id}/download', [\App\Controllers\FileSharingController::class, 'download'], ['auth']);
+$router->post('/admin/files/{id}/delete', [\App\Controllers\FileSharingController::class, 'destroy'], ['auth']);
+
 // Roles CRUD
 $router->get('/admin/roles', [\App\Controllers\RoleController::class, 'index'], ['auth', 'permission:roles.manage']);
 $router->post('/admin/roles', [\App\Controllers\RoleController::class, 'store'], ['auth', 'permission:roles.manage']);

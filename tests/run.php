@@ -72,7 +72,8 @@ $testFiles = [
     'ProfileAvatarTest.php',
     'UpdateMigrationTest.php',
     'LocalUpdateAcceptanceTest.php',
-    'OrgStructureTest.php'
+    'OrgStructureTest.php',
+    'FileSharingTest.php'
 ];
 
 $failed = false;

@@ -62,6 +62,7 @@ if ($roleSlug === 'administrator') {
         [
             'title' => __('Documents'),
             'items' => [
+                ['label' => __('Files'),              'route' => '/admin/files',         'icon' => 'fa-solid fa-folder-closed'],
                 ['label' => __('New Document'),       'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
                 ['label' => __('My Drafts'),          'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
                 ['label' => __('My Submissions'),     'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
@@ -93,6 +94,7 @@ if ($roleSlug === 'administrator') {
         [
             'title' => __('Documents'),
             'items' => [
+                ['label' => __('Files'),          'route' => '/admin/files',         'icon' => 'fa-solid fa-folder-closed'],
                 ['label' => __('New Document'),   'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
                 ['label' => __('My Drafts'),      'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
                 ['label' => __('My Submissions'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
@@ -114,6 +116,7 @@ if ($roleSlug === 'administrator') {
         [
             'title' => __('Documents (PDF)'),
             'items' => [
+                ['label' => __('Files'),                  'route' => '/admin/files',         'icon' => 'fa-solid fa-folder-closed'],
                 ['label' => __('New Document'),           'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature'],
                 ['label' => __('My Draft Documents'),     'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
                 ['label' => __('My Submitted Documents'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
