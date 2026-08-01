@@ -22,7 +22,7 @@ class DashboardController extends Controller {
 
             if (!$canViewAll && $canViewSubordinates) {
                 $subordinateIds = \App\Services\OrganizationalScopeService::getSubordinateIds((int)$user['id']);
-                $allowedUserIds = array_unique(array_merge([(int)$user['id']], $subordinateIds));
+                $allowedUserIds = array_values(array_unique(array_merge([(int)$user['id']], $subordinateIds)));
                 $inClause = implode(',', array_fill(0, count($allowedUserIds), '?'));
                 $whereUser = " WHERE s.user_id IN ({$inClause}) ";
                 $params = $allowedUserIds;

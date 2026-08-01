@@ -6,6 +6,7 @@ if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
 }
 
 new \App\Core\App();
+define('APPFORM_BOOTSTRAPPED', true); // Guard for test files
 
 // ── Global translation helper (mirrors public/index.php) ─────────────────────
 // Required so tests that include view files can call __() safely.
@@ -76,6 +77,8 @@ $testFiles = [
     'FileSharingTest.php',
     'UserControllerTest.php',
     'RolePermissionsTest.php',
+    'UserEditPasswordIsolationTest.php',
+    'DashboardRegressionTest.php',
 ];
 
 

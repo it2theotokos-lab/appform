@@ -39,10 +39,23 @@
             <i class="fa-solid fa-address-card me-2"></i><?= __('Extra Details') ?>
         </button>
     </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="tab-security" data-bs-toggle="tab" data-bs-target="#tabSecurity"
+                type="button" role="tab" aria-controls="tabSecurity" aria-selected="false">
+            <i class="fa-solid fa-lock me-2"></i><?= __('Security') ?>
+        </button>
+    </li>
 </ul>
 
-<!-- All tabs share one form so the full user record is always submitted -->
-<form action="/admin/users/<?= $user['id'] ?>/edit" method="POST" id="userEditForm">
+<!-- ═══════════════════════════════════════════════════════════════════
+     MAIN USER PROFILE EDIT FORM
+     Contains: Basic Info / Org Placement / Extra Details
+     Does NOT contain any password inputs.
+     ═══════════════════════════════════════════════════════════════════ -->
+<form action="/admin/users/<?= $user['id'] ?>/edit"
+      method="POST"
+      id="userEditForm"
+      autocomplete="off">
     <?= \App\Core\Csrf::field() ?>
     <input type="hidden" name="_method" value="PUT">
 
@@ -50,72 +63,54 @@
 
         <!-- ── TAB 1: Basic Info ──────────────────────────────────── -->
         <div class="tab-pane fade show active" id="tabBasic" role="tabpanel" aria-labelledby="tab-basic">
-            <div class="row g-4">
-                <div class="col-md-7">
-                    <div class="glass-panel p-4">
-                        <h5 class="font-heading mb-4 text-white"><?= __('Basic Info') ?></h5>
+            <div class="glass-panel p-4" style="max-width:600px;">
+                <h5 class="font-heading mb-4 text-white"><?= __('Basic Info') ?></h5>
 
-                        <div class="mb-3">
-                            <label class="form-label">Username</label>
-                            <input type="text" class="form-control" value="<?= \App\Core\View::escape($user['username']) ?>" disabled>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" name="email"
-                                   value="<?= \App\Core\View::escape($user['email']) ?>" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="full_name" class="form-label"><?= __('Full Name') ?></label>
-                            <input type="text" class="form-control" id="full_name" name="full_name"
-                                   value="<?= \App\Core\View::escape($user['full_name']) ?>" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="role_id" class="form-label"><?= __('Role') ?></label>
-                            <select class="form-select" id="role_id" name="role_id" required>
-                                <?php foreach ($roles as $r): ?>
-                                    <option value="<?= $r['id'] ?>" <?= $user['role_id'] == $r['id'] ? 'selected' : '' ?>>
-                                        <?= \App\Core\View::escape($r['name']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="manager_id" class="form-label"><?= __('Manager') ?></label>
-                            <select class="form-select" id="manager_id" name="manager_id">
-                                <option value="">-- <?= __('No Manager') ?> --</option>
-                                <?php foreach ($managers as $m): ?>
-                                    <option value="<?= $m['id'] ?>" <?= (int)($user['manager_id'] ?? 0) === (int)$m['id'] ? 'selected' : '' ?>>
-                                        <?= \App\Core\View::escape($m['full_name']) ?> &mdash; <?= \App\Core\View::escape($m['username']) ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <button type="submit" class="btn btn-premium w-100">
-                            <?= __('Save') ?> <i class="fa-solid fa-save ms-2"></i>
-                        </button>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Username</label>
+                    <input type="text" class="form-control" value="<?= \App\Core\View::escape($user['username']) ?>" disabled autocomplete="off">
                 </div>
 
-                <div class="col-md-5">
-                    <div class="glass-panel p-4">
-                        <h5 class="font-heading mb-4 text-white"><?= __('Reset Password') ?></h5>
-                        <form action="/admin/users/<?= $user['id'] ?>/reset-password" method="POST">
-                            <?= \App\Core\Csrf::field() ?>
-                            <div class="mb-4">
-                                <label for="password" class="form-label"><?= __('New Password') ?></label>
-                                <input type="password" class="form-control" id="password" name="password" required>
-                            </div>
-                            <button type="submit" class="btn btn-outline-warning w-100">
-                                <?= __('Change Password') ?> <i class="fa-solid fa-key ms-2"></i>
-                            </button>
-                        </form>
-                    </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email"
+                           value="<?= \App\Core\View::escape($user['email']) ?>"
+                           required autocomplete="email">
                 </div>
+
+                <div class="mb-3">
+                    <label for="full_name" class="form-label"><?= __('Full Name') ?></label>
+                    <input type="text" class="form-control" id="full_name" name="full_name"
+                           value="<?= \App\Core\View::escape($user['full_name']) ?>"
+                           required autocomplete="off">
+                </div>
+
+                <div class="mb-3">
+                    <label for="role_id" class="form-label"><?= __('Role') ?></label>
+                    <select class="form-select" id="role_id" name="role_id" required>
+                        <?php foreach ($roles as $r): ?>
+                            <option value="<?= $r['id'] ?>" <?= $user['role_id'] == $r['id'] ? 'selected' : '' ?>>
+                                <?= \App\Core\View::escape($r['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label for="manager_id" class="form-label"><?= __('Manager') ?></label>
+                    <select class="form-select" id="manager_id" name="manager_id">
+                        <option value="">-- <?= __('No Manager') ?> --</option>
+                        <?php foreach ($managers as $m): ?>
+                            <option value="<?= $m['id'] ?>" <?= (int)($user['manager_id'] ?? 0) === (int)$m['id'] ? 'selected' : '' ?>>
+                                <?= \App\Core\View::escape($m['full_name']) ?> &mdash; <?= \App\Core\View::escape($m['username']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-premium w-100" id="btnSaveBasic">
+                    <?= __('Save') ?> <i class="fa-solid fa-save ms-2"></i>
+                </button>
             </div>
         </div>
 
@@ -181,7 +176,7 @@
                     </small>
                 </div>
 
-                <button type="submit" class="btn btn-premium w-100">
+                <button type="submit" class="btn btn-premium w-100" id="btnSaveOrg">
                     <?= __('Save') ?> <i class="fa-solid fa-save ms-2"></i>
                 </button>
             </div>
@@ -203,7 +198,7 @@
                         <span class="input-group-text"><i class="fa-solid fa-envelope"></i></span>
                         <input type="email" class="form-control" id="personal_email" name="personal_email"
                                value="<?= \App\Core\View::escape($user['personal_email'] ?? '') ?>"
-                               maxlength="191" placeholder="user@personal.com">
+                               maxlength="191" placeholder="user@personal.com" autocomplete="off">
                     </div>
                 </div>
 
@@ -213,7 +208,7 @@
                         <span class="input-group-text"><i class="fa-solid fa-phone"></i></span>
                         <input type="tel" class="form-control" id="corporate_phone" name="corporate_phone"
                                value="<?= \App\Core\View::escape($user['corporate_phone'] ?? '') ?>"
-                               maxlength="30" placeholder="+30 210 0000000">
+                               maxlength="30" placeholder="+30 210 0000000" autocomplete="off">
                     </div>
                 </div>
 
@@ -223,7 +218,7 @@
                         <span class="input-group-text"><i class="fa-solid fa-mobile-screen"></i></span>
                         <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone"
                                value="<?= \App\Core\View::escape($user['mobile_phone'] ?? '') ?>"
-                               maxlength="30" placeholder="+30 69x xxxxxxx">
+                               maxlength="30" placeholder="+30 69x xxxxxxx" autocomplete="off">
                     </div>
                 </div>
 
@@ -233,15 +228,96 @@
                         <span class="input-group-text"><i class="fa-solid fa-hashtag"></i></span>
                         <input type="text" class="form-control" id="internal_phone" name="internal_phone"
                                value="<?= \App\Core\View::escape($user['internal_phone'] ?? '') ?>"
-                               maxlength="20" placeholder="1234">
+                               maxlength="20" placeholder="1234" autocomplete="off">
                     </div>
                 </div>
 
-                <button type="submit" class="btn btn-premium w-100">
+                <button type="submit" class="btn btn-premium w-100" id="btnSaveExtra">
                     <?= __('Save') ?> <i class="fa-solid fa-save ms-2"></i>
                 </button>
             </div>
         </div>
 
+        <!-- ── TAB 4: Security — placeholder (real form is OUTSIDE this form) ── -->
+        <div class="tab-pane fade" id="tabSecurity" role="tabpanel" aria-labelledby="tab-security">
+            <!-- Reset Password form rendered below, outside #userEditForm -->
+            <div id="resetPasswordMount"></div>
+        </div>
+
     </div><!-- /.tab-content -->
-</form><!-- /#userEditForm -->
+</form><!-- /#userEditForm — NO password inputs above this line -->
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     RESET PASSWORD FORM — completely separate, outside #userEditForm
+     The browser cannot associate this password input with the main form.
+     ═══════════════════════════════════════════════════════════════════ -->
+<form action="/admin/users/<?= $user['id'] ?>/reset-password"
+      method="POST"
+      id="resetPasswordForm"
+      autocomplete="off"
+      style="display:none;">
+    <?= \App\Core\Csrf::field() ?>
+
+    <div class="glass-panel p-4" style="max-width:480px;">
+        <h5 class="font-heading mb-2 text-white">
+            <i class="fa-solid fa-lock me-2"></i><?= __('Security') ?> — <?= __('Reset Password') ?>
+        </h5>
+        <p class="text-muted mb-4" style="font-size:0.85rem;">
+            <i class="fa-solid fa-info-circle me-1"></i>
+            <?= __('Set a new password for this user. This action is independent of all other profile fields.') ?>
+        </p>
+
+        <div class="mb-3">
+            <label for="new_password" class="form-label"><?= __('New Password') ?></label>
+            <input type="password"
+                   class="form-control"
+                   id="new_password"
+                   name="password"
+                   autocomplete="new-password"
+                   required
+                   minlength="8"
+                   placeholder="<?= __('Minimum 8 characters') ?>">
+        </div>
+
+        <div class="mb-4">
+            <label for="new_password_confirm" class="form-label"><?= __('Confirm New Password') ?></label>
+            <input type="password"
+                   class="form-control"
+                   id="new_password_confirm"
+                   name="password_confirmation"
+                   autocomplete="new-password"
+                   required
+                   minlength="8"
+                   placeholder="<?= __('Repeat password') ?>">
+        </div>
+
+        <button type="submit" class="btn btn-outline-warning w-100" id="btnChangePassword">
+            <i class="fa-solid fa-key me-2"></i><?= __('Change Password') ?>
+        </button>
+    </div>
+</form><!-- /#resetPasswordForm -->
+
+<script>
+// Move the Reset Password form into the Security tab mount point.
+// Done via JS to ensure it renders inside the tab panel visually,
+// while remaining outside #userEditForm in the DOM at all times.
+(function () {
+    var mount = document.getElementById('resetPasswordMount');
+    var form  = document.getElementById('resetPasswordForm');
+    if (mount && form) {
+        form.style.display = '';
+        mount.appendChild(form);
+    }
+
+    // Client-side guard: confirm passwords match before submit
+    form && form.addEventListener('submit', function (e) {
+        var pw  = document.getElementById('new_password');
+        var pw2 = document.getElementById('new_password_confirm');
+        if (pw && pw2 && pw.value !== pw2.value) {
+            e.preventDefault();
+            alert('<?= __('Passwords do not match.') ?>');
+            pw2.focus();
+        }
+    });
+})();
+</script>
