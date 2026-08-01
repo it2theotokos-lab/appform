@@ -34,11 +34,40 @@
         }
         ?>
 
+        <?php
+        $moduleLabels = [
+            'dashboard'          => 'Dashboard / Πίνακας Ελέγχου',
+            'users'              => 'Users / Χρήστες',
+            'roles'              => 'Roles / Ρόλοι',
+            'permissions'        => 'Permissions / Δικαιώματα',
+            'forms'              => 'Forms / Φόρμες',
+            'submissions'        => 'Submissions / Υποβολές',
+            'repositories'       => 'Repositories / Πηγές Δεδομένων',
+            'menus'              => 'Navigation Menus / Μενού Πλοήγησης',
+            'analytics'          => 'Analytics / Στατιστικά',
+            'exports'            => 'Exports / Εξαγωγές',
+            'document_templates' => 'Document Templates / Πρότυπα Εγγράφων',
+            'workflows'          => 'Workflows / Ροές Εργασίας',
+            'workflow_tasks'     => 'Workflow Tasks / Εργασίες Workflow',
+            'workflow_instances' => 'Workflow Instances / Εκτελέσεις Workflow',
+            'settings'           => 'System Settings / Ρυθμίσεις Συστήματος',
+            'backups'            => 'Backups / Αντίγραφα Ασφαλείας',
+            'demo_data'          => 'Demo Data / Δεδομένα Επίδειξης',
+            'smtp'               => 'SMTP & Email / Αλληλογραφία',
+            'restore'            => 'Restore Center / Επαναφορά',
+            'queue'              => 'Background Queue / Ουρά Εργασιών',
+            'plugins'            => 'Plugins / Πρόσθετα',
+            'updates'            => 'Updates & System / Αναβαθμίσεις',
+            'audit'              => 'Audit Logs / Καταγραφές Ελέγχου',
+            'data_exchange'      => 'Data Exchange / Ανταλλαγή Δεδομένων',
+        ];
+        ?>
+
         <?php foreach ($grouped as $module => $perms): ?>
             <div class="card bg-dark bg-opacity-25 border border-glass mb-3">
                 <div class="card-header bg-dark bg-opacity-50 border-bottom border-glass py-2">
                     <strong class="text-white text-uppercase font-heading" style="letter-spacing:1px;font-size:0.85rem;">
-                        <i class="fa-solid fa-layer-group me-2 text-primary"></i><?= htmlspecialchars($module) ?>
+                        <i class="fa-solid fa-layer-group me-2 text-primary"></i><?= htmlspecialchars($moduleLabels[$module] ?? ucfirst($module)) ?>
                     </strong>
                 </div>
                 <div class="card-body">

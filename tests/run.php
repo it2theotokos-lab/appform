@@ -75,6 +75,7 @@ $testFiles = [
     'OrgStructureTest.php',
     'FileSharingTest.php',
     'UserControllerTest.php',
+    'RolePermissionsTest.php',
 ];
 
 
