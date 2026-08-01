@@ -69,12 +69,28 @@ class UserController extends Controller {
             $params[] = (int)$status;
         }
 
-        // Count queries
-        $countQuery = str_replace("u.*, r.name as role_name", "COUNT(*)", $query);
+        // Build an independent COUNT query to avoid ONLY_FULL_GROUP_BY violation.
+        // Do NOT use str_replace() on the main query — it leaves extra SELECT columns
+        // (o.name as org_unit_name, o.type as org_unit_type) which trigger
+        // SQLSTATE[42000] 1140 on MySQL/MariaDB with ONLY_FULL_GROUP_BY sql_mode.
+        $countQuery  = "SELECT COUNT(*) FROM users u";
+        $countQuery .= " JOIN roles r ON u.role_id = r.id";
+        $countQuery .= " LEFT JOIN org_units o ON u.org_unit_id = o.id";
+        $countQuery .= " WHERE 1=1";
+        if (!empty($search)) {
+            $countQuery .= " AND (u.username LIKE ? OR u.email LIKE ? OR u.full_name LIKE ?)";
+        }
+        if ($roleId !== '') {
+            $countQuery .= " AND u.role_id = ?";
+        }
+        if ($status !== '') {
+            $countQuery .= " AND u.is_active = ?";
+        }
         $countStmt = $db->prepare($countQuery);
         $countStmt->execute($params);
         $totalItems = (int)$countStmt->fetchColumn();
-        $totalPages = ceil($totalItems / $limit);
+        $totalPages  = ceil($totalItems / $limit);
+
 
         // Fetch items
         $query .= " ORDER BY u.id ASC LIMIT $limit OFFSET $offset";

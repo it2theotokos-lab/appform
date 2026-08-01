@@ -73,8 +73,10 @@ $testFiles = [
     'UpdateMigrationTest.php',
     'LocalUpdateAcceptanceTest.php',
     'OrgStructureTest.php',
-    'FileSharingTest.php'
+    'FileSharingTest.php',
+    'UserControllerTest.php',
 ];
+
 
 $failed = false;
 
