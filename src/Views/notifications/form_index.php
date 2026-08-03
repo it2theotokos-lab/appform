@@ -150,26 +150,27 @@
                 <div class="mb-3">
                     <label for="notif_trigger" class="form-label">Γεγονός Ενεργοποίησης (Trigger Event)</label>
                     <select class="form-select" id="notif_trigger" name="trigger_event">
-                        <option value="draft">On Draft Save</option>
-                        <option value="submit">On Submit</option>
-                        <option value="start_review">On Start Review</option>
-                        <option value="return">On Return</option>
-                        <option value="resubmit">On Resubmit</option>
-                        <option value="approve">On Approve</option>
-                        <option value="reject">On Reject</option>
-                        <option value="workflow_step">On Workflow Step</option>
-                        <option value="final_approval">On Final Approval</option>
+                        <option value="draft">On Draft Save (Προσωρινή αποθήκευση προσχεδίου)</option>
+                        <option value="submit">On Submit (Οριστική υποβολή φόρμας από τον χρήστη)</option>
+                        <option value="start_review">On Start Review (Έναρξη αξιολόγησης από εγκριτή)</option>
+                        <option value="return">On Return (Επιστροφή υποβολής στον αιτούντα για διορθώσεις)</option>
+                        <option value="resubmit">On Resubmit (Επανυποβολή μετά από διορθώσεις)</option>
+                        <option value="approve">On Approve (Έγκριση υποβολής)</option>
+                        <option value="reject">On Reject (Απόρριψη υποβολής)</option>
+                        <option value="workflow_step">On Workflow Step (Μετάβαση σε βήμα ροής εργασίας)</option>
+                        <option value="final_approval">On Final Approval (Τελική ολοκλήρωση/έγκριση)</option>
                     </select>
+                    <small class="form-text text-muted">Σημείωση: Το <strong>On Draft Save</strong> αποστέλλει ειδοποίηση κατά την προσωρινή αποθήκευση, ενώ το <strong>On Submit</strong> αποστέλλεται κατά την οριστική υποβολή.</small>
                 </div>
 
                 <div class="mb-3">
                     <label for="notif_recipient_type" class="form-label">Τύπος Παραλήπτη (Recipient Type)</label>
                     <select class="form-select" id="notif_recipient_type" name="recipient_type">
-                        <option value="fixed">Fixed Recipients (Emails specified below)</option>
-                        <option value="submitter">Submitter (Author)</option>
-                        <option value="manager">Manager of Submitter</option>
-                        <option value="role">Users of Specific Role</option>
-                        <option value="dept">Users of Specific Department</option>
+                        <option value="fixed">Σταθερές διευθύνσεις Email (Fixed Recipients)</option>
+                        <option value="submitter">Υποβάλλων / Δημιουργός (Submitter)</option>
+                        <option value="manager">Προϊστάμενος Υποβάλλοντος (Manager of Submitter)</option>
+                        <option value="role">Χρήστες Συγκεκριμένου Ρόλου (Role)</option>
+                        <option value="dept">Χρήστες Συγκεκριμένου Τμήματος (Department)</option>
                     </select>
                 </div>
 
@@ -208,21 +209,44 @@
                 </div>
 
                 <div class="mb-3">
-                    <label for="notif_body" class="form-label">Μήνυμα (Body Template)</label>
-                    <textarea class="form-control" id="notif_body" name="body_template" rows="5" required placeholder="Υποβλήθηκε νέο ticket... {all_fields}"></textarea>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label for="notif_body" class="form-label mb-0">Μήνυμα HTML (HTML Body Template)</label>
+                        <button type="button" class="btn btn-outline-info btn-xs" id="previewHtmlBtn"><i class="fa-solid fa-eye me-1"></i>Προεπισκόπηση HTML</button>
+                    </div>
+                    <textarea class="form-control" id="notif_body" name="body_template" rows="5" required placeholder="<p>Γεια σας,</p><p>Υποβλήθηκε νέα αίτηση για τη φόρμα <strong>{form_name}</strong>.</p>{all_fields}"></textarea>
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label text-muted small"><i class="fa-solid fa-tags me-1"></i> Υποστηριζόμενα Smart Tags</label>
-                    <div class="glass-panel p-2 small text-white-50" style="font-size: 11px; max-height: 120px; overflow-y: auto; background: rgba(255,255,255,0.03);">
-                        <div><strong>Βασικά:</strong> <code>{form_name}</code>, <code>{form_id}</code>, <code>{submission_id}</code>, <code>{submission_uuid}</code>, <code>{submission_status}</code>, <code>{submitted_at}</code></div>
-                        <div class="mt-1"><strong>Στοιχεία Χρήστη:</strong> <code>{submitter_name}</code>, <code>{submitter_email}</code>, <code>{manager_name}</code>, <code>{manager_email}</code>, <code>{manager_comments}</code></div>
-                        <div class="mt-1"><strong>Πεδία Φόρμας:</strong>
+                    <label for="notif_body_text" class="form-label">Εναλλακτικό Μήνυμα Απλού Κειμένου (Plain Text Fallback)</label>
+                    <textarea class="form-control" id="notif_body_text" name="body_text_template" rows="3" placeholder="Γεια σας, Υποβλήθηκε νέα αίτηση για τη φόρμα {form_name}."></textarea>
+                    <small class="form-text text-muted">Εμφανίζεται σε clients αλληλογραφίας που δεν υποστηρίζουν HTML.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small"><i class="fa-solid fa-tags me-1"></i> Διαθέσιμα Smart Tags (Κάντε κλικ για εισαγωγή)</label>
+                    <div class="glass-panel p-2 small text-white" style="font-size: 11px; max-height: 140px; overflow-y: auto; background: rgba(255,255,255,0.05);">
+                        <div class="mb-1"><strong>Βασικά:</strong>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{form_name}">{form_name} (Όνομα Φόρμας)</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{form_id}">{form_id}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submission_id}">{submission_id}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submission_uuid}">{submission_uuid}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submission_status}">{submission_status}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submitted_at}">{submitted_at}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{all_fields}">{all_fields} (Όλα τα πεδία)</button>
+                        </div>
+                        <div class="mb-1"><strong>Στοιχεία Χρήστη:</strong>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submitter_name}">{submitter_name} (Όνομα)</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{submitter_email}">{submitter_email} (Email)</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{manager_name}">{manager_name} (Προϊστάμενος)</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{manager_email}">{manager_email}</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs insert-tag-btn" data-tag="{manager_comments}">{manager_comments}</button>
+                        </div>
+                        <div><strong>Πεδία Φόρμας:</strong>
                             <?php if (empty($fields)): ?>
                                 <span class="text-muted">Καμία δυναμική επιλογή πεδίου.</span>
                             <?php else: ?>
                                 <?php foreach ($fields as $f): ?>
-                                    <code>{field:<?= htmlspecialchars($f['key']) ?>}</code>
+                                    <button type="button" class="btn btn-outline-primary btn-xs insert-tag-btn me-1 mb-1" data-tag="{field:<?= htmlspecialchars($f['key']) ?>}"><?= htmlspecialchars($f['label']) ?> (<code>{field:<?= htmlspecialchars($f['key']) ?>}</code>)</button>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </div>
@@ -292,6 +316,24 @@
     </div>
 </div>
 
+<!-- Safe HTML Preview Modal -->
+<div class="modal fade" id="previewHtmlModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content bg-dark border border-secondary text-white">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title"><i class="fa-solid fa-eye text-primary me-2"></i>Προεπισκόπηση HTML Email</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-0">
+                <iframe id="previewIframe" style="width:100%; height:400px; border:none; background:#ffffff;"></iframe>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const fields = <?= json_encode($fields) ?>;
@@ -299,6 +341,58 @@ document.addEventListener('DOMContentLoaded', () => {
     const condBody = document.getElementById('cond_body');
     const addRuleBtn = document.getElementById('addRuleBtn');
     const rulesList = document.getElementById('cond_rules_list');
+    let activeInput = document.getElementById('notif_body');
+
+    // Track active input for Smart Tag insertion
+    const subjectInput = document.getElementById('notif_subject');
+    const bodyInput = document.getElementById('notif_body');
+    const bodyTextInput = document.getElementById('notif_body_text');
+
+    [subjectInput, bodyInput, bodyTextInput].forEach(input => {
+        if (input) {
+            input.addEventListener('focus', () => { activeInput = input; });
+        }
+    });
+
+    // Handle Smart Tag insertion at cursor position
+    document.querySelectorAll('.insert-tag-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tag = btn.dataset.tag;
+            if (!activeInput) activeInput = bodyInput;
+
+            const start = activeInput.selectionStart || 0;
+            const end = activeInput.selectionEnd || 0;
+            const val = activeInput.value;
+            activeInput.value = val.substring(0, start) + tag + val.substring(end);
+            activeInput.selectionStart = activeInput.selectionEnd = start + tag.length;
+            activeInput.focus();
+        });
+    });
+
+    // Safe HTML preview handler
+    const previewModalEl = new bootstrap.Modal(document.getElementById('previewHtmlModal'));
+    const previewBtn = document.getElementById('previewHtmlBtn');
+    if (previewBtn) {
+        previewBtn.addEventListener('click', () => {
+            const rawHtml = bodyInput.value || '<p class="text-muted">Το μήνυμα είναι κενό.</p>';
+            const iframe = document.getElementById('previewIframe');
+            // Write sanitized content into iframe with scripts disabled
+            const doc = iframe.contentWindow.document;
+            doc.open();
+            doc.write(`
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="utf-8"><style>body { font-family: sans-serif; padding: 20px; color: #333; line-height: 1.6; }</style></head>
+                <body>${rawHtml}</body>
+                </html>
+            `);
+            doc.close();
+            // Ensure scripts inside iframe cannot run
+            iframe.setAttribute('sandbox', 'allow-same-origin');
+            previewModalEl.show();
+        });
+    }
     
     let currentRules = [];
 

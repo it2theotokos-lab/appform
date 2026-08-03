@@ -321,13 +321,42 @@ class NotificationController extends Controller {
         }
 
         $db = Database::getInstance();
-        $stmt = $db->prepare("
-            INSERT INTO form_notification_logs (notification_id, form_id, recipient_summary, status, provider_response)
-            VALUES (?, ?, ?, 'sent', 'Test notification sent successfully')
-        ");
-        $stmt->execute([$notificationId, $formId, $testEmail]);
+        $stmt = $db->prepare("SELECT * FROM form_notifications WHERE id = ? AND form_id = ?");
+        $stmt->execute([$notificationId, $formId]);
+        $notif = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-        Session::flash('success', 'Η δοκιμαστική ειδοποίηση στάλθηκε επιτυχώς στο ' . htmlspecialchars($testEmail));
+        if (!$notif) {
+            Session::flash('error', 'Η ειδοποίηση δεν βρέθηκε.');
+            $this->back();
+        }
+
+        // Build test subject & body with placeholder stripped of smart tags
+        $testSubject = '[TEST] ' . ($notif['subject_template'] ?? 'Δοκιμαστική Ειδοποίηση');
+        $testBody    = "=== ΔΟΚΙΜΑΣΤΙΚΟ EMAIL ===\n\n" . ($notif['body_template'] ?? '') . "\n\n=== ΤΕΛΟΣ ΔΟΚΙΜΗΣ ===";
+
+        $logStatus = 'failed';
+        $logMsg    = 'SMTP not attempted';
+
+        try {
+            \App\Services\EmailService::sendEmail($testEmail, $testSubject, $testBody);
+            $logStatus = 'sent';
+            $logMsg    = 'Test delivery confirmed via SMTP';
+        } catch (\Exception $e) {
+            $logMsg = $e->getMessage();
+        }
+
+        $stmtLog = $db->prepare("
+            INSERT INTO form_notification_logs (notification_id, form_id, recipient_summary, status, provider_response)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $stmtLog->execute([$notificationId, $formId, $testEmail, $logStatus, $logMsg]);
+
+        if ($logStatus === 'sent') {
+            Session::flash('success', 'Η δοκιμαστική ειδοποίηση στάλθηκε επιτυχώς στο ' . htmlspecialchars($testEmail));
+        } else {
+            Session::flash('error', 'Αποτυχία αποστολής δοκιμαστικού email: ' . htmlspecialchars($logMsg));
+        }
+
         $this->back();
     }
 

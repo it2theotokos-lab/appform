@@ -49,7 +49,7 @@
         </div>
 
         <hr class="border-glass mb-4">
-        <h5 class="font-heading text-white mb-3">Survey & Analytics Settings</h5>
+        <h5 class="font-heading text-white mb-3">Survey &amp; Analytics Settings</h5>
 
         <div class="mb-3">
             <label for="form_mode" class="form-label text-white">Τύπος Λειτουργίας Φόρμας</label>
@@ -75,15 +75,15 @@
         </div>
 
         <hr class="border-glass mb-4">
-        <h5 class="font-heading text-white mb-3">Availability & Restrictions Settings</h5>
+        <h5 class="font-heading text-white mb-3">Availability &amp; Restrictions Settings</h5>
 
         <div class="mb-3">
-            <label for="submission_starts_at" class="form-label text-white">Ημερομηνία & Ώρα Έναρξης Υποβολών</label>
+            <label for="submission_starts_at" class="form-label text-white">Ημερομηνία &amp; Ώρα Έναρξης Υποβολών</label>
             <input type="datetime-local" class="form-control" id="submission_starts_at" name="submission_starts_at" value="<?= $form['submission_starts_at'] ? date('Y-m-d\TH:i', strtotime($form['submission_starts_at'])) : '' ?>">
         </div>
 
         <div class="mb-3">
-            <label for="submission_expires_at" class="form-label text-white">Ημερομηνία & Ώρα Λήξης Υποβολών</label>
+            <label for="submission_expires_at" class="form-label text-white">Ημερομηνία &amp; Ώρα Λήξης Υποβολών</label>
             <input type="datetime-local" class="form-control" id="submission_expires_at" name="submission_expires_at" value="<?= $form['submission_expires_at'] ? date('Y-m-d\TH:i', strtotime($form['submission_expires_at'])) : '' ?>">
         </div>
 
@@ -117,12 +117,13 @@
             </select>
         </div>
 
-        <div class="mb-3 d-none" id="section_selected_roles">
+        <!-- Roles section: hidden by default via inline style, toggled by JS -->
+        <div id="section_selected_roles" style="display:none;" class="mb-3">
             <label class="form-label text-white">Επιλέξτε Ρόλους που επιτρέπεται να υποβάλουν:</label>
             <div class="d-flex flex-column gap-2 border border-glass rounded p-3 bg-dark bg-opacity-25" style="max-height: 200px; overflow-y: auto;">
-                <?php 
+                <?php
                 $assignedRoles = array_column($roleAssignments ?? [], 'role_id');
-                foreach ($roles as $role): 
+                foreach ($roles as $role):
                 ?>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="submission_roles[]" value="<?= $role['id'] ?>" id="sub_role_<?= $role['id'] ?>"
@@ -135,12 +136,13 @@
             </div>
         </div>
 
-        <div class="mb-3 d-none" id="section_selected_users">
+        <!-- Users section: hidden by default via inline style, toggled by JS -->
+        <div id="section_selected_users" style="display:none;" class="mb-3">
             <label class="form-label text-white">Επιλέξτε Χρήστες που επιτρέπεται να υποβάλουν:</label>
             <div class="d-flex flex-column gap-2 border border-glass rounded p-3 bg-dark bg-opacity-25" style="max-height: 200px; overflow-y: auto;">
-                <?php 
+                <?php
                 $assignedUsers = array_column($userAssignments ?? [], 'user_id');
-                foreach ($users as $u): 
+                foreach ($users as $u):
                 ?>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="submission_users[]" value="<?= $u['id'] ?>" id="sub_user_<?= $u['id'] ?>"
@@ -156,7 +158,7 @@
         </div> <!-- /col-md-7 -->
 
         <div class="col-md-5 ps-4">
-            <h5 class="font-heading text-white mb-3">Public Access & Terms Settings</h5>
+            <h5 class="font-heading text-white mb-3">Public Access &amp; Terms Settings</h5>
 
             <div class="mb-3 form-check">
                 <input type="checkbox" class="form-check-input" id="is_public" name="is_public" value="1" <?= ($form['is_public'] ?? 0) ? 'checked' : '' ?>>
@@ -189,16 +191,15 @@
             </div>
 
             <!-- Public Link Panel -->
-            <?php if (!empty($form['is_public']) && !empty($form['public_token'])): 
+            <?php if (!empty($form['is_public']) && !empty($form['public_token'])):
                 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                 $publicUrl = $protocol . '://' . $host . '/f/' . $form['public_token'];
-                
-                // Get public status using central service
+
                 $statusCheck = \App\Services\FormAvailabilityService::checkAvailability($form, null);
                 $statusLabel = 'Open';
                 $statusColor = 'text-success';
-                
+
                 if ($statusCheck === 'inactive') {
                     $statusLabel = 'Disabled';
                     $statusColor = 'text-danger';
@@ -223,7 +224,6 @@
                     <a href="<?= $publicUrl ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline-success btn-sm"><i class="fa-solid fa-external-link me-1"></i> Άνοιγμα Φόρμας</a>
                     <button type="button" class="btn btn-outline-warning btn-sm" id="btnOpenQrModal"><i class="fa-solid fa-qrcode me-1"></i> QR Code</button>
                 </div>
-
                 <div class="d-flex justify-content-between align-items-center border-top border-glass pt-2" style="font-size: 0.85rem;">
                     <span class="text-muted">Public Status: <strong class="<?= $statusColor ?>"><?= $statusLabel ?></strong></span>
                     <button type="button" class="btn btn-link btn-sm text-danger p-0 text-decoration-none" id="btnRegenerateUrl"><i class="fa-solid fa-arrows-rotate me-1"></i> Ανανέωση Συνδέσμου</button>
@@ -235,7 +235,6 @@
                 <div class="glass-panel p-4 text-center" style="max-width: 450px; width: 90%;">
                     <h5 class="text-white mb-3"><?= \App\Core\View::escape($form['title']) ?></h5>
                     <div class="bg-white p-3 rounded d-inline-block mb-3" id="qrCanvasContainer">
-                        <!-- Use dynamic canvas rendering locally or via library -->
                         <div id="qrcode"></div>
                     </div>
                     <div class="small text-muted mb-4"><?= $publicUrl ?></div>
@@ -257,55 +256,53 @@
 <!-- Load minimal JS QR Code Generator Library -->
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Copy URL
-    const btnCopy = document.getElementById('btnCopyUrl');
-    const urlInput = document.getElementById('publicUrlInput');
+document.addEventListener('DOMContentLoaded', function () {
+    // ── Copy URL ──────────────────────────────────────────────────────────────
+    var btnCopy  = document.getElementById('btnCopyUrl');
+    var urlInput = document.getElementById('publicUrlInput');
     if (btnCopy && urlInput) {
-        btnCopy.addEventListener('click', () => {
-            navigator.clipboard.writeText(urlInput.value).then(() => {
-                const originalText = btnCopy.innerHTML;
+        btnCopy.addEventListener('click', function () {
+            navigator.clipboard.writeText(urlInput.value).then(function () {
+                var orig = btnCopy.innerHTML;
                 btnCopy.innerHTML = '<i class="fa-solid fa-check me-1"></i> Ο σύνδεσμος αντιγράφηκε.';
-                setTimeout(() => { btnCopy.innerHTML = originalText; }, 2000);
-            }).catch(() => {
+                setTimeout(function () { btnCopy.innerHTML = orig; }, 2000);
+            }).catch(function () {
                 urlInput.select();
                 document.execCommand('copy');
-                const originalText = btnCopy.innerHTML;
+                var orig = btnCopy.innerHTML;
                 btnCopy.innerHTML = '<i class="fa-solid fa-check me-1"></i> Ο σύνδεσμος αντιγράφηκε.';
-                setTimeout(() => { btnCopy.innerHTML = originalText; }, 2000);
+                setTimeout(function () { btnCopy.innerHTML = orig; }, 2000);
             });
         });
     }
 
-    // Regenerate URL
-    const btnRegenerate = document.getElementById('btnRegenerateUrl');
+    // ── Regenerate URL ────────────────────────────────────────────────────────
+    var btnRegenerate = document.getElementById('btnRegenerateUrl');
     if (btnRegenerate) {
-        btnRegenerate.addEventListener('click', () => {
+        btnRegenerate.addEventListener('click', function () {
             if (confirm('Η ανανέωση του δημόσιου συνδέσμου θα ακυρώσει άμεσα τον προηγούμενο σύνδεσμο. Θέλετε να συνεχίσετε;')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = '/admin/forms/<?= $form['id'] ?>/regenerate-token';
-                
-                const csrfInput = document.createElement('input');
-                csrfInput.type = 'hidden';
-                csrfInput.name = 'csrf_token';
-                csrfInput.value = '<?= \App\Core\Csrf::token() ?>';
-                form.appendChild(csrfInput);
-                
-                document.body.appendChild(form);
-                form.submit();
+                var f = document.createElement('form');
+                f.method = 'POST';
+                f.action = '/admin/forms/<?= $form['id'] ?>/regenerate-token';
+                var csrf = document.createElement('input');
+                csrf.type  = 'hidden';
+                csrf.name  = 'csrf_token';
+                csrf.value = '<?= \App\Core\Csrf::token() ?>';
+                f.appendChild(csrf);
+                document.body.appendChild(f);
+                f.submit();
             }
         });
     }
 
-    // QR Code Modal Interactive Logic
-    const qrModal = document.getElementById('qrModal');
-    const btnOpenQr = document.getElementById('btnOpenQrModal');
-    const btnCloseQr = document.getElementById('btnCloseQrModal');
-    const qrcodeDiv = document.getElementById('qrcode');
+    // ── QR Code Modal ─────────────────────────────────────────────────────────
+    var qrModal    = document.getElementById('qrModal');
+    var btnOpenQr  = document.getElementById('btnOpenQrModal');
+    var btnCloseQr = document.getElementById('btnCloseQrModal');
+    var qrcodeDiv  = document.getElementById('qrcode');
 
     if (btnOpenQr && qrModal) {
-        btnOpenQr.addEventListener('click', () => {
+        btnOpenQr.addEventListener('click', function () {
             qrModal.classList.remove('d-none');
             qrcodeDiv.innerHTML = '';
             new QRCode(qrcodeDiv, {
@@ -318,21 +315,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        const closeQr = () => { qrModal.classList.add('d-none'); };
+        var closeQr = function () { qrModal.classList.add('d-none'); };
         btnCloseQr.addEventListener('click', closeQr);
-        qrModal.addEventListener('click', (e) => {
-            if (e.target === qrModal) {
-                closeQr();
-            }
+        qrModal.addEventListener('click', function (e) {
+            if (e.target === qrModal) closeQr();
         });
 
-        // Download QR Code as PNG
-        const btnDownloadQr = document.getElementById('btnDownloadQr');
+        var btnDownloadQr = document.getElementById('btnDownloadQr');
         if (btnDownloadQr) {
-            btnDownloadQr.addEventListener('click', () => {
-                const img = qrcodeDiv.querySelector('img');
+            btnDownloadQr.addEventListener('click', function () {
+                var img = qrcodeDiv.querySelector('img');
                 if (img) {
-                    const link = document.createElement('a');
+                    var link = document.createElement('a');
                     link.href = img.src;
                     link.download = 'qrcode_<?= $form['slug'] ?>.png';
                     document.body.appendChild(link);
@@ -342,41 +336,52 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Print QR Code
-        const btnPrintQr = document.getElementById('btnPrintQr');
+        var btnPrintQr = document.getElementById('btnPrintQr');
         if (btnPrintQr) {
-            btnPrintQr.addEventListener('click', () => {
-                const img = qrcodeDiv.querySelector('img');
+            btnPrintQr.addEventListener('click', function () {
+                var img = qrcodeDiv.querySelector('img');
                 if (img) {
-                    const printWindow = window.open('', '_blank');
-                    printWindow.document.write('<html><body style="text-align:center;padding:50px;"><img src="' + img.src + '" style="width:300px;"><p style="font-family:sans-serif;margin-top:20px;">' + encodeURI('<?= $form['title'] ?>') + '</p></body></html>');
-                    printWindow.document.close();
-                    printWindow.print();
+                    var pw = window.open('', '_blank');
+                    pw.document.write('<html><body style="text-align:center;padding:50px;"><img src="' + img.src + '" style="width:300px;"><p style="font-family:sans-serif;margin-top:20px;"><?= addslashes(\App\Core\View::escape($form['title'])) ?></p></body></html>');
+                    pw.document.close();
+                    pw.print();
                 }
             });
         }
-    // Toggle Submission Access Mode sections
-    const accessModeSelect = document.getElementById('submission_access_mode');
-    const sectionRoles = document.getElementById('section_selected_roles');
-    const sectionUsers = document.getElementById('section_selected_users');
-
-    if (accessModeSelect) {
-        const toggleSections = () => {
-            const val = accessModeSelect.value;
-            if (val === 'selected_roles') {
-                sectionRoles.classList.remove('d-none');
-                sectionUsers.classList.add('d-none');
-            } else if (val === 'selected_users') {
-                sectionUsers.classList.remove('d-none');
-                sectionRoles.classList.add('d-none');
-            } else {
-                sectionRoles.classList.add('d-none');
-                sectionUsers.classList.add('d-none');
-            }
-        };
-
-        accessModeSelect.addEventListener('change', toggleSections);
-        toggleSections(); // run on load
-    }
+    } // end QR modal block
 });
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     Submission Access Mode Toggle
+     Completely standalone IIFE — no dependency on QR modal or any other code
+     HTML IDs used: submission_access_mode | section_selected_roles | section_selected_users
+     ════════════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+    'use strict';
+
+    function initAccessToggle() {
+        var sel   = document.getElementById('submission_access_mode');
+        var roles = document.getElementById('section_selected_roles');
+        var users = document.getElementById('section_selected_users');
+
+        if (!sel || !roles || !users) return;
+
+        function applyToggle() {
+            var v = sel.value;
+            roles.style.display = (v === 'selected_roles') ? 'block' : 'none';
+            users.style.display = (v === 'selected_users') ? 'block' : 'none';
+        }
+
+        sel.addEventListener('change', applyToggle);
+        applyToggle(); // run immediately on page load
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAccessToggle);
+    } else {
+        initAccessToggle(); // DOM already parsed
+    }
+}());
 </script>

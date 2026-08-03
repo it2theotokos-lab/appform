@@ -2,6 +2,22 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.29-Stable] - 2026-08-03
+
+### Fixed
+- **Submission Access Permissions Toggle**: Fixed Bootstrap `d-none` CSS override issue and isolated toggle script into a standalone IIFE in `forms/edit.php`, ensuring Selected Roles and Selected Users sections display correctly when selected.
+
+
+### Added
+- **Global Notifications — Rule Builder UI**: The Global Notifications editor (`Administration → Settings → Global Notifications`) now includes a full interactive Rule Builder, consistent with the form-level Notification Rules already in the application. Admins can add/remove rules, choose context variables (`user_name`, `user_email`, `user_role`, `site_name`), select operators (`equals`, `not_equals`, `contains`, `is_empty`, etc.), and set match mode (`All` / `Any`).
+- **Global Notifications — Execution Rules Engine (`triggerGlobal`)**: Added `FormNotificationTriggerService::triggerGlobal(string $slug, string $toEmail, array $context)`. Reuses the existing `evaluateConditions()` engine — no second rules system introduced. Fetches the template by slug, evaluates `conditional_logic_json` rules against the context, replaces Smart Tags (`{user_name}`, `{user_email}`, `{user_role}`, `{site_name}`, `{site_url}`, `{action_url}`), and fires the email via `EmailService::sendEmail()`.
+- **`user_registered` Event Hook**: `UserController::store()` now fires `triggerGlobal('user_registered', …)` immediately after a new user is created. Context includes `user_name`, `user_email`, `user_role`, `site_name`, `site_url`, and `action_url`. Trigger is fully non-blocking.
+- **HTML Preview Modal**: The Global Notifications editor retains its iframe-based safe HTML preview (sandbox) for the HTML body field.
+
+### Fixed
+- **Global Notifications JS**: The JavaScript block was missing the complete Rule Builder logic (`renderGlobalRules`, `addGlobalRuleItem`, remove handler, `conditional_logic_json` loader on edit). All are now implemented.
+- **Preview Modal**: The `globalPreviewModal` HTML structure was accidentally omitted; restored.
+
 ## [1.1.23-Stable] - 2026-07-31
 
 ### Added

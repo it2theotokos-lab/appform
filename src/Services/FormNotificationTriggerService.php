@@ -78,9 +78,15 @@ class FormNotificationTriggerService {
                 $subject = self::replaceSmartTags($rule['subject_template'], $submissionDetails, $answers);
                 $body = self::replaceSmartTags($rule['body_template'], $submissionDetails, $answers);
 
-                // 5. Send emails to resolved recipient addresses
+                // 5. Send emails to resolved recipient addresses & create internal notifications
                 foreach ($recipients as $recipientEmail) {
-                    $sent = \App\Services\EmailService::sendEmail($recipientEmail, $subject, $body);
+                    $sent = false;
+                    $errMsg = '';
+                    try {
+                        $sent = \App\Services\EmailService::sendEmail($recipientEmail, $subject, $body);
+                    } catch (\Exception $eEmail) {
+                        $errMsg = $eEmail->getMessage();
+                    }
 
                     $stmtLog = $db->prepare("
                         INSERT INTO form_notification_logs (notification_id, form_id, submission_id, recipient_summary, status, provider_response)
@@ -92,8 +98,24 @@ class FormNotificationTriggerService {
                         $submissionDetails['id'],
                         $recipientEmail,
                         $sent ? 'sent' : 'failed',
-                        $sent ? 'Real SMTP Delivery Confirmed' : 'SMTP Error encountered'
+                        $sent ? 'Real SMTP Delivery Confirmed' : ($errMsg ?: 'SMTP Error encountered')
                     ]);
+
+                    // Internal notification record creation for system users matching recipient email
+                    $stmtUser = $db->prepare("SELECT id FROM users WHERE email = ? AND is_active = 1");
+                    $stmtUser->execute([$recipientEmail]);
+                    $targetUserId = $stmtUser->fetchColumn();
+                    if ($targetUserId) {
+                        $subUuid = $submissionDetails['uuid'] ?? '';
+                        $linkUrl = $subUuid ? '/admin/submissions/' . $subUuid : '/my-submissions';
+                        \App\Services\NotificationService::notify(
+                            (int)$targetUserId,
+                            'form_notification',
+                            $subject,
+                            mb_substr(strip_tags($body), 0, 255),
+                            $linkUrl
+                        );
+                    }
                 }
 
             } catch (\Exception $e) {
@@ -276,9 +298,106 @@ class FormNotificationTriggerService {
         $result = preg_replace_callback('/\{field:([a-zA-Z0-9_]+)\}/i', function($m) use ($answers) {
             $key = $m[1];
             $val = $answers[$key] ?? '';
-            return is_array($val) ? (is_array($val) ? implode(', ', $val) : $val) : '';
+            return is_array($val) ? implode(', ', $val) : (string)$val;
         }, $result);
 
         return $result;
+    }
+
+    /**
+     * Trigger a global (system-level) notification by slug.
+     *
+     * @param string $slug     The notification_templates.slug to look up.
+     * @param string $toEmail  The recipient email address.
+     * @param array  $context  Key/value pairs used both for rule evaluation and Smart Tag replacement.
+     *                         Expected keys: user_name, user_email, user_role, site_name, site_url, action_url, etc.
+     */
+    public static function triggerGlobal(string $slug, string $toEmail, array $context = []): void {
+        if (empty($slug) || empty($toEmail)) {
+            return;
+        }
+
+        try {
+            $db = Database::getInstance();
+
+            // 1. Load the template
+            $stmt = $db->prepare("SELECT * FROM notification_templates WHERE slug = ? AND is_active = 1 LIMIT 1");
+            $stmt->execute([$slug]);
+            $tpl = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$tpl) {
+                return; // Template not found or inactive — silently skip
+            }
+
+            // Decode conditional logic and settings metadata
+            $condJson = $tpl['conditional_logic_json'] ?? '';
+            $cond = json_decode($condJson, true) ?: [];
+
+            // If $toEmail is empty, attempt to resolve recipient from template configuration
+            if (empty($toEmail)) {
+                $recipType = $cond['recipient_type'] ?? 'event_user';
+                if ($recipType === 'fixed' && !empty($cond['to_recipients'])) {
+                    $toEmail = $cond['to_recipients'];
+                } elseif ($recipType === 'role' && !empty($cond['recipient_role_id'])) {
+                    $stmtRoles = $db->prepare("SELECT email FROM users WHERE role_id = ? AND is_active = 1");
+                    $stmtRoles->execute([$cond['recipient_role_id']]);
+                    $emails = $stmtRoles->fetchAll(\PDO::FETCH_COLUMN);
+                    if ($emails) {
+                        $toEmail = implode(',', array_filter($emails));
+                    }
+                } elseif ($recipType === 'event_user' && !empty($context['user_email'])) {
+                    $toEmail = $context['user_email'];
+                }
+            }
+
+            if (empty($toEmail)) {
+                return;
+            }
+
+            // 2. Evaluate conditional logic rules (reuse existing engine)
+            if (!empty($cond['enabled'])) {
+                // For global notifications the "answers" map IS the context array.
+                // fieldsMap is empty — global fields don't need schema lookup.
+                if (!self::evaluateConditions($cond, $context, [])) {
+                    // Rules say do not send — log and skip
+                    $logPath = 'storage/logs/mail_delivery.log';
+                    $logMsg = sprintf("[%s] GLOBAL NOTIFICATION '%s' SKIPPED BY RULES for recipient '%s'\n", date('Y-m-d H:i:s'), $slug, $toEmail);
+                    @file_put_contents($logPath, $logMsg, FILE_APPEND);
+                    return;
+                }
+            }
+
+            // 3. Replace Smart Tags in subject and body
+            $subject = self::replaceGlobalSmartTags($tpl['subject'] ?? '', $context);
+            $bodyHtml = self::replaceGlobalSmartTags($tpl['body_html'] ?? '', $context);
+            $bodyText = self::replaceGlobalSmartTags($tpl['body_text'] ?? '', $context);
+
+            // 4. Send email (prefer HTML, fall back to plain text)
+            $body = $bodyHtml ?: $bodyText;
+            \App\Services\EmailService::sendEmail($toEmail, $subject, $body);
+
+        } catch (\Exception $e) {
+            try {
+                $logPath = 'storage/logs/mail_delivery.log';
+                $logMsg = sprintf("[%s] GLOBAL NOTIFICATION '%s' ERROR: %s\n", date('Y-m-d H:i:s'), $slug, $e->getMessage());
+                @file_put_contents($logPath, $logMsg, FILE_APPEND);
+            } catch (\Exception $eLog) {}
+        }
+    }
+
+    /**
+     * Replace Smart Tags in a global notification template string.
+     * Supports: {user_name}, {user_email}, {user_role}, {site_name}, {site_url}, {action_url}
+     */
+    protected static function replaceGlobalSmartTags(string $template, array $context): string {
+        $tags = [
+            '{user_name}'  => $context['user_name']  ?? '',
+            '{user_email}' => $context['user_email']  ?? '',
+            '{user_role}'  => $context['user_role']   ?? '',
+            '{site_name}'  => $context['site_name']   ?? '',
+            '{site_url}'   => $context['site_url']    ?? '',
+            '{action_url}' => $context['action_url']  ?? '',
+        ];
+
+        return str_replace(array_keys($tags), array_values($tags), $template);
     }
 }

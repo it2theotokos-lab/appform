@@ -18,11 +18,11 @@ class Submission extends Model {
 
     public static function getDetailsByUuid(string $uuid) {
         $sql = "
-            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title, f.slug as form_slug, COALESCE(fv.schema_json, '{\"schemaVersion\":1,\"sections\":[]}') as schema_json, u.username as submitter_name 
+            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title, f.slug as form_slug, COALESCE(fv.schema_json, '{\"schemaVersion\":1,\"sections\":[]}') as schema_json, COALESCE(u.username, 'External User') as submitter_name, u.email as user_email
             FROM form_submissions s 
             LEFT JOIN forms f ON s.form_id = f.id 
             LEFT JOIN form_versions fv ON s.form_version_id = fv.id
-            JOIN users u ON s.user_id = u.id
+            LEFT JOIN users u ON s.user_id = u.id
             WHERE s.uuid = ?
         ";
         $sub = self::fetch($sql, [$uuid]);

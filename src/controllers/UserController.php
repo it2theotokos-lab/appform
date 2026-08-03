@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Core\Database;
 use App\Models\User;
 use App\Models\Role;
+use App\Services\FormNotificationTriggerService;
 use PDO;
 
 class UserController extends Controller {
@@ -165,6 +166,20 @@ class UserController extends Controller {
         
         $newUserId = $db->lastInsertId();
         $this->logAudit('create', 'users', $newUserId, ['username' => $validated['username']]);
+
+        // Fire global notification for user_registered event (non-blocking)
+        $stmtRole = $db->prepare("SELECT name FROM roles WHERE id = ? LIMIT 1");
+        $stmtRole->execute([$validated['role_id']]);
+        $roleName = $stmtRole->fetchColumn() ?: '';
+        $siteSettings = $db->query("SELECT setting_key, setting_value FROM system_settings WHERE setting_key IN ('site_name','site_url')")->fetchAll(PDO::FETCH_KEY_PAIR);
+        FormNotificationTriggerService::triggerGlobal('user_registered', $validated['email'], [
+            'user_name'  => $validated['full_name'] ?: $validated['username'],
+            'user_email' => $validated['email'],
+            'user_role'  => $roleName,
+            'site_name'  => $siteSettings['site_name'] ?? 'AppForm',
+            'site_url'   => $siteSettings['site_url']  ?? '',
+            'action_url' => ($siteSettings['site_url'] ?? '') . '/login',
+        ]);
 
         Session::flash('success', 'Ο χρήστης δημιουργήθηκε επιτυχώς.');
         $this->redirect('/admin/users');

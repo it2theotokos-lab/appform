@@ -289,6 +289,9 @@ $router->post('/admin/menus/items/{itemId}/delete', [\App\Controllers\MenuContro
 // Settings
 $router->get('/admin/settings', [\App\Controllers\SettingsController::class, 'index'], ['auth', 'permission:settings.manage']);
 $router->post('/admin/settings/update', [\App\Controllers\SettingsController::class, 'update'], ['auth', 'permission:settings.manage']);
+$router->post('/admin/settings/global-notifications', [\App\Controllers\SettingsController::class, 'storeGlobalNotification'], ['auth', 'permission:settings.manage']);
+$router->post('/admin/settings/global-notifications/update', [\App\Controllers\SettingsController::class, 'updateGlobalNotification'], ['auth', 'permission:settings.manage']);
+$router->post('/admin/settings/global-notifications/{id}/delete', [\App\Controllers\SettingsController::class, 'deleteGlobalNotification'], ['auth', 'permission:settings.manage']);
 $router->post('/admin/settings/smtp/update', [\App\Controllers\SettingsController::class, 'updateSmtp'], ['auth', 'permission:smtp.manage']);
 $router->post('/admin/settings/smtp/test', [\App\Controllers\SettingsController::class, 'testSmtp'], ['auth', 'permission:smtp.manage']);
 $router->post('/admin/settings/smtp/test-email', [\App\Controllers\SettingsController::class, 'sendTestEmail'], ['auth', 'permission:smtp.manage']);

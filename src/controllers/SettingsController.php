@@ -1284,6 +1284,71 @@ class SettingsController extends Controller {
         $this->redirect('/admin/settings/ldap/role-mappings');
     }
 
+    public function storeGlobalNotification() {
+        $this->checkCsrf();
+        $data = Request::all();
+        $name = trim($data['name'] ?? '');
+        $triggerEvent = trim($data['trigger_event'] ?? '');
+        $slug = trim($data['slug'] ?? '');
+        $subject = trim($data['subject'] ?? '');
+        $bodyHtml = trim($data['body_html'] ?? '');
+        $bodyText = trim($data['body_text'] ?? '');
+
+        if (!$name || !$subject) {
+            Session::flash('error', 'Το όνομα και το θέμα είναι υποχρεωτικά πεδία.');
+            $this->redirect('/admin/settings?tab=global_notifications');
+            return;
+        }
+
+        if (!$slug) {
+            $slug = $triggerEvent ?: strtolower(preg_replace('/[^a-zA-Z0-9_]+/', '_', $name));
+        }
+
+        $condEnabled = isset($data['cond_enabled']);
+        $condLogic = [
+            'enabled' => $condEnabled,
+            'action' => $data['cond_action'] ?? 'show',
+            'match' => $data['cond_match'] ?? 'all',
+            'trigger_event' => $triggerEvent ?: $slug,
+            'recipient_type' => $data['recipient_type'] ?? 'fixed',
+            'to_recipients' => trim($data['to_recipients'] ?? ''),
+            'recipient_role_id' => !empty($data['recipient_role_id']) ? (int)$data['recipient_role_id'] : null,
+            'rules' => []
+        ];
+
+        if ($condEnabled && isset($data['rules']) && is_array($data['rules'])) {
+            foreach ($data['rules'] as $r) {
+                if (!empty($r['field'])) {
+                    $condLogic['rules'][] = [
+                        'field' => $r['field'],
+                        'operator' => $r['operator'],
+                        'value' => $r['value'] ?? ''
+                    ];
+                }
+            }
+        }
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            INSERT INTO notification_templates (name, slug, subject, body_html, body_text, is_active, conditional_logic_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        $stmt->execute([
+            $name,
+            $slug,
+            $subject,
+            $bodyHtml,
+            $bodyText ?: strip_tags($bodyHtml),
+            isset($data['is_active']) ? 1 : 0,
+            json_encode($condLogic, JSON_UNESCAPED_UNICODE)
+        ]);
+
+        $newId = (int)$db->lastInsertId();
+        $this->logAudit('settings.global_notification.created', 'notification_templates', $newId, []);
+        Session::flash('success', 'Ο νέος κανόνας ειδοποίησης συστήματος δημιουργήθηκε επιτυχώς.');
+        $this->redirect('/admin/settings?tab=global_notifications');
+    }
+
     public function updateGlobalNotification() {
         $this->checkCsrf();
         $data = Request::all();
@@ -1296,21 +1361,71 @@ class SettingsController extends Controller {
         }
 
         $db = Database::getInstance();
+        $name = trim($data['name'] ?? '');
+        $triggerEvent = trim($data['trigger_event'] ?? '');
+        $subject = trim($data['subject'] ?? '');
+        $bodyHtml = trim($data['body_html'] ?? '');
+        $bodyText = trim($data['body_text'] ?? '');
+
+        $condEnabled = isset($data['cond_enabled']);
+        $condLogic = [
+            'enabled' => $condEnabled,
+            'action' => $data['cond_action'] ?? 'show',
+            'match' => $data['cond_match'] ?? 'all',
+            'trigger_event' => $triggerEvent,
+            'recipient_type' => $data['recipient_type'] ?? 'fixed',
+            'to_recipients' => trim($data['to_recipients'] ?? ''),
+            'recipient_role_id' => !empty($data['recipient_role_id']) ? (int)$data['recipient_role_id'] : null,
+            'rules' => []
+        ];
+
+        if ($condEnabled && isset($data['rules']) && is_array($data['rules'])) {
+            foreach ($data['rules'] as $r) {
+                if (!empty($r['field'])) {
+                    $condLogic['rules'][] = [
+                        'field' => $r['field'],
+                        'operator' => $r['operator'],
+                        'value' => $r['value'] ?? ''
+                    ];
+                }
+            }
+        }
+
+        $slugSql = $triggerEvent ? ", slug = ?" : "";
+        $params = [$name, isset($data['is_active']) ? 1 : 0, $subject, $bodyHtml, $bodyText ?: strip_tags($bodyHtml), json_encode($condLogic, JSON_UNESCAPED_UNICODE)];
+        if ($triggerEvent) {
+            $params[] = $triggerEvent;
+        }
+        $params[] = $id;
+
         $stmt = $db->prepare("
             UPDATE notification_templates
-            SET is_active = ?, subject = ?, body_html = ?, body_text = ?, updated_at = NOW()
+            SET name = COALESCE(NULLIF(?, ''), name), is_active = ?, subject = ?, body_html = ?, body_text = ?, conditional_logic_json = ? {$slugSql}, updated_at = NOW()
             WHERE id = ?
         ");
-        $stmt->execute([
-            isset($data['is_active']) ? 1 : 0,
-            $data['subject'] ?? '',
-            $data['body_html'] ?? '',
-            $data['body_text'] ?? '',
-            $id
-        ]);
+        $stmt->execute($params);
 
         $this->logAudit('settings.global_notification.updated', 'notification_templates', $id, []);
         Session::flash('success', 'Ο κανόνας ειδοποίησης συστήματος ενημερώθηκε.');
+        $this->redirect('/admin/settings?tab=global_notifications');
+    }
+
+    public function deleteGlobalNotification(array $params) {
+        $this->checkCsrf();
+        $id = (int)($params['id'] ?? 0);
+
+        if (!$id) {
+            Session::flash('error', 'Μη έγκυρος κανόνας.');
+            $this->redirect('/admin/settings?tab=global_notifications');
+            return;
+        }
+
+        $db = Database::getInstance();
+        $stmt = $db->prepare("DELETE FROM notification_templates WHERE id = ?");
+        $stmt->execute([$id]);
+
+        $this->logAudit('settings.global_notification.deleted', 'notification_templates', $id, []);
+        Session::flash('success', 'Ο κανόνας ειδοποίησης συστήματος διαγράφηκε.');
         $this->redirect('/admin/settings?tab=global_notifications');
     }
 

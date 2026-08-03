@@ -294,114 +294,467 @@ $activeTab = $tab ?? $_GET['tab'] ?? 'general';
 
     <?php elseif ($activeTab === 'global_notifications'): ?>
         <div>
-            <h4 class="text-white mb-2"><i class="fa-solid fa-envelope-circle-check text-primary me-2"></i> Global Email Notification Rules</h4>
-            <p class="text-muted mb-4">Διαμορφώστε τους παγκόσμιους κανόνες ειδοποιήσεων συστήματος (π.χ. Δημιουργία Χρήστη, Reset Password κλπ).</p>
-
             <?php
             $db = \App\Core\Database::getInstance();
             $globalRules = $db->query("SELECT * FROM notification_templates ORDER BY id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $allRoles = $db->query("SELECT id, name FROM roles ORDER BY name ASC")->fetchAll(PDO::FETCH_ASSOC);
             ?>
 
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h4 class="text-white mb-1"><i class="fa-solid fa-envelope-circle-check text-primary me-2"></i> Global Email Notification Rules</h4>
+                    <p class="text-muted mb-0">Διαμορφώστε τους παγκόσμιους κανόνες ειδοποιήσεων συστήματος (π.χ. Δημιουργία Χρήστη, Reset Password κλπ).</p>
+                </div>
+                <button type="button" class="btn btn-success btn-sm" id="newGlobalRuleBtn"><i class="fa-solid fa-plus me-1"></i> Νέος Κανόνας / New Rule</button>
+            </div>
+
             <div class="row g-4">
-                <div class="col-md-7">
-                    <div class="card p-3 bg-dark border-secondary">
-                        <h6 class="text-white mb-3">Λίστα Κανόνων Συστήματος</h6>
+                <!-- Left: rules list -->
+                <div class="col-md-6">
+                    <div class="card p-3">
+                        <h6 class="text-white mb-3"><i class="fa-solid fa-list text-primary me-2"></i>Λίστα Κανόνων Συστήματος</h6>
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0">
                                 <thead>
                                     <tr class="text-white">
                                         <th>Κανόνας</th>
-                                        <th>Slug</th>
+                                        <th>Event</th>
                                         <th>Κατάσταση</th>
                                         <th class="text-end">Ενέργειες</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($globalRules as $rule): ?>
+                                    <?php if (empty($globalRules)): ?>
+                                        <tr><td colspan="4" class="text-center text-muted py-4">Δεν έχουν οριστεί κανόνες ειδοποίησης.</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($globalRules as $rule):
+                                            $ruleConfig = json_decode($rule['conditional_logic_json'] ?? '{}', true) ?: [];
+                                            $triggerEvent = $ruleConfig['trigger_event'] ?? $rule['slug'];
+                                            $hasCondRules = !empty($ruleConfig['enabled']);
+                                        ?>
                                         <tr>
-                                            <td class="text-white font-weight-bold"><?= htmlspecialchars($rule['name']) ?></td>
-                                            <td class="text-muted small"><?= htmlspecialchars($rule['slug']) ?></td>
+                                            <td>
+                                                <strong class="text-white"><?= htmlspecialchars($rule['name']) ?></strong>
+                                                <?php if ($hasCondRules): ?>
+                                                    <span class="badge bg-warning text-dark ms-1" style="font-size:9px;">Conditional</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-muted small"><code><?= htmlspecialchars($triggerEvent) ?></code></td>
                                             <td>
                                                 <span class="badge <?= $rule['is_active'] ? 'bg-success' : 'bg-secondary' ?>">
                                                     <?= $rule['is_active'] ? 'Ενεργός' : 'Ανενεργός' ?>
                                                 </span>
                                             </td>
                                             <td class="text-end">
-                                                <button type="button" class="btn btn-xs btn-outline-info edit-global-rule-btn" data-rule='<?= json_encode($rule, JSON_UNESCAPED_UNICODE) ?>'><i class="fa-solid fa-edit"></i> Edit</button>
+                                                <div class="d-flex justify-content-end gap-1">
+                                                    <button type="button" class="btn btn-xs btn-outline-info edit-global-rule-btn" data-rule='<?= json_encode($rule, JSON_UNESCAPED_UNICODE | JSON_HEX_APOS) ?>'><i class="fa-solid fa-edit"></i></button>
+                                                    <form action="/admin/settings/global-notifications/<?= (int)$rule['id'] ?>/delete" method="POST" style="display:inline;" class="js-confirm-action" data-confirm-title="Διαγραφή" data-confirm-message="Θέλετε να διαγράψετε αυτόν τον κανόνα;">
+                                                        <?= \App\Core\Csrf::field() ?>
+                                                        <button type="submit" class="btn btn-xs btn-outline-danger"><i class="fa-solid fa-trash"></i></button>
+                                                    </form>
+                                                </div>
                                             </td>
                                         </tr>
-                                    <?php endforeach; ?>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-5">
-                    <div class="card p-3 bg-dark border-secondary" id="globalRuleFormContainer">
+                <!-- Right: Add / Edit form -->
+                <div class="col-md-6">
+                    <div class="card p-3" id="globalRuleFormContainer">
                         <h6 class="text-white mb-3" id="globalRuleTitle"><i class="fa-solid fa-edit text-info me-2"></i>Επεξεργασία Κανόνα</h6>
+
                         <form action="/admin/settings/global-notifications/update" method="POST" id="globalRuleForm">
                             <?= \App\Core\Csrf::field() ?>
                             <input type="hidden" name="id" id="globalRuleId">
 
+                            <!-- Rule Name + Active toggle -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-8">
+                                    <label class="form-label text-white small">Όνομα Κανόνα</label>
+                                    <input type="text" name="name" id="globalRuleName" class="form-control form-control-sm" required placeholder="π.χ. Νέος Χρήστης – Καλωσόρισμα">
+                                </div>
+                                <div class="col-4 d-flex align-items-end pb-1">
+                                    <div class="form-check ms-1">
+                                        <input type="checkbox" name="is_active" id="globalRuleActive" class="form-check-input" value="1">
+                                        <label class="form-check-label text-white small" for="globalRuleActive">Ενεργός</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Trigger Event -->
                             <div class="mb-3">
-                                <label class="form-label text-white small">Όνομα Κανόνα</label>
-                                <input type="text" id="globalRuleName" class="form-control form-control-sm" readonly>
+                                <label class="form-label text-white small">Γεγονός Ενεργοποίησης (Trigger Event)</label>
+                                <select class="form-select form-select-sm" name="trigger_event" id="globalRuleTrigger">
+                                    <option value="user_registered">user_registered — Δημιουργία νέου χρήστη</option>
+                                    <option value="password_reset">password_reset — Επαναφορά κωδικού</option>
+                                    <option value="account_activated">account_activated — Ενεργοποίηση λογαριασμού</option>
+                                    <option value="account_deactivated">account_deactivated — Απενεργοποίηση λογαριασμού</option>
+                                    <option value="role_changed">role_changed — Αλλαγή ρόλου χρήστη</option>
+                                    <option value="login_failure">login_failure — Αποτυχία σύνδεσης</option>
+                                    <option value="system_alert">system_alert — Ειδοποίηση Συστήματος</option>
+                                </select>
+                                <small class="form-text text-muted">Το slug αυτού του event χρησιμοποιείται ως αναγνωριστικό στον κώδικα.</small>
                             </div>
 
-                            <div class="mb-3 form-check">
-                                <input type="checkbox" name="is_active" id="globalRuleActive" class="form-check-input" value="1">
-                                <label class="form-check-label text-white small" for="globalRuleActive">Ενεργός Κανόνας</label>
+                            <!-- Recipient Type -->
+                            <div class="mb-3">
+                                <label class="form-label text-white small">Τύπος Παραλήπτη (Recipient Type)</label>
+                                <select class="form-select form-select-sm" name="recipient_type" id="globalRecipientType">
+                                    <option value="fixed">Σταθερές διευθύνσεις Email (Fixed)</option>
+                                    <option value="event_user">Χρήστης του Event (Event User)</option>
+                                    <option value="role">Χρήστες Συγκεκριμένου Ρόλου (Role)</option>
+                                </select>
                             </div>
 
+                            <!-- Fixed Recipients field -->
+                            <div class="mb-3" id="globalToWrapper">
+                                <label class="form-label text-white small">Παραλήπτες (To — emails)</label>
+                                <input type="text" name="to_recipients" id="globalRuleTo" class="form-control form-control-sm" placeholder="admin@example.com, other@domain.com">
+                                <small class="form-text text-muted">Διαχωρίστε πολλαπλά emails με κόμμα.</small>
+                            </div>
+
+                            <!-- Role Recipients -->
+                            <div class="mb-3 d-none" id="globalRoleWrapper">
+                                <label class="form-label text-white small">Επιλογή Ρόλου</label>
+                                <select class="form-select form-select-sm" name="recipient_role_id" id="globalRuleRoleId">
+                                    <option value="">Επιλέξτε ρόλο...</option>
+                                    <?php foreach ($allRoles as $role): ?>
+                                        <option value="<?= $role['id'] ?>"><?= htmlspecialchars($role['name']) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <!-- Subject -->
                             <div class="mb-3">
                                 <label class="form-label text-white small">Θέμα (Subject Template)</label>
-                                <input type="text" name="subject" id="globalRuleSubject" class="form-control form-control-sm" required>
+                                <input type="text" name="subject" id="globalRuleSubject" class="form-control form-control-sm" required placeholder="Καλωσήρθατε στο AppForm, {user_name}!">
                             </div>
 
+                            <!-- HTML Body -->
                             <div class="mb-3">
-                                <label class="form-label text-white small">Μήνυμα HTML</label>
-                                <textarea name="body_html" id="globalRuleBodyHtml" class="form-control form-control-sm" rows="4" required></textarea>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label text-white small mb-0">Μήνυμα HTML (HTML Body)</label>
+                                    <button type="button" class="btn btn-outline-info btn-xs" id="globalPreviewHtmlBtn"><i class="fa-solid fa-eye me-1"></i>Προεπισκόπηση HTML</button>
+                                </div>
+                                <textarea name="body_html" id="globalRuleBodyHtml" class="form-control form-control-sm" rows="5" placeholder="<p>Γεια σας, {user_name}!</p><p>Ο λογαριασμός σας δημιουργήθηκε.</p>"></textarea>
                             </div>
 
+                            <!-- Plain Text Fallback -->
                             <div class="mb-3">
-                                <label class="form-label text-white small">Μήνυμα Text</label>
-                                <textarea name="body_text" id="globalRuleBodyText" class="form-control form-control-sm" rows="3" required></textarea>
+                                <label class="form-label text-white small">Εναλλακτικό Μήνυμα Απλού Κειμένου (Plain Text Fallback)</label>
+                                <textarea name="body_text" id="globalRuleBodyText" class="form-control form-control-sm" rows="3" placeholder="Γεια σας, {user_name}. Ο λογαριασμός σας δημιουργήθηκε."></textarea>
+                                <small class="form-text text-muted">Εμφανίζεται σε clients που δεν υποστηρίζουν HTML.</small>
                             </div>
 
-                            <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-save me-1"></i>Αποθήκευση Κανόνα</button>
+                            <!-- Smart Tags Picker -->
+                            <div class="mb-3">
+                                <label class="form-label text-muted small"><i class="fa-solid fa-tags me-1"></i> Smart Tags — Κάντε κλικ για εισαγωγή στη θέση cursor</label>
+                                <div class="glass-panel p-2" style="font-size: 11px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                                    <div class="mb-1"><strong class="text-white-50">Στοιχεία Χρήστη:</strong><br>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{user_name}">{user_name} (Όνομα)</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{user_email}">{user_email} (Email)</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{user_role}">{user_role} (Ρόλος)</button>
+                                    </div>
+                                    <div><strong class="text-white-50">Σύστημα:</strong><br>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{site_name}">{site_name}</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{site_url}">{site_url}</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs insert-global-tag-btn me-1 mb-1" data-tag="{action_url}">{action_url} (Σύνδεσμος)</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Conditional Logic / Execution Rules -->
+                            <div class="border border-secondary rounded p-3 mb-4">
+                                <h6 class="text-white small font-heading mb-2">Κανόνες Εκτέλεσης (Conditional Logic)</h6>
+                                <div class="form-check mb-2">
+                                    <input type="checkbox" class="form-check-input" id="global_cond_enabled" name="cond_enabled">
+                                    <label class="form-check-label text-white small" for="global_cond_enabled">Ενεργοποίηση Κανόνων</label>
+                                </div>
+                                <div class="d-none" id="global_cond_body">
+                                    <div class="mb-2">
+                                        <label class="form-label small text-white-50">Ενέργεια (Action)</label>
+                                        <select class="form-select form-select-sm" name="cond_action" id="global_cond_action">
+                                            <option value="show">Αποστολή (Send)</option>
+                                            <option value="hide">Μη αποστολή (Do not send)</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-2">
+                                        <label class="form-label small text-white-50">Συνθήκη (Match Mode)</label>
+                                        <select class="form-select form-select-sm" name="cond_match" id="global_cond_match">
+                                            <option value="all">Όλα τα κριτήρια (All)</option>
+                                            <option value="any">Οποιοδήποτε κριτήριο (Any)</option>
+                                        </select>
+                                    </div>
+                                    <div id="global_cond_rules_list" class="mb-2"></div>
+                                    <button type="button" class="btn btn-outline-success btn-xs" id="addGlobalRuleBtn"><i class="fa-solid fa-plus me-1"></i>Προσθήκη Κανόνα</button>
+                                </div>
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fa-solid fa-save me-1"></i>Αποθήκευση Κανόνα</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm w-50 d-none" id="cancelGlobalEditBtn">Ακύρωση</button>
+                            </div>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const editBtns = document.querySelectorAll('.edit-global-rule-btn');
-                const formId = document.getElementById('globalRuleId');
-                const formName = document.getElementById('globalRuleName');
-                const formActive = document.getElementById('globalRuleActive');
-                const formSubject = document.getElementById('globalRuleSubject');
-                const formBodyHtml = document.getElementById('globalRuleBodyHtml');
-                const formBodyText = document.getElementById('globalRuleBodyText');
+            <!-- Global HTML Preview Modal -->
+            <div class="modal fade" id="globalPreviewModal" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content bg-dark border border-secondary text-white">
+                        <div class="modal-header border-secondary">
+                            <h5 class="modal-title"><i class="fa-solid fa-eye text-primary me-2"></i>Προεπισκόπηση HTML Email</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-0">
+                            <iframe id="globalPreviewIframe" style="width:100%; height:420px; border:none; background:#fff;"></iframe>
+                        </div>
+                        <div class="modal-footer border-secondary">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Κλείσιμο</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                editBtns.forEach(btn => {
-                    btn.addEventListener('click', () => {
-                        const r = JSON.parse(btn.dataset.rule);
-                        formId.value = r.id;
-                        formName.value = r.name;
-                        formActive.checked = parseInt(r.is_active) === 1;
-                        formSubject.value = r.subject || '';
-                        formBodyHtml.value = r.body_html || '';
-                        formBodyText.value = r.body_text || '';
-                    });
-                });
+<script>
+document.addEventListener('DOMContentLoaded', () => {
 
-                if (editBtns.length > 0) {
-                    editBtns[0].click();
-                }
+    /* ── DOM refs ─────────────────────────────────────────────── */
+    const editBtns       = document.querySelectorAll('.edit-global-rule-btn');
+    const newRuleBtn     = document.getElementById('newGlobalRuleBtn');
+    const cancelBtn      = document.getElementById('cancelGlobalEditBtn');
+    const form           = document.getElementById('globalRuleForm');
+    const formTitle      = document.getElementById('globalRuleTitle');
+    const formId         = document.getElementById('globalRuleId');
+    const formName       = document.getElementById('globalRuleName');
+    const formActive     = document.getElementById('globalRuleActive');
+    const formTrigger    = document.getElementById('globalRuleTrigger');
+    const formRecipType  = document.getElementById('globalRecipientType');
+    const formTo         = document.getElementById('globalRuleTo');
+    const formRoleId     = document.getElementById('globalRuleRoleId');
+    const formSubject    = document.getElementById('globalRuleSubject');
+    const formBodyHtml   = document.getElementById('globalRuleBodyHtml');
+    const formBodyText   = document.getElementById('globalRuleBodyText');
+    const toWrapper      = document.getElementById('globalToWrapper');
+    const roleWrapper    = document.getElementById('globalRoleWrapper');
+
+    /* ── Recipient type toggle ────────────────────────────────── */
+    function updateRecipientUI() {
+        const t = formRecipType.value;
+        toWrapper.classList.toggle('d-none', t !== 'fixed');
+        roleWrapper.classList.toggle('d-none', t !== 'role');
+    }
+    formRecipType.addEventListener('change', updateRecipientUI);
+    updateRecipientUI();
+
+    /* ── Smart Tag cursor-aware insert ───────────────────────── */
+    let activeGlobalInput = formBodyHtml;
+    [formSubject, formBodyHtml, formBodyText].forEach(el => {
+        if (el) el.addEventListener('focus', () => { activeGlobalInput = el; });
+    });
+    document.querySelectorAll('.insert-global-tag-btn').forEach(btn => {
+        btn.addEventListener('click', e => {
+            e.preventDefault();
+            const tag = btn.dataset.tag;
+            const el = activeGlobalInput || formBodyHtml;
+            const start = el.selectionStart ?? el.value.length;
+            const end   = el.selectionEnd   ?? el.value.length;
+            el.value = el.value.substring(0, start) + tag + el.value.substring(end);
+            el.selectionStart = el.selectionEnd = start + tag.length;
+            el.focus();
+        });
+    });
+
+    /* ── HTML Preview ─────────────────────────────────────────── */
+    const previewModal = new bootstrap.Modal(document.getElementById('globalPreviewModal'));
+    document.getElementById('globalPreviewHtmlBtn').addEventListener('click', () => {
+        const html = formBodyHtml.value || '<p class="text-muted">Το μήνυμα είναι κενό.</p>';
+        const iframe = document.getElementById('globalPreviewIframe');
+        const doc = iframe.contentWindow.document;
+        doc.open();
+        doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:sans-serif;padding:20px;color:#333;line-height:1.6;}</style></head><body>${html}</body></html>`);
+        doc.close();
+        iframe.setAttribute('sandbox', 'allow-same-origin');
+        previewModal.show();
+    });
+
+    /* ── Conditional Logic / Rule Builder ────────────────────── */
+    const condEnabledChk  = document.getElementById('global_cond_enabled');
+    const condBody        = document.getElementById('global_cond_body');
+    const condActionSel   = document.getElementById('global_cond_action');
+    const condMatchSel    = document.getElementById('global_cond_match');
+    const condRulesList   = document.getElementById('global_cond_rules_list');
+    const addRuleBtn      = document.getElementById('addGlobalRuleBtn');
+    let currentRules = [];
+
+    const globalFields = [
+        { key: 'user_name',  label: 'Όνομα Χρήστη' },
+        { key: 'user_email', label: 'Email Χρήστη'  },
+        { key: 'user_role',  label: 'Ρόλος Χρήστη'  },
+        { key: 'site_name',  label: 'Όνομα Site'     }
+    ];
+
+    condEnabledChk.addEventListener('change', e => {
+        if (e.target.checked) {
+            condBody.classList.remove('d-none');
+            if (currentRules.length === 0) addGlobalRuleItem();
+        } else {
+            condBody.classList.add('d-none');
+        }
+    });
+
+    addRuleBtn.addEventListener('click', () => addGlobalRuleItem());
+
+    function addGlobalRuleItem(rule = { field: '', operator: 'equals', value: '' }) {
+        currentRules.push(rule);
+        renderGlobalRules();
+    }
+
+    function renderGlobalRules() {
+        condRulesList.innerHTML = '';
+        currentRules.forEach((r, idx) => {
+            const div = document.createElement('div');
+            div.className = 'border border-secondary rounded p-2 mb-2';
+            div.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small text-muted">Κανόνας #${idx + 1}</span>
+                    <button type="button" class="btn btn-outline-danger btn-xs border-0 rm-rule-btn" data-idx="${idx}"><i class="fa-solid fa-times"></i></button>
+                </div>
+                <div class="mb-1">
+                    <select class="form-select form-select-sm g-rule-field" name="rules[${idx}][field]">
+                        <option value="">Επιλέξτε μεταβλητή...</option>
+                        ${globalFields.map(f => `<option value="${f.key}" ${f.key === r.field ? 'selected' : ''}>${f.label} (${f.key})</option>`).join('')}
+                    </select>
+                </div>
+                <div class="mb-1">
+                    <select class="form-select form-select-sm g-rule-op" name="rules[${idx}][operator]">
+                        <option value="equals"       ${r.operator==='equals'       ?'selected':''}>Ισούται με</option>
+                        <option value="not_equals"   ${r.operator==='not_equals'   ?'selected':''}>Δεν ισούται με</option>
+                        <option value="contains"     ${r.operator==='contains'     ?'selected':''}>Περιέχει</option>
+                        <option value="not_contains" ${r.operator==='not_contains' ?'selected':''}>Δεν περιέχει</option>
+                        <option value="is_empty"     ${r.operator==='is_empty'     ?'selected':''}>Είναι κενό</option>
+                        <option value="is_not_empty" ${r.operator==='is_not_empty' ?'selected':''}>Δεν είναι κενό</option>
+                    </select>
+                </div>
+                <div>
+                    <input type="text" class="form-control form-control-sm g-rule-val" name="rules[${idx}][value]" value="${r.value || ''}" placeholder="Τιμή">
+                </div>
+            `;
+            condRulesList.appendChild(div);
+        });
+
+        condRulesList.querySelectorAll('.g-rule-op').forEach(sel => {
+            const valInput = sel.closest('div.border').querySelector('.g-rule-val');
+            const tog = () => valInput.classList.toggle('d-none', sel.value === 'is_empty' || sel.value === 'is_not_empty');
+            sel.addEventListener('change', tog);
+            tog();
+        });
+
+        condRulesList.querySelectorAll('.rm-rule-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentRules.splice(parseInt(btn.dataset.idx), 1);
+                renderGlobalRules();
             });
-            </script>
+        });
+    }
+
+    /* ── Form reset helper ───────────────────────────────────── */
+    function resetGlobalForm() {
+        formId.value          = '';
+        formName.value        = '';
+        formName.removeAttribute('readonly');
+        formActive.checked    = true;
+        formTrigger.value     = 'user_registered';
+        formRecipType.value   = 'fixed';
+        formTo.value          = '';
+        if (formRoleId) formRoleId.value = '';
+        formSubject.value     = '';
+        formBodyHtml.value    = '';
+        formBodyText.value    = '';
+        condEnabledChk.checked = false;
+        condBody.classList.add('d-none');
+        currentRules          = [];
+        condRulesList.innerHTML = '';
+        updateRecipientUI();
+    }
+
+    /* ── "New Rule" button ───────────────────────────────────── */
+    newRuleBtn.addEventListener('click', () => {
+        formTitle.innerHTML = '<i class="fa-solid fa-plus text-success me-2"></i>Νέος Κανόνας Ειδοποίησης';
+        form.action = '/admin/settings/global-notifications';
+        resetGlobalForm();
+        cancelBtn.classList.remove('d-none');
+    });
+
+    /* ── Cancel button ───────────────────────────────────────── */
+    cancelBtn.addEventListener('click', () => {
+        if (editBtns.length > 0) {
+            editBtns[0].click();
+        } else {
+            formTitle.innerHTML = '<i class="fa-solid fa-edit text-info me-2"></i>Επεξεργασία Κανόνα';
+            form.action = '/admin/settings/global-notifications/update';
+            resetGlobalForm();
+            cancelBtn.classList.add('d-none');
+        }
+    });
+
+    /* ── Edit buttons ────────────────────────────────────────── */
+    editBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const r = JSON.parse(btn.dataset.rule);
+            let cfg = {};
+            try { cfg = JSON.parse(r.conditional_logic_json || '{}'); } catch(e) {}
+
+            formTitle.innerHTML = '<i class="fa-solid fa-edit text-info me-2"></i>Επεξεργασία Κανόνα';
+            form.action   = '/admin/settings/global-notifications/update';
+            formId.value  = r.id;
+            formName.value = r.name;
+            formName.removeAttribute('readonly');
+            formActive.checked = parseInt(r.is_active) === 1;
+
+            // Trigger event — from extended config or slug
+            const te = cfg.trigger_event || r.slug || 'user_registered';
+            const opt = formTrigger.querySelector(`option[value="${te}"]`);
+            if (opt) { formTrigger.value = te; } else { formTrigger.value = 'user_registered'; }
+
+            // Recipients
+            formRecipType.value = cfg.recipient_type || 'fixed';
+            formTo.value        = cfg.to_recipients  || '';
+            if (formRoleId) formRoleId.value = cfg.recipient_role_id || '';
+            updateRecipientUI();
+
+            formSubject.value   = r.subject   || '';
+            formBodyHtml.value  = r.body_html || '';
+            formBodyText.value  = r.body_text || '';
+
+            // Conditional logic
+            if (cfg && cfg.enabled) {
+                condEnabledChk.checked = true;
+                condBody.classList.remove('d-none');
+                if (condActionSel) condActionSel.value = cfg.action || 'show';
+                if (condMatchSel)  condMatchSel.value  = cfg.match  || 'all';
+                currentRules = cfg.rules || [];
+                renderGlobalRules();
+            } else {
+                condEnabledChk.checked = false;
+                condBody.classList.add('d-none');
+                currentRules = [];
+                condRulesList.innerHTML = '';
+            }
+
+            cancelBtn.classList.add('d-none');
+        });
+    });
+
+    // Auto-load first rule on page load
+    if (editBtns.length > 0) editBtns[0].click();
+});
         </div>
 
     <?php elseif ($activeTab === 'smtp'): ?>
