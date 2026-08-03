@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'version' => '1.1.30',
-    'build'   => 32,
+    'version' => '1.1.31',
+    'build'   => 33,
     'channel' => 'stable',
 ];
