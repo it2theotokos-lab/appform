@@ -222,19 +222,26 @@ class WorkflowTaskController extends Controller {
 
             // Notify old and new assignees
             try {
-                \App\Services\NotificationService::notify(
-                    $oldUserId,
-                    'warning',
-                    'Αφαίρεση Εργασίας Workflow',
-                    "Η εργασία '{$task['step_name']}' για το έγγραφο {$task['document_number']} σας αφαιρέθηκε.",
-                    "/documents/{$task['document_instance_id']}"
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'workflow_reassigned_old',
+                    [
+                        'id' => $task['document_instance_id'],
+                        'document_number' => $task['document_number'],
+                        'step_name' => $task['step_name'],
+                        'old_user_id' => $oldUserId
+                    ],
+                    Auth::id()
                 );
-                \App\Services\NotificationService::notify(
-                    $newUserId,
-                    'info',
-                    'Νέα Εργασία Workflow (Επανανάθεση)',
-                    "Σας ανατέθηκε η εργασία '{$task['step_name']}' για το έγγραφο {$task['document_number']}.",
-                    "/workflow/tasks/{$id}"
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'workflow_reassigned_new',
+                    [
+                        'id' => $task['document_instance_id'],
+                        'document_number' => $task['document_number'],
+                        'step_name' => $task['step_name'],
+                        'new_user_id' => $newUserId,
+                        'task_instance_id' => $id
+                    ],
+                    Auth::id()
                 );
             } catch (\Exception $e) {}
 
@@ -333,12 +340,14 @@ class WorkflowTaskController extends Controller {
 
             // Notify Creator
             try {
-                \App\Services\NotificationService::notify(
-                    $wf['doc_creator_id'],
-                    'danger',
-                    'Ακύρωση Workflow Εγγράφου',
-                    "Το workflow του εγγράφου {$wf['document_number']} ακυρώθηκε από τον διαχειριστή.",
-                    "/documents/{$docId}"
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'workflow_cancelled',
+                    [
+                        'id' => $docId,
+                        'document_number' => $wf['document_number'],
+                        'created_by' => $wf['doc_creator_id']
+                    ],
+                    Auth::id()
                 );
             } catch (\Exception $e) {}
 

@@ -35,6 +35,8 @@ class FormNotificationTriggerService {
             return;
         }
 
+        $notifiedUserIds = [];
+
         // Fetch schema to parse field labels and keys configuration
         $stmtSchema = $db->prepare("
             SELECT v.schema_json FROM form_versions v
@@ -102,19 +104,41 @@ class FormNotificationTriggerService {
                     ]);
 
                     // Internal notification record creation for system users matching recipient email
-                    $stmtUser = $db->prepare("SELECT id FROM users WHERE email = ? AND is_active = 1");
-                    $stmtUser->execute([$recipientEmail]);
-                    $targetUserId = $stmtUser->fetchColumn();
-                    if ($targetUserId) {
-                        $subUuid = $submissionDetails['uuid'] ?? '';
-                        $linkUrl = $subUuid ? '/admin/submissions/' . $subUuid : '/my-submissions';
-                        \App\Services\NotificationService::notify(
-                            (int)$targetUserId,
-                            'form_notification',
-                            $subject,
-                            mb_substr(strip_tags($body), 0, 255),
-                            $linkUrl
-                        );
+                    $cleanEmail = trim($recipientEmail);
+                    if (!empty($cleanEmail)) {
+                        $stmtUser = $db->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1");
+                        $stmtUser->execute([$cleanEmail]);
+                        $targetUserId = (int)$stmtUser->fetchColumn();
+
+                        if ($targetUserId > 0 && !in_array($targetUserId, $notifiedUserIds, true)) {
+                            $notifiedUserIds[] = $targetUserId;
+                            $subUuid    = $submissionDetails['uuid'] ?? '';
+                            $formTitle  = $submissionDetails['form_title'] ?? '';
+                            $subName    = !empty($submissionDetails['submitter_name'])
+                                ? $submissionDetails['submitter_name']
+                                : 'Επισκέπτης';
+                            $subEmail   = $submissionDetails['user_email'] ?? '';
+                            $linkUrl    = $subUuid ? '/admin/submissions/' . $subUuid : '/my-submissions';
+
+                            $notifTitle   = $formTitle
+                                ? 'Νέα υποβολή: ' . $formTitle
+                                : 'Νέα υποβολή φόρμας';
+
+                            $notifMessage = $subEmail
+                                ? 'Ο χρήστης ' . $subName . ' (' . $subEmail . ') υπέβαλε τη φόρμα.'
+                                : $subName . ' υπέβαλε τη φόρμα.';
+                            if ($subUuid) {
+                                $notifMessage .= ' Υποβολή: ' . $subUuid;
+                            }
+
+                            \App\Services\NotificationService::notify(
+                                $targetUserId,
+                                'form_notification',
+                                $notifTitle,
+                                mb_substr($notifMessage, 0, 255),
+                                $linkUrl
+                            );
+                        }
                     }
                 }
 
@@ -373,7 +397,34 @@ class FormNotificationTriggerService {
 
             // 4. Send email (prefer HTML, fall back to plain text)
             $body = $bodyHtml ?: $bodyText;
-            \App\Services\EmailService::sendEmail($toEmail, $subject, $body);
+            try {
+                \App\Services\EmailService::sendEmail($toEmail, $subject, $body);
+            } catch (\Exception $eEmail) {}
+
+            // 5. Internal notification record creation for matching active AppForm users
+            $rawRecipients = array_filter(array_map('trim', explode(',', $toEmail)));
+            $notifiedGlobalUsers = [];
+            foreach ($rawRecipients as $cleanRecipient) {
+                if (empty($cleanRecipient)) {
+                    continue;
+                }
+
+                $stmtUser = $db->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1");
+                $stmtUser->execute([$cleanRecipient]);
+                $targetUserId = (int)$stmtUser->fetchColumn();
+
+                if ($targetUserId > 0 && !in_array($targetUserId, $notifiedGlobalUsers, true)) {
+                    $notifiedGlobalUsers[] = $targetUserId;
+                    $actionUrl = !empty($context['action_url']) ? $context['action_url'] : '/notifications';
+                    \App\Services\NotificationService::notify(
+                        $targetUserId,
+                        'global_notification',
+                        $subject,
+                        mb_substr(strip_tags($body), 0, 255),
+                        $actionUrl
+                    );
+                }
+            }
 
         } catch (\Exception $e) {
             try {

@@ -637,6 +637,7 @@ class FormController extends Controller {
         }
 
         $schema = json_decode($latestVer['schema_json'], true);
+        $repositories = [];
         // Load dynamic dropdown and multi-checkbox repository contents
         if (isset($schema['sections']) && is_array($schema['sections'])) {
             foreach ($schema['sections'] as $sec) {

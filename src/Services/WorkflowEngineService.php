@@ -258,14 +258,17 @@ class WorkflowEngineService {
 
                 // Send notification
                 try {
-                    $notifyTitle = $inst['step_type'] === 'signature' ? 'Απαιτείται Υπογραφή' : 'Εκκρεμεί Έγκριση';
-                    $notifyMsg = "Έχετε μια νέα εργασία για το έγγραφο/φόρμα {$documentNumber} στο βήμα '{$inst['step_name']}'.";
-                    NotificationService::notify(
-                        $inst['assigned_user_id'],
-                        'info',
-                        $notifyTitle,
-                        $notifyMsg,
-                        "/workflow/tasks/{$inst['id']}"
+                    \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                        'workflow_task_assigned',
+                        [
+                            'id' => $entityId,
+                            'document_number' => $documentNumber,
+                            'assigned_user_id' => $inst['assigned_user_id'],
+                            'step_name' => $inst['step_name'],
+                            'step_type' => $inst['step_type'],
+                            'task_instance_id' => $inst['id']
+                        ],
+                        $actorId
                     );
                 } catch (\Exception $e) {}
             }
@@ -529,15 +532,18 @@ class WorkflowEngineService {
                     ], $actorId);
                 }
 
-                // Notify Creator
+                // Notify Creator & Admins
                 try {
-                    $notifyUrl = ($entityType === 'form') ? "/admin/submissions" : "/documents/{$entityId}";
-                    NotificationService::notify(
-                        $task['doc_creator_id'],
-                        'danger',
-                        'Απόρριψη Εγγράφου/Φόρμας',
-                        "Το έγγραφο/φόρμα {$docNum} απορρίφθηκε στο βήμα '{$task['step_name']}'.",
-                        $notifyUrl
+                    \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                        'workflow_rejected',
+                        [
+                            'id' => $entityId,
+                            'document_number' => $docNum,
+                            'created_by' => $task['doc_creator_id'],
+                            'step_name' => $task['step_name']
+                        ],
+                        $actorId,
+                        $comment
                     );
                 } catch (\Exception $e) {}
 
@@ -621,20 +627,39 @@ class WorkflowEngineService {
                     ], $actorId);
                 }
 
-                // Notify Creator
+                // Notify Creator & Admins
                 try {
-                    $notifyUrl = ($entityType === 'form') ? "/admin/submissions" : "/documents/{$entityId}/edit";
-                    NotificationService::notify(
-                        $task['doc_creator_id'],
-                        'warning',
-                        'Επιστροφή για Διορθώσεις',
-                        "Το έγγραφο/φόρμα {$docNum} σας επιστράφηκε για διορθώσεις με σχόλιο: '{$comment}'.",
-                        $notifyUrl
+                    \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                        'workflow_returned',
+                        [
+                            'id' => $entityId,
+                            'document_number' => $docNum,
+                            'created_by' => $task['doc_creator_id'],
+                            'step_name' => $task['step_name']
+                        ],
+                        $actorId,
+                        $comment
                     );
                 } catch (\Exception $e) {}
             }
 
             $db->commit();
+
+            // Trigger workflow approved / advanced notifications
+            if ($decision === 'approved') {
+                try {
+                    \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                        'workflow_approved',
+                        [
+                            'id' => $entityId,
+                            'document_number' => $docNum,
+                            'created_by' => $task['doc_creator_id']
+                        ],
+                        $actorId
+                    );
+                } catch (\Exception $exApp) {}
+            }
+
             return ['success' => true];
 
         } catch (\Exception $e) {

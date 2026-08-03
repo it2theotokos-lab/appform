@@ -228,18 +228,38 @@ class EmailService {
                 throw new \Exception("DATA command Rejected: " . trim($dataResponse));
             }
 
-            // Format headers and body content safely
+            // Format headers and body content safely with multipart/alternative support
+            $boundary = "----=_Part_" . md5(uniqid(microtime(), true));
+
             $headers = [];
             $headers[] = "From: =?UTF-8?B?" . base64_encode($fromName) . "?= <{$fromEmail}>";
             $headers[] = "To: <{$recipient}>";
             $headers[] = "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=";
             $headers[] = "MIME-Version: 1.0";
-            $headers[] = "Content-Type: text/plain; charset=UTF-8";
-            $headers[] = "Content-Transfer-Encoding: 8bit";
+            $headers[] = "Content-Type: multipart/alternative; boundary=\"{$boundary}\"";
             $headers[] = "Date: " . date('r');
             $headers[] = "Message-ID: <" . md5(uniqid(microtime(), true)) . "@" . $host . ">";
 
-            $payload = implode("\r\n", $headers) . "\r\n\r\n" . $body;
+            // Format Plain Text fallback
+            $plainText = preg_replace('/<br\s*\/?>/i', "\n", $body);
+            $plainText = preg_replace('/<\/p>/i', "\n\n", $plainText);
+            $plainText = html_entity_decode(strip_tags($plainText), ENT_QUOTES, 'UTF-8');
+
+            $mimePayload = [];
+            $mimePayload[] = "This is a multi-part message in MIME format.";
+            $mimePayload[] = "--{$boundary}";
+            $mimePayload[] = "Content-Type: text/plain; charset=UTF-8";
+            $mimePayload[] = "Content-Transfer-Encoding: 8bit";
+            $mimePayload[] = "";
+            $mimePayload[] = trim($plainText);
+            $mimePayload[] = "--{$boundary}";
+            $mimePayload[] = "Content-Type: text/html; charset=UTF-8";
+            $mimePayload[] = "Content-Transfer-Encoding: 8bit";
+            $mimePayload[] = "";
+            $mimePayload[] = $body;
+            $mimePayload[] = "--{$boundary}--";
+
+            $payload = implode("\r\n", $headers) . "\r\n\r\n" . implode("\r\n", $mimePayload);
             // Prevent double dot encapsulation rule (SMTP transparency)
             $payload = str_replace("\n.", "\n..", $payload);
 

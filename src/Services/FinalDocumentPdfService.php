@@ -264,12 +264,14 @@ class FinalDocumentPdfService {
 
             // Notify Creator
             try {
-                \App\Services\NotificationService::notify(
-                    $instance['created_by'],
-                    'success',
-                    'Το τελικό PDF είναι έτοιμο',
-                    "Το τελικό PDF του εγγράφου {$instance['document_number']} δημιουργήθηκε επιτυχώς.",
-                    "/documents/{$instanceId}"
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'pdf_ready',
+                    [
+                        'id' => $instanceId,
+                        'document_number' => $instance['document_number'],
+                        'created_by' => $instance['created_by']
+                    ],
+                    $userId
                 );
             } catch (\Exception $notifEx) {}
 
@@ -286,18 +288,16 @@ class FinalDocumentPdfService {
 
             // Notify Admin
             try {
-                $stmtAdmin = $db->prepare("SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE slug = 'administrator') LIMIT 1");
-                $stmtAdmin->execute();
-                $admin = $stmtAdmin->fetch();
-                if ($admin) {
-                    \App\Services\NotificationService::notify(
-                        $admin['id'],
-                        'danger',
-                        'Αποτυχία δημιουργίας τελικού PDF',
-                        "Δεν δημιουργήθηκε το τελικό PDF για το έγγραφο {$instance['document_number']}.",
-                        "/documents/{$instanceId}"
-                    );
-                }
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'pdf_failed',
+                    [
+                        'id' => $instanceId,
+                        'document_number' => $instance['document_number'],
+                        'created_by' => $instance['created_by']
+                    ],
+                    $userId,
+                    $e->getMessage()
+                );
             } catch (\Exception $notifEx) {}
 
             return ['success' => false, 'error' => 'generation_failed', 'message' => $e->getMessage()];

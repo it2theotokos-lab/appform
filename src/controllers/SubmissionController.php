@@ -333,8 +333,10 @@ class SubmissionController extends Controller {
                 $subDetails = Submission::getDetailsByUuid($uuid);
                 if ($status === 'draft') {
                     \App\Services\FormNotificationTriggerService::trigger((int)$form['id'], 'draft', $subDetails, $answers);
+                    \App\Services\LifecycleNotificationService::notifyFormLifecycle('draft', $subDetails, $userId);
                 } elseif ($status === 'submitted') {
                     \App\Services\FormNotificationTriggerService::trigger((int)$form['id'], 'submit', $subDetails, $answers);
+                    \App\Services\LifecycleNotificationService::notifyFormLifecycle('submit', $subDetails, $userId);
                 }
             } catch (\Throwable $eCustomNotif) {}
 

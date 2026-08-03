@@ -88,10 +88,19 @@ class SubmissionWorkflowService {
                 elseif ($newStatus === 'returned') $triggerEvent = 'return';
                 elseif ($newStatus === 'approved') $triggerEvent = 'approve';
                 elseif ($newStatus === 'rejected') $triggerEvent = 'reject';
+                elseif ($newStatus === 'draft') $triggerEvent = 'return_to_draft';
 
                 // Trigger custom notification rules
                 $answers = json_decode($subDetails['data_json'], true) ?: [];
                 \App\Services\FormNotificationTriggerService::trigger($formId, $triggerEvent, $subDetails, $answers);
+
+                // Trigger Central Lifecycle Notifications
+                \App\Services\LifecycleNotificationService::notifyFormLifecycle(
+                    $triggerEvent,
+                    $subDetails,
+                    Auth::id(),
+                    $notes
+                );
 
                 if (!empty($userEmail)) {
                     $subject = sprintf("Ενημέρωση Κατάστασης Υποβολής #%s: %s", $subDetails['id'], strtoupper($newStatus));

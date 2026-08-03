@@ -423,32 +423,15 @@ class DocumentInstanceController extends Controller {
 
             // Notify Creator and Admin inside separate try/catch so exceptions do not abort submission
             try {
-                // Notify User
-                NotificationService::notify(
-                    Auth::id(),
-                    'info',
-                    'Το έγγραφο υποβλήθηκε',
-                    "Το έγγραφο {$instance['document_number']} υποβλήθηκε επιτυχώς.",
-                    "/documents/{$id}"
+                \App\Services\LifecycleNotificationService::notifyDocumentLifecycle(
+                    'document_submitted',
+                    $instance,
+                    Auth::id()
                 );
-
-                // Notify Admin
-                $stmtAdmin = $db->prepare("SELECT id FROM users WHERE role_id = (SELECT id FROM roles WHERE slug = 'administrator') LIMIT 1");
-                $stmtAdmin->execute();
-                $admin = $stmtAdmin->fetch();
-                if ($admin) {
-                    NotificationService::notify(
-                        $admin['id'],
-                        'info',
-                        'Νέα υποβολή εγγράφου',
-                        "Υποβλήθηκε το έγγραφο {$instance['document_number']}.",
-                        "/documents/{$id}"
-                    );
-                }
             } catch (\Exception $notifEx) {
-                // Technically log notification exceptions server-side only
                 error_log("Document submission notifications creation failed: " . $notifEx->getMessage());
             }
+
 
             Session::flash('success', 'Το έγγραφο υποβλήθηκε επιτυχώς.');
             $this->redirect("/documents/{$id}");
