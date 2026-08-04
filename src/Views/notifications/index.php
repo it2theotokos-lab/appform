@@ -1,14 +1,14 @@
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h1 class="header-page-title mb-0">Ειδοποιήσεις</h1>
+    <h1 class="header-page-title mb-0"><?= __('Notifications') ?></h1>
     <form action="/notifications/read-all" method="POST">
         <?= \App\Core\Csrf::field() ?>
-        <button type="submit" class="btn btn-premium btn-sm"><i class="fa-solid fa-check-double me-1" aria-hidden="true"></i> Σήμανση όλων ως αναγνωσμένα</button>
+        <button type="submit" class="btn btn-premium btn-sm"><i class="fa-solid fa-check-double me-1" aria-hidden="true"></i> <?= __('Mark all as read') ?></button>
     </form>
 </div>
 
 <div class="card p-4">
     <?php if (empty($notifications)): ?>
-        <p class="text-muted text-center py-4">Δεν έχετε καμία ειδοποίηση.</p>
+        <p class="text-muted text-center py-4"><?= __('You have no notifications.') ?></p>
     <?php else: ?>
         <div class="list-group" style="gap: 8px;">
             <?php foreach ($notifications as $n): ?>
@@ -17,7 +17,7 @@
                     <div>
                         <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
                             <span class="<?= $n['is_read'] ? 'badge-status-rejected' : 'badge-status-approved' ?>">
-                                <?= $n['is_read'] ? 'ΑΝΑΓΝΩΣΜΕΝΟ' : 'ΝΕΟ' ?>
+                                <?= $n['is_read'] ? __('READ') : __('NEW') ?>
                             </span>
                             <strong class="text-soft"><?= \App\Core\View::escape($n['title']) ?></strong>
                         </div>
@@ -28,7 +28,7 @@
                         <?php if (!$n['is_read']): ?>
                             <form action="/notifications/<?= $n['id'] ?>/read" method="POST">
                                 <?= \App\Core\Csrf::field() ?>
-                                <button type="submit" class="btn btn-premium btn-sm">Ανάγνωση</button>
+                                <button type="submit" class="btn btn-premium btn-sm"><?= __('Read') ?></button>
                             </form>
                         <?php endif; ?>
                     </div>

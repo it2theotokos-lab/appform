@@ -4,10 +4,10 @@
 <div class="row mb-4 align-items-center document-header-toolbar bg-dark p-3 rounded border border-secondary" style="margin-top: -15px;">
     <div class="col-md-6 d-flex align-items-center gap-3">
         <a href="<?= $backUrl ?? '/workflow/tasks' ?>" class="btn btn-sm btn-outline-secondary">
-            <i class="fa-solid fa-arrow-left me-1"></i> Πίσω
+            <i class="fa-solid fa-arrow-left me-1"></i> <?= __('Back') ?>
         </a>
         <div>
-            <h4 class="h5 m-0 text-white font-heading"><?= \App\Core\View::escape($docTitle ?? 'Έγγραφο') ?></h4>
+            <h4 class="h5 m-0 text-white font-heading"><?= \App\Core\View::escape($docTitle ?? __('Document')) ?></h4>
             <small class="text-muted"><?= \App\Core\View::escape($docNumber ?? '') ?></small>
         </div>
     </div>
@@ -17,19 +17,19 @@
             $statusLabel = $docStatus;
             $statusBadgeClass = 'bg-secondary';
             if ($docStatus === 'active' || $docStatus === 'in_review') {
-                $statusLabel = 'Σε Αξιολόγηση';
+                $statusLabel = __('In Review');
                 $statusBadgeClass = 'bg-warning text-dark';
             } elseif ($docStatus === 'approved' || $docStatus === 'finalized') {
-                $statusLabel = 'Ολοκληρώθηκε';
+                $statusLabel = __('Completed');
                 $statusBadgeClass = 'bg-success';
             } elseif ($docStatus === 'returned' || $docStatus === 'returned_for_correction') {
-                $statusLabel = 'Επιστράφηκε';
+                $statusLabel = __('Returned');
                 $statusBadgeClass = 'bg-warning text-dark';
             } elseif ($docStatus === 'rejected') {
-                $statusLabel = 'Απορρίφθηκε';
+                $statusLabel = __('Rejected');
                 $statusBadgeClass = 'bg-danger';
             } elseif ($docStatus === 'cancelled') {
-                $statusLabel = 'Ακυρώθηκε';
+                $statusLabel = __('Cancelled');
                 $statusBadgeClass = 'bg-danger';
             }
             ?>
@@ -37,10 +37,10 @@
         <?php endif; ?>
 
         <a href="<?= $pdfUrl ?>" target="_blank" class="btn btn-sm btn-primary">
-            <i class="fa-solid fa-expand me-1"></i> Άνοιγμα σε νέα καρτέλα
+            <i class="fa-solid fa-expand me-1"></i> <?= __('Open in new tab') ?>
         </a>
         <a href="<?= $pdfUrl ?>/download" class="btn btn-sm btn-outline-info">
-            <i class="fa-solid fa-download me-1"></i> Λήψη
+            <i class="fa-solid fa-download me-1"></i> <?= __('Download') ?>
         </a>
     </div>
 </div>

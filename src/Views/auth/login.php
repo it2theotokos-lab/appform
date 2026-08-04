@@ -4,8 +4,8 @@
         <span>App<span>Form</span></span>
     </div>
     
-    <h1 class="auth-title">Είσοδος στο Σύστημα</h1>
-    <p class="auth-subtitle">Παρακαλώ εισάγετε τα στοιχεία σας για να συνδεθείτε</p>
+    <h1 class="auth-title"><?= __('Login to the System') ?></h1>
+    <p class="auth-subtitle"><?= __('Please enter your credentials to log in.') ?></p>
 
     <?php if ($error = \App\Core\Session::flash('error')): ?>
         <div class="alert alert-danger" role="alert">
@@ -17,7 +17,7 @@
     <?php if (isset($_GET['timeout'])): ?>
         <div class="alert alert-warning" role="alert">
             <i class="fa-solid fa-circle-exclamation me-2"></i>
-            Η συνεδρία σας έληξε λόγω αδράνειας. Παρακαλώ συνδεθείτε ξανά.
+            <?= __('Your session has expired due to inactivity. Please log in again.') ?>
         </div>
     <?php endif; ?>
 
@@ -25,12 +25,12 @@
         <?= \App\Core\Csrf::field() ?>
         
         <div class="mb-3">
-            <label for="username" class="form-label">Όνομα χρήστη ή Email</label>
+            <label for="username" class="form-label"><?= __('Username or Email') ?></label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fa-solid fa-user"></i></span>
                 <input type="text" class="form-control" id="username" name="username" 
                        value="<?= \App\Core\View::escape(\App\Core\Session::flash('old')['username'] ?? '') ?>" 
-                       placeholder="Όνομα χρήστη..." required autofocus>
+                       placeholder="<?= __('Username...') ?>" required autofocus>
             </div>
             <?php if ($err = (\App\Core\Session::flash('errors')['username'] ?? null)): ?>
                 <small class="text-danger d-block mt-1"><i class="fa-solid fa-circle-xmark me-1"></i><?= $err[0] ?></small>
@@ -38,10 +38,10 @@
         </div>
         
         <div class="mb-4">
-            <label for="password" class="form-label">Κωδικός πρόσβασης</label>
+            <label for="password" class="form-label"><?= __('Password') ?></label>
             <div class="input-group">
                 <span class="input-group-text"><i class="fa-solid fa-lock"></i></span>
-                <input type="password" class="form-control" id="password" name="password" placeholder="Κωδικός..." required>
+                <input type="password" class="form-control" id="password" name="password" placeholder="<?= __('Password...') ?>" required>
             </div>
             <?php if ($err = (\App\Core\Session::flash('errors')['password'] ?? null)): ?>
                 <small class="text-danger d-block mt-1"><i class="fa-solid fa-circle-xmark me-1"></i><?= $err[0] ?></small>
@@ -49,7 +49,7 @@
         </div>
 
         <button type="submit" class="btn btn-premium w-100 mb-4 py-2">
-            Σύνδεση <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
+            <?= __('Sign In') ?> <i class="fa-solid fa-arrow-right-to-bracket ms-2"></i>
         </button>
 
     </form>

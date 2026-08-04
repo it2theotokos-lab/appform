@@ -1,5 +1,5 @@
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h1 class="header-page-title mb-0">Οι Υποβολές Φορμών μου</h1>
+    <h1 class="header-page-title mb-0"><?= __('My Form Submissions') ?></h1>
 </div>
 
 <?php if ($success = \App\Core\Session::flash('success')): ?>
@@ -12,15 +12,15 @@
 
 <?php
 $filtersConfig = [
-    ['name' => 'search', 'label' => 'Αναζήτηση', 'type' => 'text', 'placeholder' => 'Τίτλος φόρμας...', 'col' => 'col-md-6'],
-    ['name' => 'status', 'label' => 'Κατάσταση', 'type' => 'select', 'options' => [
-        '' => 'Όλες',
-        'draft' => 'Draft (Προσχέδιο)',
-        'submitted' => 'Submitted (Υποβλήθηκε)',
-        'under_review' => 'In Review (Σε Αξιολόγηση)',
-        'returned' => 'Returned for Correction (Επιστράφηκε)',
-        'approved' => 'Approved (Εγκρίθηκε)',
-        'rejected' => 'Rejected (Απορρίφθηκε)'
+    ['name' => 'search', 'label' => __('Search'), 'type' => 'text', 'placeholder' => __('Form Title...'), 'col' => 'col-md-6'],
+    ['name' => 'status', 'label' => __('Status'), 'type' => 'select', 'options' => [
+        '' => __('All'),
+        'draft' => __('Draft'),
+        'submitted' => __('Submitted'),
+        'under_review' => __('In Review'),
+        'returned' => __('Returned for Correction'),
+        'approved' => __('Approved'),
+        'rejected' => __('Rejected')
     ], 'col' => 'col-md-4']
 ];
 
@@ -33,16 +33,16 @@ include __DIR__ . '/../shared/filter_bar.php';
             <thead>
                 <tr>
                     <th>ID</th>
-                    <th>Φόρμα</th>
-                    <th>Ημερομηνία Δημιουργίας</th>
-                    <th>Ημερομηνία Υποβολής</th>
-                    <th>Κατάσταση</th>
-                    <th class="text-end">Ενέργειες</th>
+                    <th><?= __('Form') ?></th>
+                    <th><?= __('Created Date') ?></th>
+                    <th><?= __('Submission Date') ?></th>
+                    <th><?= __('Status') ?></th>
+                    <th class="text-end"><?= __('Actions') ?></th>
                 </tr>
             </thead>
             <tbody>
                 <?php if (empty($submissions)): ?>
-                    <tr><td colspan="6" class="text-center text-muted py-4">Δεν βρέθηκαν υποβολές φορμών.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-4"><?= __('No form submissions found.') ?></td></tr>
                 <?php else: ?>
                     <?php foreach ($submissions as $sub): ?>
                         <tr>
@@ -54,22 +54,24 @@ include __DIR__ . '/../shared/filter_bar.php';
                                 <?php
                                 $badgeClass = 'badge-status-draft';
                                 $statusLabel = strtoupper($sub['status']);
-                                if ($sub['status'] === 'approved') { $badgeClass = 'badge-status-approved'; $statusLabel = 'APPROVED'; }
-                                elseif ($sub['status'] === 'rejected') { $badgeClass = 'badge-status-rejected'; $statusLabel = 'REJECTED'; }
-                                elseif ($sub['status'] === 'under_review') { $badgeClass = 'badge-status-pending'; $statusLabel = 'IN REVIEW'; }
-                                elseif ($sub['status'] === 'returned') { $badgeClass = 'badge-status-pending'; $statusLabel = 'RETURNED'; }
+                                if ($sub['status'] === 'approved') { $badgeClass = 'badge-status-approved'; $statusLabel = __('APPROVED'); }
+                                elseif ($sub['status'] === 'rejected') { $badgeClass = 'badge-status-rejected'; $statusLabel = __('REJECTED'); }
+                                elseif ($sub['status'] === 'under_review') { $badgeClass = 'badge-status-pending'; $statusLabel = __('IN REVIEW'); }
+                                elseif ($sub['status'] === 'returned') { $badgeClass = 'badge-status-pending'; $statusLabel = __('RETURNED'); }
+                                elseif ($sub['status'] === 'submitted') { $badgeClass = 'badge-status-pending'; $statusLabel = __('SUBMITTED'); }
+                                elseif ($sub['status'] === 'draft') { $badgeClass = 'badge-status-draft'; $statusLabel = __('DRAFT'); }
                                 ?>
                                 <span class="<?= $badgeClass ?>"><?= $statusLabel ?></span>
                             </td>
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-2 flex-wrap">
-                                    <a href="/my-submissions/<?= $sub['uuid'] ?>" class="btn btn-premium btn-sm" title="Προβολή">
-                                        <i class="fa-solid fa-eye me-1" aria-hidden="true"></i> Προβολή
+                                    <a href="/my-submissions/<?= $sub['uuid'] ?>" class="btn btn-premium btn-sm" title="<?= __('View') ?>">
+                                        <i class="fa-solid fa-eye me-1" aria-hidden="true"></i> <?= __('View') ?>
                                     </a>
 
                                     <?php if ($sub['status'] === 'draft' || $sub['status'] === 'returned'): ?>
-                                        <a href="/forms/<?= htmlspecialchars($sub['form_slug']) ?>" class="btn btn-warning btn-sm" title="Επεξεργασία">
-                                            <i class="fa-solid fa-edit me-1" aria-hidden="true"></i> Επεξεργασία
+                                        <a href="/forms/<?= htmlspecialchars($sub['form_slug']) ?>" class="btn btn-warning btn-sm" title="<?= __('Edit') ?>">
+                                            <i class="fa-solid fa-edit me-1" aria-hidden="true"></i> <?= __('Edit') ?>
                                         </a>
                                     <?php endif; ?>
                                 </div>

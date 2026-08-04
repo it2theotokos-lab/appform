@@ -21,7 +21,7 @@ $totalRecords = $totalRecords ?? null;
             $value = $_GET[$name] ?? ($filter['default'] ?? '');
             $options = $filter['options'] ?? [];
             $colClass = $filter['col'] ?? 'col-md-3';
-            $placeholder = $filter['placeholder'] ?? 'Αναζήτηση...';
+            $placeholder = $filter['placeholder'] ?? __('Search...');
             ?>
 
             <div class="<?= $colClass ?>">
@@ -46,14 +46,14 @@ $totalRecords = $totalRecords ?? null;
         <?php endforeach; ?>
 
         <div class="col-md-auto d-flex gap-2 ms-auto">
-            <button type="submit" class="btn btn-premium btn-sm"><i class="fa-solid fa-filter me-1" aria-hidden="true"></i> Φίλτρο</button>
-            <a href="<?= htmlspecialchars(strtok($actionUrl, '?')) ?>" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i> Καθαρισμός</a>
+            <button type="submit" class="btn btn-premium btn-sm"><i class="fa-solid fa-filter me-1" aria-hidden="true"></i> <?= __('Filter') ?></button>
+            <a href="<?= htmlspecialchars(strtok($actionUrl, '?')) ?>" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-rotate-left me-1" aria-hidden="true"></i> <?= __('Clear') ?></a>
         </div>
     </form>
 
     <?php if ($totalRecords !== null): ?>
         <div class="mt-2 pt-2 border-top border-secondary-subtle d-flex justify-content-between align-items-center small text-muted">
-            <span>Βρέθηκαν <strong><?= (int)$totalRecords ?></strong> εγγραφές</span>
+            <span><?= __('Found') ?> <strong><?= (int)$totalRecords ?></strong> <?= __('records') ?></span>
         </div>
     <?php endif; ?>
 </div>

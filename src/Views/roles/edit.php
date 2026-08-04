@@ -1,6 +1,6 @@
 <div class="mb-4">
-    <a href="/admin/roles" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> Πίσω</a>
-    <h3 class="font-heading text-white">Επεξεργασία Δικαιωμάτων Ρόλου: <?= \App\Core\View::escape($role['name']) ?></h3>
+    <a href="/admin/roles" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> <?= __('Back') ?></a>
+    <h3 class="font-heading text-white"><?= __('Edit Role Permissions') ?>: <?= \App\Core\View::escape($role['name']) ?></h3>
 </div>
 
 <?php if ($error = \App\Core\Session::flash('error')): ?>
@@ -14,16 +14,16 @@
 
         <div class="row g-3 mb-4">
             <div class="col-md-6">
-                <label for="name" class="form-label">Όνομα Ρόλου</label>
+                <label for="name" class="form-label"><?= __('Role Name') ?></label>
                 <input type="text" class="form-control" id="name" name="name" value="<?= \App\Core\View::escape($role['name']) ?>" required>
             </div>
             <div class="col-md-6">
-                <label for="description" class="form-label">Περιγραφή</label>
+                <label for="description" class="form-label"><?= __('Description') ?></label>
                 <input type="text" class="form-control" id="description" name="description" value="<?= \App\Core\View::escape($role['description'] ?? '') ?>">
             </div>
         </div>
 
-        <h5 class="font-heading mb-3 text-white border-bottom border-glass pb-2">Δικαιώματα Πρόσβασης & Ενεργειών ανά Ενότητα</h5>
+        <h5 class="font-heading mb-3 text-white border-bottom border-glass pb-2"><?= __('Access & Action Permissions by Module') ?></h5>
 
         <?php
         $grouped = [];
@@ -36,30 +36,30 @@
 
         <?php
         $moduleLabels = [
-            'dashboard'          => 'Dashboard / Πίνακας Ελέγχου',
-            'users'              => 'Users / Χρήστες',
-            'roles'              => 'Roles / Ρόλοι',
-            'permissions'        => 'Permissions / Δικαιώματα',
-            'forms'              => 'Forms / Φόρμες',
-            'submissions'        => 'Submissions / Υποβολές',
-            'repositories'       => 'Repositories / Πηγές Δεδομένων',
-            'menus'              => 'Navigation Menus / Μενού Πλοήγησης',
-            'analytics'          => 'Analytics / Στατιστικά',
-            'exports'            => 'Exports / Εξαγωγές',
-            'document_templates' => 'Document Templates / Πρότυπα Εγγράφων',
-            'workflows'          => 'Workflows / Ροές Εργασίας',
-            'workflow_tasks'     => 'Workflow Tasks / Εργασίες Workflow',
-            'workflow_instances' => 'Workflow Instances / Εκτελέσεις Workflow',
-            'settings'           => 'System Settings / Ρυθμίσεις Συστήματος',
-            'backups'            => 'Backups / Αντίγραφα Ασφαλείας',
-            'demo_data'          => 'Demo Data / Δεδομένα Επίδειξης',
-            'smtp'               => 'SMTP & Email / Αλληλογραφία',
-            'restore'            => 'Restore Center / Επαναφορά',
-            'queue'              => 'Background Queue / Ουρά Εργασιών',
-            'plugins'            => 'Plugins / Πρόσθετα',
-            'updates'            => 'Updates & System / Αναβαθμίσεις',
-            'audit'              => 'Audit Logs / Καταγραφές Ελέγχου',
-            'data_exchange'      => 'Data Exchange / Ανταλλαγή Δεδομένων',
+            'dashboard'          => 'Dashboard',
+            'users'              => 'Users / ' . __('Users'),
+            'roles'              => 'Roles / ' . __('Roles'),
+            'permissions'        => 'Permissions / ' . __('Permissions'),
+            'forms'              => 'Forms / ' . __('Forms'),
+            'submissions'        => 'Submissions / ' . __('Submissions'),
+            'repositories'       => 'Repositories',
+            'menus'              => 'Navigation Menus / ' . __('Navigation'),
+            'analytics'          => 'Analytics / ' . __('Statistics'),
+            'exports'            => 'Exports / ' . __('Export'),
+            'document_templates' => 'Document Templates / ' . __('Document Templates'),
+            'workflows'          => 'Workflows',
+            'workflow_tasks'     => 'Workflow Tasks',
+            'workflow_instances' => 'Workflow Instances',
+            'settings'           => 'System Settings / ' . __('Settings'),
+            'backups'            => 'Backups / ' . __('Backup'),
+            'demo_data'          => 'Demo Data',
+            'smtp'               => 'SMTP & Email',
+            'restore'            => 'Restore Center',
+            'queue'              => 'Background Queue',
+            'plugins'            => 'Plugins',
+            'updates'            => 'Updates & System',
+            'audit'              => 'Audit Logs / ' . __('Audit Logs'),
+            'data_exchange'      => 'Data Exchange / ' . __('Data Exchange'),
         ];
         ?>
 
@@ -90,6 +90,6 @@
             </div>
         <?php endforeach; ?>
 
-        <button type="submit" class="btn btn-premium w-100 mt-3">Αποθήκευση Αλλαγών & Δικαιωμάτων <i class="fa-solid fa-save ms-2"></i></button>
+        <button type="submit" class="btn btn-premium w-100 mt-3"><?= __('Save Changes') ?> <i class="fa-solid fa-save ms-2"></i></button>
     </form>
 </div>

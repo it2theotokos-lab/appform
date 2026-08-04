@@ -1,6 +1,6 @@
 <div class="card p-4">
-    <h2 class="card-title mb-2"><i class="fa-solid fa-chart-line me-2 text-primary" aria-hidden="true"></i> Επιλογή Φόρμας για Analytics</h2>
-    <p class="text-muted mb-4">Επιλέξτε μια από τις παρακάτω φόρμες για να δείτε αναλυτικά στατιστικά υποβολών.</p>
+    <h2 class="card-title mb-2"><i class="fa-solid fa-chart-line me-2 text-primary" aria-hidden="true"></i> <?= __('Select Form for Analytics') ?></h2>
+    <p class="text-muted mb-4"><?= __('Select one of the forms below to view detailed submission statistics.') ?></p>
 
     <div class="list-group" style="max-width: 600px; gap: 8px;">
         <?php foreach ($forms as $form): ?>

@@ -88,14 +88,14 @@ if (!function_exists('__')) {
 assert(function_exists('__'), "Test 8 Failed: Global __() helper must be defined (shim or real).");
 Lang::setLocale('el');
 $result = __('Save');
-assert($result === 'Save', "Test 8 Failed: __() in EL must return key as-is. Got: {$result}");
+assert($result === 'Αποθήκευση', "Test 8 Failed: __() in EL must return dictionary translation. Got: {$result}");
 echo "Test 8 Passed: __() global helper works correctly.\n";
 
-// ── Test 9: EL locale always returns key unchanged ────────────────────────────
+// ── Test 9: EL locale dictionary lookup ────────────────────────────────────
 Lang::setLocale('el');
 $key = 'General Settings';
-assert(Lang::get($key) === $key, "Test 9 Failed: EL locale must return the key unchanged.");
-echo "Test 9 Passed: EL locale returns key unchanged.\n";
+assert(Lang::get($key) === 'Γενικές Ρυθμίσεις', "Test 9 Failed: EL locale must translate known key.");
+echo "Test 9 Passed: EL locale dictionary lookup works.\n";
 
 // Reset locale
 Lang::setLocale('el');

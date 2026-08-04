@@ -1,5 +1,9 @@
+<?php
+use App\Services\Lang;
+$currentLang = Lang::locale();
+?>
 <!DOCTYPE html>
-<html lang="el" data-theme="light">
+<html lang="<?= $currentLang ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -46,11 +50,33 @@
 </head>
 <body class="auth-wrapper">
 
-    <?= $content ?>
+    <!-- Centered Login Container -->
+    <div class="guest-login-wrapper">
+        <!-- Language Selector (positioned directly above login card) -->
+        <div class="guest-lang-row" role="navigation" aria-label="Language / Γλώσσα">
+            <form action="/set-language" method="POST" style="display:inline-flex;margin:0;">
+                <?= \App\Core\Csrf::field() ?>
+                <input type="hidden" name="redirect" value="<?= htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/login') ?>">
+                <div class="lang-switcher" role="group" aria-label="Language / Γλώσσα">
+                    <button type="submit" name="lang" value="el"
+                            class="lang-btn <?= $currentLang === 'el' ? 'active' : '' ?>"
+                            title="Ελληνικά" aria-pressed="<?= $currentLang === 'el' ? 'true' : 'false' ?>">
+                        🇬🇷 EL
+                    </button>
+                    <button type="submit" name="lang" value="en"
+                            class="lang-btn <?= $currentLang === 'en' ? 'active' : '' ?>"
+                            title="English" aria-pressed="<?= $currentLang === 'en' ? 'true' : 'false' ?>">
+                        🇬🇧 EN
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <?= $content ?>
+    </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/assets/js/theme.js?v=20260718-01"></script>
 </body>
 </html>
-

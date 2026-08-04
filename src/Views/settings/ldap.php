@@ -1,14 +1,14 @@
 <div class="row mb-4 align-items-center">
     <div class="col-md-6">
-        <h1 class="h3 m-0 text-white"><i class="fa-solid fa-server me-2 text-primary"></i> Ρυθμίσεις Active Directory / LDAP</h1>
-        <p class="text-muted m-0">Παραμετροποίηση της σύνδεσης με τον κατάλογο Active Directory.</p>
+        <h1 class="h3 m-0 text-white"><i class="fa-solid fa-server me-2 text-primary"></i> <?= __('Active Directory / LDAP Settings') ?></h1>
+        <p class="text-muted m-0"><?= __('Configure connection to Active Directory domain.') ?></p>
     </div>
     <div class="col-md-6 text-end">
         <a href="/admin/settings/ldap/role-mappings" class="btn btn-outline-primary me-2">
-            <i class="fa-solid fa-user-shield me-1"></i> Αντιστοίχιση Ρόλων
+            <i class="fa-solid fa-user-shield me-1"></i> <?= __('LDAP Role Mapping') ?>
         </a>
         <a href="/admin/settings" class="btn btn-secondary">
-            <i class="fa-solid fa-arrow-left me-1"></i> Επιστροφή
+            <i class="fa-solid fa-arrow-left me-1"></i> <?= __('Back') ?>
         </a>
     </div>
 </div>
@@ -21,16 +21,16 @@
 
         <div class="form-check form-switch mb-4">
             <input class="form-check-input" type="checkbox" id="provider_enabled" name="provider_enabled" value="1" <?= ($config['provider_enabled'] ?? 0) ? 'checked' : '' ?>>
-            <label class="form-check-label text-white" for="provider_enabled">Ενεργοποίηση LDAP / AD Provider</label>
+            <label class="form-check-label text-white" for="provider_enabled"><?= __('Enable LDAP / AD Provider') ?></label>
         </div>
 
         <div class="row g-3">
             <div class="col-md-6 mb-3">
-                <label for="ldap_host" class="form-label">LDAP Host (π.χ. active-directory.domain.com)</label>
+                <label for="ldap_host" class="form-label"><?= __('LDAP Host') ?> (e.g. active-directory.domain.com)</label>
                 <input type="text" class="form-control" id="ldap_host" name="ldap_host" value="<?= \App\Core\View::escape($config['ldap_host'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
-                <label for="ldap_port" class="form-label">LDAP Port (π.χ. 389, 636)</label>
+                <label for="ldap_port" class="form-label"><?= __('LDAP Port') ?> (e.g. 389, 636)</label>
                 <input type="number" class="form-control" id="ldap_port" name="ldap_port" value="<?= (int)($config['ldap_port'] ?? 389) ?>">
             </div>
             <div class="col-md-6 mb-3">
@@ -47,7 +47,7 @@
             </div>
 
             <div class="col-md-6 mb-3">
-                <label for="base_dn" class="form-label">Base DN (π.χ. DC=domain,DC=com)</label>
+                <label for="base_dn" class="form-label">Base DN (e.g. DC=domain,DC=com)</label>
                 <input type="text" class="form-control" id="base_dn" name="base_dn" value="<?= \App\Core\View::escape($config['base_dn'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
@@ -56,14 +56,14 @@
             </div>
             <div class="col-md-6 mb-3">
                 <label for="bind_password" class="form-label">Bind Password</label>
-                <input type="password" class="form-control" id="bind_password" name="bind_password" value="" placeholder="[Κρυπτογραφημένο / Αμετάβλητο]">
+                <input type="password" class="form-control" id="bind_password" name="bind_password" value="" placeholder="[<?= __('Encrypted / Unchanged') ?>]">
             </div>
             <div class="col-md-6 mb-3">
-                <label for="user_search_base" class="form-label">User Search Base OU (π.χ. OU=Users)</label>
+                <label for="user_search_base" class="form-label">User Search Base OU (e.g. OU=Users)</label>
                 <input type="text" class="form-control" id="user_search_base" name="user_search_base" value="<?= \App\Core\View::escape($config['user_search_base'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
-                <label for="user_filter" class="form-label">User Filter Query (π.χ. (sAMAccountName={username}))</label>
+                <label for="user_filter" class="form-label">User Filter Query (e.g. (sAMAccountName={username}))</label>
                 <input type="text" class="form-control" id="user_filter" name="user_filter" value="<?= \App\Core\View::escape($config['user_filter'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
@@ -71,11 +71,11 @@
                 <input type="text" class="form-control" id="group_search_base" name="group_search_base" value="<?= \App\Core\View::escape($config['group_search_base'] ?? '') ?>">
             </div>
             <div class="col-md-6 mb-3">
-                <label for="connection_timeout" class="form-label">Timeout (δευτερόλεπτα)</label>
+                <label for="connection_timeout" class="form-label"><?= __('Timeout (seconds)') ?></label>
                 <input type="number" class="form-control" id="connection_timeout" name="connection_timeout" value="<?= (int)($config['connection_timeout'] ?? 5) ?>">
             </div>
             <div class="col-md-6 mb-3">
-                <label for="default_role_id" class="form-label">Προεπιλεγμένος Ρόλος Χρήστη</label>
+                <label for="default_role_id" class="form-label"><?= __('Default User Role') ?></label>
                 <select class="form-select" id="default_role_id" name="default_role_id">
                     <?php foreach ($roles as $r): ?>
                         <option value="<?= $r['id'] ?>" <?= (int)($config['default_role_id'] ?? 2) === (int)$r['id'] ? 'selected' : '' ?>><?= \App\Core\View::escape($r['name']) ?></option>
@@ -86,10 +86,10 @@
 
         <div class="d-flex gap-3 justify-content-between mt-4">
             <button type="button" class="btn btn-outline-warning" id="test-connection-btn">
-                <i class="fa-solid fa-vial me-1"></i> Δοκιμή Σύνδεσης LDAP
+                <i class="fa-solid fa-vial me-1"></i> <?= __('Test LDAP Connection') ?>
             </button>
             <button type="submit" class="btn btn-premium">
-                <i class="fa-solid fa-save me-1"></i> Αποθήκευση Ρυθμίσεων
+                <i class="fa-solid fa-save me-1"></i> <?= __('Save Settings') ?>
             </button>
         </div>
     </form>
@@ -99,11 +99,11 @@
     <div class="modal-dialog">
         <div class="modal-content bg-dark border border-glass">
             <div class="modal-header border-bottom border-glass">
-                <h5 class="modal-title text-white">Αποτέλεσμα Δοκιμής LDAP</h5>
+                <h5 class="modal-title text-white"><?= __('LDAP Test Result') ?></h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body text-soft" id="test-result-body">
-                Γίνεται έλεγχος...
+                <?= __('Testing connection...') ?>
             </div>
         </div>
     </div>
@@ -129,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(err => {
             const body = document.getElementById('test-result-body');
-            body.innerHTML = `<div class="alert alert-danger">Αποτυχία σύνδεσης στον διακομιστή LDAP.</div>`;
+            body.innerHTML = `<div class="alert alert-danger"><?= __('Failed to connect to LDAP server.') ?></div>`;
             const modal = new bootstrap.Modal(document.getElementById('testResultModal'));
             modal.show();
         });

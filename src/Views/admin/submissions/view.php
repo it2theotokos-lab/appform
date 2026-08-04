@@ -1,7 +1,7 @@
 <div class="mb-4">
-    <a href="/admin/submissions" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> Πίσω στις Υποβολές</a>
-    <h3 class="font-heading text-white">Αξιολόγηση Υποβολής #<?= $submission['id'] ?></h3>
-    <small class="text-muted">Υποβλήθηκε από: <strong><?= htmlspecialchars($submission['submitter_name']) ?></strong> | Φόρμα: <?= htmlspecialchars($submission['form_title']) ?></small>
+    <a href="/admin/submissions" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> <?= __('Back') ?></a>
+    <h3 class="font-heading text-white"><?= __('Review Submission') ?> #<?= $submission['id'] ?></h3>
+    <small class="text-muted"><?= __('Submitted by') ?>: <strong><?= htmlspecialchars($submission['submitter_name']) ?></strong> | <?= __('Form') ?>: <?= htmlspecialchars($submission['form_title']) ?></small>
 </div>
 
 <?php 
@@ -26,7 +26,7 @@ if ($hasDesign):
 <div class="row g-4">
     <div class="col-md-7">
         <div class="glass-panel p-4 mb-4">
-            <h5 class="font-heading mb-4 text-white">Απαντήσεις</h5>
+            <h5 class="font-heading mb-4 text-white"><?= __('Submission Values') ?></h5>
 
             <?php foreach ($schema['sections'] as $sec): ?>
                 <div class="mb-4 border-bottom border-glass pb-3">
@@ -49,10 +49,10 @@ if ($hasDesign):
                                     ?>
                                         <?php if ($fData): ?>
                                             <a href="/my-submissions/<?= $submission['uuid'] ?>/files/<?= $fData['id'] ?>/download" class="btn btn-outline-primary btn-sm mt-1">
-                                                <i class="fa-solid fa-file-arrow-down me-1"></i> Κατέβασμα: <?= htmlspecialchars($fData['original_name']) ?>
+                                                <i class="fa-solid fa-file-arrow-down me-1"></i> <?= __('Download') ?>: <?= htmlspecialchars($fData['original_name']) ?>
                                             </a>
                                         <?php else: ?>
-                                            <span class="text-muted">Δεν ανέβηκε αρχείο</span>
+                                            <span class="text-muted"><?= __('No file uploaded') ?></span>
                                         <?php endif; ?>
                                     <?php elseif ($f['type'] === 'password'): ?>
                                         <span class="text-muted">[PROTECTED PASSWORD]</span>
@@ -81,7 +81,7 @@ if ($hasDesign):
                                             <?php endforeach; ?>
                                         </div>
                                     <?php elseif ($f['type'] === 'consent'): ?>
-                                        <span><?= $ans ? 'Ναι (Συγκατάθεση)' : 'Όχι' ?></span>
+                                        <span><?= $ans ? __('Yes (Consent given)') : __('No') ?></span>
                                     <?php else: ?>
                                         <?= is_array($ans) ? \App\Core\View::escape(json_encode($ans, JSON_UNESCAPED_UNICODE)) : \App\Core\View::escape($ans ?? '—') ?>
                                     <?php endif; ?>
@@ -98,32 +98,32 @@ if ($hasDesign):
     <div class="col-md-5">
         <!-- Current status card -->
         <div class="glass-panel p-4 mb-4">
-            <h5 class="font-heading mb-3 text-white">Κατάσταση: <?= strtoupper($submission['status']) ?></h5>
+            <h5 class="font-heading mb-3 text-white"><?= __('Status') ?>: <?= strtoupper($submission['status']) ?></h5>
             
             <?php if ($submission['status'] === 'submitted'): ?>
                 <form action="/admin/submissions/<?= $submission['uuid'] ?>/start-review" method="POST">
                     <?= \App\Core\Csrf::field() ?>
-                    <button type="submit" class="btn btn-primary w-100">Έναρξη Αξιολόγησης (Start Review) <i class="fa-solid fa-play ms-1"></i></button>
+                    <button type="submit" class="btn btn-primary w-100"><?= __('Start Review') ?> <i class="fa-solid fa-play ms-1"></i></button>
                 </form>
             <?php endif; ?>
         </div>
 
         <?php if ($submission['status'] === 'under_review'): ?>
             <div class="glass-panel p-4 mb-4">
-                <h5 class="font-heading mb-4 text-white">Απόφαση Αξιολόγησης</h5>
+                <h5 class="font-heading mb-4 text-white"><?= __('Make Decision') ?></h5>
                 <form id="reviewActionForm" method="POST">
                     <?= \App\Core\Csrf::field() ?>
                     
                     <div class="mb-3">
-                        <label for="review_notes" class="form-label">Σχόλια / Παρατηρήσεις</label>
-                        <textarea class="form-control" id="review_notes" name="review_notes" rows="4" placeholder="Σημειώσεις..."></textarea>
+                        <label for="review_notes" class="form-label"><?= __('Comment / Notes') ?></label>
+                        <textarea class="form-control" id="review_notes" name="review_notes" rows="4" placeholder="<?= __('Notes') ?>..."></textarea>
                     </div>
 
                     <div class="d-flex flex-column gap-2">
-                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/approve')" class="btn btn-success"><i class="fa-solid fa-check me-2"></i> Έγκριση (Approve)</button>
-                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/reject')" class="btn btn-danger"><i class="fa-solid fa-xmark me-2"></i> Απόρριψη (Reject)</button>
-                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/return')" class="btn btn-warning"><i class="fa-solid fa-undo me-2"></i> Επιστροφή για Διορθώσεις (Return)</button>
-                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/return-to-draft')" class="btn btn-outline-warning"><i class="fa-solid fa-rotate-left me-2"></i> Επιστροφή σε Πρόχειρο (Draft)</button>
+                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/approve')" class="btn btn-success"><i class="fa-solid fa-check me-2"></i> <?= __('Approve') ?></button>
+                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/reject')" class="btn btn-danger"><i class="fa-solid fa-xmark me-2"></i> <?= __('Reject') ?></button>
+                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/return')" class="btn btn-warning"><i class="fa-solid fa-undo me-2"></i> <?= __('Return for Corrections') ?></button>
+                        <button type="submit" onclick="submitReview(event, '/admin/submissions/<?= $submission['uuid'] ?>/return-to-draft')" class="btn btn-outline-warning"><i class="fa-solid fa-rotate-left me-2"></i> <?= __('Return') ?> (Draft)</button>
                     </div>
 
                 </form>
@@ -132,7 +132,7 @@ if ($hasDesign):
 
         <!-- History card -->
         <div class="glass-panel p-4">
-            <h6 class="text-white mb-3 border-bottom border-glass pb-2">Ιστορικό Κατάστασης</h6>
+            <h6 class="text-white mb-3 border-bottom border-glass pb-2"><?= __('Approval History') ?></h6>
             <div class="d-flex flex-column gap-3">
                 <?php foreach ($history as $h): ?>
                     <div class="small">
@@ -157,7 +157,7 @@ function submitReview(event, actionUrl) {
     
     // Require notes for reject or return
     if ((actionUrl.includes('reject') || actionUrl.includes('return')) && notes === '') {
-        alert('Τα σχόλια είναι υποχρεωτικά για απόρριψη ή επιστροφή.');
+        alert('<?= __('Enter comments (Required for Rejection/Return)') ?>');
         event.preventDefault();
         return;
     }

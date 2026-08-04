@@ -357,7 +357,19 @@ $router->post('/admin/data-exchange/import', [\App\Controllers\DataExchangeContr
 $router->post('/admin/data-exchange/report', [\App\Controllers\DataExchangeController::class, 'generateReport'], ['auth', 'permission:data_exchange.reports']);
 $router->get('/admin/data-exchange/template', [\App\Controllers\DataExchangeController::class, 'downloadTemplate'], ['auth', 'permission:data_exchange.import']);
 
-// ── Language Switcher ──────────────────────────────────────────────────────
+// ── Language Switcher (public — works on login screen too) ─────────────────
+$router->post('/set-language', function() {
+    $lang = $_POST['lang'] ?? 'el';
+    \App\Services\Lang::setLocale($lang);
+    $redirect = $_POST['redirect'] ?? '/';
+    if (!str_starts_with($redirect, '/') || str_contains($redirect, '://')) {
+        $redirect = '/';
+    }
+    header('Location: ' . $redirect);
+    exit;
+});
+
+// ── Language Switcher (auth — legacy, keep for backward compat) ────────────
 $router->post('/admin/set-language', function() {
     $lang = $_POST['lang'] ?? 'el';
     \App\Services\Lang::setLocale($lang);
