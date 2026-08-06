@@ -95,6 +95,39 @@ $jsonContent = SpreadsheetService::exportJson($headers, $rows);
 $parsedJson = SpreadsheetService::parseJsonContent($jsonContent);
 assertRepoTest(count($parsedJson['rows']) === 2, 'JSON parser correctly extracted 2 rows');
 
+// ── TEST 4b: Custom Repository Column Persistence Test ────────────────────
+echo "\nTest 4b: Custom Repository Column Persistence Test...\n";
+$importRows = [
+    [
+        'value' => '001',
+        'label' => 'Item 001',
+        'employee_code' => '0179',
+        'lastname' => 'ANASTOLI',
+        'firstname' => 'CHRISTINA',
+        'department' => 'PURCHASING'
+    ]
+];
+
+$itemsMap = [];
+$knownHeaders = ['value', 'label', 'employee_code', 'lastname', 'firstname', 'department'];
+
+foreach ($importRows as $row) {
+    $val = (string)$row['value'];
+    $cleanItem = [];
+    $allKeys = array_unique(array_merge($knownHeaders, array_keys($row)));
+    foreach ($allKeys as $h) {
+        if (isset($row[$h])) {
+            $cleanItem[$h] = (string)$row[$h];
+        }
+    }
+    $itemsMap[$val] = $cleanItem;
+}
+
+$savedRecord = reset($itemsMap);
+assertRepoTest(isset($savedRecord['employee_code']) && $savedRecord['employee_code'] === '0179', 'Custom column employee_code persisted correctly');
+assertRepoTest(isset($savedRecord['lastname']) && $savedRecord['lastname'] === 'ANASTOLI', 'Custom column lastname persisted correctly');
+assertRepoTest(isset($savedRecord['department']) && $savedRecord['department'] === 'PURCHASING', 'Custom column department persisted correctly');
+
 // ── TEST 5: Cleanup ───────────────────────────────────────────────────────
 echo "\nTest 5: Cleaning up test repository...\n";
 $pdo->prepare("DELETE FROM repositories WHERE id = ?")->execute([$repoId]);

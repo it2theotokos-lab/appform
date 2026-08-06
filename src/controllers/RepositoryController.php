@@ -679,7 +679,27 @@ class RepositoryController extends Controller {
 
         $insertedCount = 0;
         $updatedCount = 0;
-        $knownHeaders = $importData['known_headers'] ?? ['value', 'label'];
+        
+        // Dynamically build all known headers & label-to-key mappings from repository columns_json
+        $knownHeaders = ['value', 'label'];
+        $keyMap = ['value' => true, 'label' => true];
+        $labelToKeyMap = [];
+
+        $cols = json_decode($repo['columns_json'] ?? '[]', true);
+        if (is_array($cols)) {
+            foreach ($cols as $c) {
+                if (!empty($c['key'])) {
+                    $k = (string)$c['key'];
+                    if (!in_array($k, $knownHeaders, true)) {
+                        $knownHeaders[] = $k;
+                    }
+                    $keyMap[$k] = true;
+                    if (!empty($c['label'])) {
+                        $labelToKeyMap[trim((string)$c['label'])] = $k;
+                    }
+                }
+            }
+        }
 
         $db = Database::getInstance();
         $db->beginTransaction();
@@ -687,20 +707,49 @@ class RepositoryController extends Controller {
         try {
             foreach ($rows as $row) {
                 unset($row['_line']);
-                $val = (string)($row['value'] ?? '');
+                $val = (string)($row['value'] ?? $row['VALUE'] ?? $row['Value'] ?? '');
                 if ($val === '') continue;
-
+                // Collect all columns present in file row mapped to machine keys or labels
                 $cleanItem = [];
+                
+                // Map by exact machine key first, then fallback to matching label
+                foreach ($row as $fileHeader => $fileVal) {
+                    $fileHeaderStr = (string)$fileHeader;
+                    $targetKey = null;
+
+                    // 1. Direct match with value or label
+                    if (in_array($fileHeaderStr, ['value', 'label'], true)) {
+                        $targetKey = $fileHeaderStr;
+                    }
+                    // 2. Direct match with configured column key
+                    elseif (isset($keyMap[$fileHeaderStr])) {
+                        $targetKey = $fileHeaderStr;
+                    }
+                    // 3. Match with configured column label
+                    elseif (isset($labelToKeyMap[$fileHeaderStr])) {
+                        $targetKey = $labelToKeyMap[$fileHeaderStr];
+                    }
+                    // 4. Fallback to raw file header
+                    else {
+                        $targetKey = $fileHeaderStr;
+                    }
+
+                    $cleanItem[$targetKey] = (string)$fileVal;
+                }
+
+                // Ensure all configured repository columns exist in the record
                 foreach ($knownHeaders as $h) {
-                    $cleanItem[$h] = $row[$h] ?? '';
+                    if (!isset($cleanItem[$h])) {
+                        $cleanItem[$h] = '';
+                    }
                 }
 
                 if (isset($itemsMap[$val])) {
-                    // Update
+                    // Update existing item
                     $itemsMap[$val] = array_merge($itemsMap[$val], $cleanItem);
                     $updatedCount++;
                 } else {
-                    // Insert
+                    // Insert new item
                     $itemsMap[$val] = $cleanItem;
                     $insertedCount++;
                 }
