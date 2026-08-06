@@ -28,6 +28,8 @@ use App\Models\OrgUnit;
 use App\Models\SharedFile;
 use App\Models\User;
 
+\App\Core\App::$config = require __DIR__ . '/../config/config.php';
+
 echo "========================================\n";
 echo "  APPFORM v1.1.24 FILE SHARING TESTS\n";
 echo "========================================\n";

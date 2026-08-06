@@ -142,6 +142,10 @@ $router->get('/admin/repositories/{id}/edit', [\App\Controllers\RepositoryContro
 $router->put('/admin/repositories/{id}/edit', [\App\Controllers\RepositoryController::class, 'update'], ['auth', 'permission:repositories.manage']);
 $router->post('/admin/repositories/{id}/toggle-status', [\App\Controllers\RepositoryController::class, 'toggleStatus'], ['auth', 'permission:repositories.manage']);
 $router->delete('/admin/repositories/{id}/delete', [\App\Controllers\RepositoryController::class, 'delete'], ['auth', 'permission:repositories.manage']);
+$router->get('/admin/repositories/{id}/export', [\App\Controllers\RepositoryController::class, 'export'], ['auth', 'permission:repositories.manage']);
+$router->get('/admin/repositories/{id}/template', [\App\Controllers\RepositoryController::class, 'downloadTemplate'], ['auth', 'permission:repositories.manage']);
+$router->post('/admin/repositories/{id}/import/preview', [\App\Controllers\RepositoryController::class, 'previewImport'], ['auth', 'permission:repositories.manage']);
+$router->post('/admin/repositories/{id}/import/process', [\App\Controllers\RepositoryController::class, 'processImport'], ['auth', 'permission:repositories.manage']);
 $router->get('/admin/repositories/{id}', [\App\Controllers\RepositoryController::class, 'preview'], ['auth', 'permission:repositories.manage']);
 $router->get('/api/repositories/autocomplete', [\App\Controllers\RepositoryController::class, 'apiAutocomplete'], ['auth']);
 $router->get('/api/repositories/tags', [\App\Controllers\RepositoryController::class, 'apiTags'], ['auth']);

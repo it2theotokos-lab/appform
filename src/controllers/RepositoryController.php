@@ -360,4 +360,378 @@ class RepositoryController extends Controller {
         echo json_encode($tags, JSON_UNESCAPED_UNICODE);
         exit;
     }
+
+    /**
+     * Export repository dataset in CSV, XLSX, or JSON format.
+     */
+    public function export($params) {
+        $id = (int)$params['id'];
+        $repo = Repository::findById($id);
+        if (!$repo) {
+            http_response_code(404);
+            View::render('errors/404');
+            exit;
+        }
+
+        $format = strtolower($_GET['format'] ?? 'csv');
+        if (!in_array($format, ['csv', 'xlsx', 'json'], true)) {
+            $format = 'csv';
+        }
+
+        // Header column keys
+        $headers = ['value', 'label'];
+        $cols = json_decode($repo['columns_json'] ?? '[]', true);
+        if (is_array($cols)) {
+            foreach ($cols as $c) {
+                if (!empty($c['key']) && !in_array($c['key'], $headers, true)) {
+                    $headers[] = $c['key'];
+                }
+            }
+        }
+
+        $rows = json_decode($repo['data_json'] ?? '[]', true);
+        if (!is_array($rows)) {
+            $rows = [];
+        }
+
+        $slug = preg_replace('/[^a-z0-9_-]/i', '_', $repo['slug'] ?: 'repository');
+        $filename = "{$slug}_export." . ($format === 'excel' ? 'xlsx' : $format);
+
+        $this->logAudit('export', 'repositories', $id, ['format' => $format, 'count' => count($rows)]);
+
+        if ($format === 'xlsx') {
+            $content = \App\Services\SpreadsheetService::exportXlsx($headers, $rows);
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header("Content-Disposition: attachment; filename=\"{$slug}_export.xlsx\"");
+            header('Content-Length: ' . strlen($content));
+            echo $content;
+            exit;
+        } elseif ($format === 'json') {
+            $content = \App\Services\SpreadsheetService::exportJson($headers, $rows);
+            header('Content-Type: application/json; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"{$slug}_export.json\"");
+            echo $content;
+            exit;
+        } else {
+            $content = \App\Services\SpreadsheetService::exportCsv($headers, $rows);
+            header('Content-Type: text/csv; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"{$slug}_export.csv\"");
+            echo $content;
+            exit;
+        }
+    }
+
+    /**
+     * Download empty repository template file (CSV, XLSX, JSON).
+     */
+    public function downloadTemplate($params) {
+        $id = (int)$params['id'];
+        $repo = Repository::findById($id);
+        if (!$repo) {
+            http_response_code(404);
+            View::render('errors/404');
+            exit;
+        }
+
+        $format = strtolower($_GET['format'] ?? 'csv');
+        if (!in_array($format, ['csv', 'xlsx', 'json'], true)) {
+            $format = 'csv';
+        }
+
+        $headers = ['value', 'label'];
+        $cols = json_decode($repo['columns_json'] ?? '[]', true);
+        if (is_array($cols)) {
+            foreach ($cols as $c) {
+                if (!empty($c['key']) && !in_array($c['key'], $headers, true)) {
+                    $headers[] = $c['key'];
+                }
+            }
+        }
+
+        // Sample placeholder row
+        $sampleRow = [];
+        foreach ($headers as $h) {
+            $sampleRow[$h] = ($h === 'value' ? 'sample_code' : ($h === 'label' ? 'Sample Item Name' : ''));
+        }
+        $rows = [$sampleRow];
+
+        $slug = preg_replace('/[^a-z0-9_-]/i', '_', $repo['slug'] ?: 'repository');
+
+        $this->logAudit('template_download', 'repositories', $id, ['format' => $format]);
+
+        if ($format === 'xlsx') {
+            $content = \App\Services\SpreadsheetService::exportXlsx($headers, $rows);
+            header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+            header("Content-Disposition: attachment; filename=\"{$slug}_template.xlsx\"");
+            header('Content-Length: ' . strlen($content));
+            echo $content;
+            exit;
+        } elseif ($format === 'json') {
+            $content = \App\Services\SpreadsheetService::exportJson($headers, $rows);
+            header('Content-Type: application/json; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"{$slug}_template.json\"");
+            echo $content;
+            exit;
+        } else {
+            $content = \App\Services\SpreadsheetService::exportCsv($headers, $rows);
+            header('Content-Type: text/csv; charset=utf-8');
+            header("Content-Disposition: attachment; filename=\"{$slug}_template.csv\"");
+            echo $content;
+            exit;
+        }
+    }
+
+    /**
+     * Preview uploaded import file (CSV/XLSX/JSON) and return validation summary JSON.
+     */
+    public function previewImport($params) {
+        $this->checkCsrf();
+        $id = (int)$params['id'];
+        $repo = Repository::findById($id);
+        if (!$repo) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => __('Repository not found.')]);
+            exit;
+        }
+
+        if (empty($_FILES['import_file']) || $_FILES['import_file']['error'] !== UPLOAD_ERR_OK) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => __('Uploaded file is missing or failed to upload.')]);
+            exit;
+        }
+
+        $tmpFile = $_FILES['import_file']['tmp_name'];
+        $origName = $_FILES['import_file']['name'];
+        $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+
+        $strategy = $_POST['strategy'] ?? 'upsert';
+        if (!in_array($strategy, ['insert', 'update', 'upsert'], true)) {
+            $strategy = 'upsert';
+        }
+
+        try {
+            if ($ext === 'csv') {
+                $parsed = \App\Services\SpreadsheetService::parseCsvFile($tmpFile);
+            } elseif ($ext === 'xlsx') {
+                $parsed = \App\Services\SpreadsheetService::parseXlsxFile($tmpFile);
+            } elseif ($ext === 'json') {
+                $content = file_get_contents($tmpFile);
+                $parsed = \App\Services\SpreadsheetService::parseJsonContent($content);
+            } else {
+                throw new \Exception(__('Unsupported file extension. Allowed: CSV, XLSX, JSON.'));
+            }
+        } catch (\Exception $e) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
+
+        $headers = $parsed['headers'];
+        $rows = $parsed['rows'];
+
+        // Known Repository headers
+        $knownHeaders = ['value', 'label'];
+        $cols = json_decode($repo['columns_json'] ?? '[]', true);
+        if (is_array($cols)) {
+            foreach ($cols as $c) {
+                if (!empty($c['key']) && !in_array($c['key'], $knownHeaders, true)) {
+                    $knownHeaders[] = $c['key'];
+                }
+            }
+        }
+
+        // Validate headers: check for unknown headers
+        $unknownHeaders = array_diff($headers, $knownHeaders);
+
+        // Existing repository data map indexed by `value` key
+        $existingItems = json_decode($repo['data_json'] ?? '[]', true) ?: [];
+        $existingKeys = [];
+        foreach ($existingItems as $item) {
+            if (isset($item['value'])) {
+                $existingKeys[(string)$item['value']] = true;
+            }
+        }
+
+        $validationErrors = [];
+        $validCount = 0;
+        $insertCount = 0;
+        $updateCount = 0;
+        $seenFileKeys = [];
+        $previewRows = [];
+
+        foreach ($rows as $idx => $row) {
+            $lineNum = $row['_line'] ?? ($idx + 2);
+            $rowErrors = [];
+
+            $val = trim((string)($row['value'] ?? ''));
+            $label = trim((string)($row['label'] ?? ''));
+
+            if ($val === '') {
+                $rowErrors[] = __('Line %s — Column value — Value is required.', [$lineNum]);
+            }
+            if ($label === '') {
+                $rowErrors[] = __('Line %s — Column label — Label is required.', [$lineNum]);
+            }
+
+            if ($val !== '') {
+                if (isset($seenFileKeys[$val])) {
+                    $rowErrors[] = __('Line %s — Column value — Duplicate value "%s" in file.', [$lineNum, $val]);
+                }
+                $seenFileKeys[$val] = true;
+
+                $exists = isset($existingKeys[$val]);
+                if ($strategy === 'insert' && $exists) {
+                    $rowErrors[] = __('Line %s — Value "%s" already exists (Insert mode).', [$lineNum, $val]);
+                } elseif ($strategy === 'update' && !$exists) {
+                    $rowErrors[] = __('Line %s — Value "%s" does not exist (Update mode).', [$lineNum, $val]);
+                }
+
+                if (empty($rowErrors)) {
+                    if ($exists) {
+                        $updateCount++;
+                    } else {
+                        $insertCount++;
+                    }
+                }
+            }
+
+            if (!empty($rowErrors)) {
+                foreach ($rowErrors as $err) {
+                    $validationErrors[] = $err;
+                }
+            } else {
+                $validCount++;
+            }
+
+            if (count($previewRows) < 10) {
+                unset($row['_line']);
+                $previewRows[] = $row;
+            }
+        }
+
+        // Save validated upload payload to temporary session file for safe execution on confirmation
+        $tempToken = bin2hex(random_bytes(16));
+        $tempPath = sys_get_temp_dir() . "/repo_import_{$tempToken}.json";
+        file_put_contents($tempPath, json_encode([
+            'repo_id' => $id,
+            'strategy' => $strategy,
+            'rows' => $rows,
+            'known_headers' => $knownHeaders
+        ], JSON_UNESCAPED_UNICODE));
+
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => true,
+            'temp_token' => $tempToken,
+            'total_rows' => count($rows),
+            'valid_rows' => $validCount,
+            'insert_rows' => $insertCount,
+            'update_rows' => $updateCount,
+            'failed_rows' => count($rows) - $validCount,
+            'unknown_headers' => array_values($unknownHeaders),
+            'errors' => $validationErrors,
+            'preview_rows' => $previewRows
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    /**
+     * Process confirmed repository import with automatic backup & transaction safety.
+     */
+    public function processImport($params) {
+        $this->checkCsrf();
+        $id = (int)$params['id'];
+        $repo = Repository::findById($id);
+        if (!$repo) {
+            Session::flash('error', __('Repository not found.'));
+            $this->back();
+        }
+
+        $tempToken = $_POST['temp_token'] ?? '';
+        $tempPath = sys_get_temp_dir() . "/repo_import_{$tempToken}.json";
+
+        if ($tempToken === '' || !file_exists($tempPath)) {
+            Session::flash('error', __('Import session expired. Please re-upload your file.'));
+            $this->redirect("/admin/repositories/{$id}/edit");
+        }
+
+        $importData = json_decode(file_get_contents($tempPath), true);
+        @unlink($tempPath); // cleanup temp payload file
+
+        if (!$importData || (int)$importData['repo_id'] !== $id) {
+            Session::flash('error', __('Invalid import session data.'));
+            $this->redirect("/admin/repositories/{$id}/edit");
+        }
+
+        $rows = $importData['rows'];
+        $strategy = $importData['strategy'];
+
+        // Automatic Backup of current state before processing
+        $backupJson = $repo['data_json'];
+
+        $existingItems = json_decode($backupJson, true) ?: [];
+        $itemsMap = [];
+        foreach ($existingItems as $item) {
+            if (isset($item['value'])) {
+                $itemsMap[(string)$item['value']] = $item;
+            }
+        }
+
+        $insertedCount = 0;
+        $updatedCount = 0;
+        $knownHeaders = $importData['known_headers'] ?? ['value', 'label'];
+
+        $db = Database::getInstance();
+        $db->beginTransaction();
+
+        try {
+            foreach ($rows as $row) {
+                unset($row['_line']);
+                $val = (string)($row['value'] ?? '');
+                if ($val === '') continue;
+
+                $cleanItem = [];
+                foreach ($knownHeaders as $h) {
+                    $cleanItem[$h] = $row[$h] ?? '';
+                }
+
+                if (isset($itemsMap[$val])) {
+                    // Update
+                    $itemsMap[$val] = array_merge($itemsMap[$val], $cleanItem);
+                    $updatedCount++;
+                } else {
+                    // Insert
+                    $itemsMap[$val] = $cleanItem;
+                    $insertedCount++;
+                }
+            }
+
+            $newItemsArray = array_values($itemsMap);
+            $newDataJson = json_encode($newItemsArray, JSON_UNESCAPED_UNICODE);
+
+            $stmt = $db->prepare("UPDATE repositories SET data_json = ? WHERE id = ?");
+            $stmt->execute([$newDataJson, $id]);
+
+            $db->commit();
+
+            $this->logAudit('import', 'repositories', $id, [
+                'strategy' => $strategy,
+                'inserted' => $insertedCount,
+                'updated' => $updatedCount
+            ]);
+
+            Session::flash('success', __('Import completed successfully! Inserted: %s, Updated: %s.', [$insertedCount, $updatedCount]));
+            $this->redirect("/admin/repositories/{$id}/edit");
+
+        } catch (\Exception $e) {
+            $db->rollBack();
+            // Restore previous state if fail occurs
+            $stmtRestore = $db->prepare("UPDATE repositories SET data_json = ? WHERE id = ?");
+            $stmtRestore->execute([$backupJson, $id]);
+
+            Session::flash('error', __('Import failed during database write. Previous state restored. Error: %s', [$e->getMessage()]));
+            $this->redirect("/admin/repositories/{$id}/edit");
+        }
+    }
 }
+

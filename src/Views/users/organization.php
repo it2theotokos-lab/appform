@@ -1,7 +1,164 @@
 <?php
-// View: Organizational Structure Tree
+// View: Organizational Structure Tree (Unlimited Depth)
 // Path: src/Views/users/organization.php
+
+if (!function_exists('renderOrgTreeNode')) {
+    function renderOrgTreeNode(array $node, int $depth, array $allUnits): void {
+        $isRoot = ($depth === 0);
+        $type = $node['type'] ?? 'department';
+        $badgeClass = match($type) {
+            'department' => 'bg-primary',
+            'subdepartment' => 'text-bg-info',
+            'team' => 'text-bg-success',
+            default => 'text-bg-secondary'
+        };
+        $iconClass = match($type) {
+            'department' => 'fa-building',
+            'subdepartment' => 'fa-diagram-project',
+            'team' => 'fa-people-group',
+            default => 'fa-folder-tree'
+        };
+        $typeLabel = match($type) {
+            'department' => __('Department'),
+            'subdepartment' => __('Sub-department'),
+            'team' => __('Team'),
+            default => ucfirst($type)
+        };
+        ?>
+        <div class="org-node rounded mb-2 p-3" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);margin-left:<?= $depth * 1.5 ?>rem;">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge <?= $badgeClass ?> rounded-pill">
+                        <i class="fa-solid <?= $iconClass ?> me-1"></i><?= $typeLabel ?>
+                    </span>
+                    <strong class="text-white fs-6"><?= \App\Core\View::escape($node['name']) ?></strong>
+                    <?php if (!empty($node['users'])): ?>
+                        <small class="text-muted">(<?= count($node['users']) ?> <?= __('members') ?>)</small>
+                    <?php endif; ?>
+                </div>
+
+                <div class="d-flex gap-2 align-items-center">
+                    <!-- Add Sub-unit button on every node -->
+                    <button class="btn btn-outline-success btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalAddChild<?= $node['id'] ?>" title="<?= __('Add Sub-unit') ?>">
+                        <i class="fa-solid fa-plus me-1"></i><?= __('Add Sub-unit') ?>
+                    </button>
+                    <!-- Edit Unit -->
+                    <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
+                            data-bs-target="#modalEdit<?= $node['id'] ?>" title="<?= __('Edit') ?>">
+                        <i class="fa-solid fa-edit"></i>
+                    </button>
+                    <!-- Delete Unit -->
+                    <form action="/admin/organization/units/<?= $node['id'] ?>/delete" method="POST"
+                          class="js-confirm-action d-inline"
+                          data-confirm-title="<?= __('Delete Organizational Unit') ?>"
+                          data-confirm-message="<?= __('Are you sure you want to delete this organizational unit?') ?>"
+                          data-confirm-button="<?= __('Delete') ?>"
+                          data-confirm-variant="danger">
+                        <?= \App\Core\Csrf::field() ?>
+                        <button type="submit" class="btn btn-outline-danger btn-sm">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Assigned Members -->
+            <?php if (!empty($node['users'])): ?>
+                <div class="mt-2 d-flex flex-wrap gap-2 ps-2">
+                    <?php foreach ($node['users'] as $usr): ?>
+                        <a href="/admin/users/<?= $usr['id'] ?>/edit" class="badge text-bg-secondary text-decoration-none" style="font-size:0.75rem;">
+                            <i class="fa-solid fa-user me-1"></i><?= \App\Core\View::escape($usr['full_name'] ?: $usr['username']) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Child Nodes -->
+            <?php if (!empty($node['children'])): ?>
+                <div class="org-children mt-3">
+                    <?php foreach ($node['children'] as $child): ?>
+                        <?php renderOrgTreeNode($child, $depth + 1, $allUnits); ?>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <!-- Edit Modal for Node -->
+        <div class="modal fade" id="modalEdit<?= $node['id'] ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog"><div class="modal-content glass-panel">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title font-heading text-white"><?= __('Edit Organizational Unit') ?></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/organization/units/<?= $node['id'] ?>/update" method="POST">
+                    <?= \App\Core\Csrf::field() ?>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label"><?= __('Unit Name') ?></label>
+                            <input type="text" class="form-control" name="name"
+                                   value="<?= \App\Core\View::escape($node['name']) ?>" required maxlength="150">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><?= __('Parent Unit') ?></label>
+                            <select class="form-select" name="parent_id">
+                                <option value=""><?= __('Root Unit (No Parent)') ?></option>
+                                <?php foreach ($allUnits as $u): ?>
+                                    <?php if ((int)$u['id'] !== (int)$node['id']): ?>
+                                        <option value="<?= (int)$u['id'] ?>" <?= (int)($node['parent_id'] ?? 0) === (int)$dId = $u['id'] ? 'selected' : '' ?>>
+                                            <?= \App\Core\View::escape($u['name']) ?> (<?= ucfirst($u['type']) ?>)
+                                        </option>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= __('Cancel') ?></button>
+                        <button type="submit" class="btn btn-premium"><?= __('Save') ?></button>
+                    </div>
+                </form>
+            </div></div>
+        </div>
+
+        <!-- Add Sub-unit Modal for Node -->
+        <div class="modal fade" id="modalAddChild<?= $node['id'] ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog"><div class="modal-content glass-panel">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title font-heading text-white">
+                        <i class="fa-solid fa-plus me-2"></i><?= __('Add Sub-unit under') ?> "<?= \App\Core\View::escape($node['name']) ?>"
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form action="/admin/organization/units" method="POST">
+                    <?= \App\Core\Csrf::field() ?>
+                    <input type="hidden" name="parent_id" value="<?= (int)$node['id'] ?>">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label"><?= __('Unit Name') ?></label>
+                            <input type="text" class="form-control" name="name" required maxlength="150" placeholder="<?= __('Unit Name') ?>">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><?= __('Unit Type') ?></label>
+                            <select class="form-select" name="type">
+                                <option value="subdepartment"><?= __('Sub-department') ?></option>
+                                <option value="team"><?= __('Team') ?></option>
+                                <option value="department"><?= __('Department') ?></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= __('Cancel') ?></button>
+                        <button type="submit" class="btn btn-premium"><i class="fa-solid fa-save me-2"></i><?= __('Create') ?></button>
+                    </div>
+                </form>
+            </div></div>
+        </div>
+        <?php
+    }
+}
 ?>
+
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div class="d-flex align-items-center gap-3">
         <a href="/admin/users" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-arrow-left me-1"></i> <?= __('Back') ?></a>
@@ -42,167 +199,8 @@
     </div>
 <?php else: ?>
     <div class="org-tree">
-        <?php foreach ($tree as $dept): ?>
-            <div class="card mb-3 org-node org-dept">
-                <!-- Department Header -->
-                <div class="card-header d-flex justify-content-between align-items-center" style="background:rgba(var(--color-accent-rgb,108,99,255),0.15);border-bottom:1px solid rgba(255,255,255,0.08);">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="badge bg-primary rounded-pill"><i class="fa-solid fa-building me-1"></i><?= __('Department') ?></span>
-                        <strong class="text-white fs-5"><?= \App\Core\View::escape($dept['name']) ?></strong>
-                        <?php if (!empty($dept['users'])): ?>
-                            <small class="text-muted">(<?= count($dept['users']) ?> <?= __('members') ?>)</small>
-                        <?php endif; ?>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
-                                data-bs-target="#modalEdit<?= $dept['id'] ?>">
-                            <i class="fa-solid fa-edit"></i>
-                        </button>
-                        <form action="/admin/organization/units/<?= $dept['id'] ?>/delete" method="POST"
-                              class="js-confirm-action"
-                              data-confirm-title="<?= __('Delete Organizational Unit') ?>"
-                              data-confirm-message="<?= __('Are you sure you want to delete this organizational unit?') ?>"
-                              data-confirm-button="<?= __('Delete') ?>"
-                              data-confirm-variant="danger">
-                            <?= \App\Core\Csrf::field() ?>
-                            <button type="submit" class="btn btn-outline-danger btn-sm">
-                                <i class="fa-solid fa-trash"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="card-body p-3">
-                    <!-- Direct members of department -->
-                    <?php if (!empty($dept['users'])): ?>
-                        <div class="mb-3 ps-2">
-                            <small class="text-muted d-block mb-2"><i class="fa-solid fa-users me-1"></i><?= __('Direct Members') ?></small>
-                            <div class="d-flex flex-wrap gap-2">
-                                <?php foreach ($dept['users'] as $usr): ?>
-                                    <a href="/admin/users/<?= $usr['id'] ?>/edit" class="badge text-bg-secondary text-decoration-none" style="font-size:0.8rem;">
-                                        <i class="fa-solid fa-user me-1"></i><?= \App\Core\View::escape($usr['full_name'] ?: $usr['username']) ?>
-                                    </a>
-                                <?php endforeach; ?>
-                            </div>
-                        </div>
-                    <?php endif; ?>
-
-                    <!-- Children: Sub-departments and Teams -->
-                    <?php if (!empty($dept['children'])): ?>
-                        <div class="org-children">
-                            <?php foreach ($dept['children'] as $child): ?>
-                                <?php $isTeam = ($child['type'] === 'team'); ?>
-                                <div class="org-node org-child rounded mb-2 p-3" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);margin-left:1.5rem;">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <span class="badge <?= $isTeam ? 'text-bg-success' : 'text-bg-info' ?> rounded-pill me-2">
-                                                <i class="fa-solid fa-<?= $isTeam ? 'people-group' : 'diagram-project' ?> me-1"></i>
-                                                <?= $isTeam ? __('Team') : __('Sub-department') ?>
-                                            </span>
-                                            <span class="fw-semibold text-white"><?= \App\Core\View::escape($child['name']) ?></span>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="modal"
-                                                    data-bs-target="#modalEdit<?= $child['id'] ?>">
-                                                <i class="fa-solid fa-edit"></i>
-                                            </button>
-                                            <form action="/admin/organization/units/<?= $child['id'] ?>/delete" method="POST"
-                                                  class="js-confirm-action"
-                                                  data-confirm-title="<?= __('Delete Organizational Unit') ?>"
-                                                  data-confirm-message="<?= __('Are you sure you want to delete this organizational unit?') ?>"
-                                                  data-confirm-button="<?= __('Delete') ?>"
-                                                  data-confirm-variant="danger">
-                                                <?= \App\Core\Csrf::field() ?>
-                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                    <i class="fa-solid fa-trash"></i>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-
-                                    <?php if (!empty($child['users'])): ?>
-                                        <div class="mt-2 d-flex flex-wrap gap-2">
-                                            <?php foreach ($child['users'] as $cusr): ?>
-                                                <a href="/admin/users/<?= $cusr['id'] ?>/edit" class="badge text-bg-secondary text-decoration-none" style="font-size:0.75rem;">
-                                                    <i class="fa-solid fa-user me-1"></i><?= \App\Core\View::escape($cusr['full_name'] ?: $cusr['username']) ?>
-                                                </a>
-                                            <?php endforeach; ?>
-                                        </div>
-                                    <?php else: ?>
-                                        <div class="mt-2 text-muted" style="font-size:0.78rem;">
-                                            <i class="fa-solid fa-inbox me-1"></i><?= __('No members assigned.') ?>
-                                        </div>
-                                    <?php endif; ?>
-                                </div>
-
-                                <!-- Edit modal for child unit -->
-                                <div class="modal fade" id="modalEdit<?= $child['id'] ?>" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog"><div class="modal-content glass-panel">
-                                        <div class="modal-header border-0">
-                                            <h5 class="modal-title font-heading text-white"><?= __('Edit Organizational Unit') ?></h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <form action="/admin/organization/units/<?= $child['id'] ?>/update" method="POST">
-                                            <?= \App\Core\Csrf::field() ?>
-                                            <div class="modal-body">
-                                                <div class="mb-3">
-                                                    <label class="form-label"><?= __('Unit Name') ?></label>
-                                                    <input type="text" class="form-control" name="name"
-                                                           value="<?= \App\Core\View::escape($child['name']) ?>" required maxlength="150">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label"><?= __('Parent Department') ?></label>
-                                                    <select class="form-select" name="parent_id" required>
-                                                        <?php foreach ($departments as $d): ?>
-                                                            <option value="<?= (int)$d['id'] ?>" <?= (int)$child['parent_id'] === (int)$d['id'] ? 'selected' : '' ?>>
-                                                                <?= \App\Core\View::escape($d['name']) ?>
-                                                            </option>
-                                                        <?php endforeach; ?>
-                                                    </select>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer border-0">
-                                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= __('Cancel') ?></button>
-                                                <button type="submit" class="btn btn-premium"><?= __('Save') ?></button>
-                                            </div>
-                                        </form>
-                                    </div></div>
-                                </div>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php else: ?>
-                        <?php if (empty($dept['users'])): ?>
-                            <div class="text-muted text-center py-2" style="font-size:0.8rem;">
-                                <i class="fa-solid fa-inbox me-1"></i><?= __('No members assigned.') ?>
-                            </div>
-                        <?php endif; ?>
-                    <?php endif; ?>
-                </div>
-
-                <!-- Edit modal for department -->
-                <div class="modal fade" id="modalEdit<?= $dept['id'] ?>" tabindex="-1" aria-hidden="true">
-                    <div class="modal-dialog"><div class="modal-content glass-panel">
-                        <div class="modal-header border-0">
-                            <h5 class="modal-title font-heading text-white"><?= __('Edit Organizational Unit') ?></h5>
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                        </div>
-                        <form action="/admin/organization/units/<?= $dept['id'] ?>/update" method="POST">
-                            <?= \App\Core\Csrf::field() ?>
-                            <div class="modal-body">
-                                <div class="mb-3">
-                                    <label class="form-label"><?= __('Unit Name') ?></label>
-                                    <input type="text" class="form-control" name="name"
-                                           value="<?= \App\Core\View::escape($dept['name']) ?>" required maxlength="150">
-                                </div>
-                            </div>
-                            <div class="modal-footer border-0">
-                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= __('Cancel') ?></button>
-                                <button type="submit" class="btn btn-premium"><?= __('Save') ?></button>
-                            </div>
-                        </form>
-                    </div></div>
-                </div>
-            </div>
+        <?php foreach ($tree as $rootNode): ?>
+            <?php renderOrgTreeNode($rootNode, 0, $departments); ?>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
@@ -248,9 +246,9 @@
                     <input type="text" class="form-control" id="subdept_name" name="name" required maxlength="150">
                 </div>
                 <div class="mb-3">
-                    <label for="subdept_parent" class="form-label"><?= __('Parent Department') ?></label>
+                    <label for="subdept_parent" class="form-label"><?= __('Parent Unit') ?></label>
                     <select class="form-select" id="subdept_parent" name="parent_id" required>
-                        <option value=""><?= __('Select Department…') ?></option>
+                        <option value=""><?= __('Select Parent Unit…') ?></option>
                         <?php foreach ($departments as $d): ?>
                             <option value="<?= (int)$d['id'] ?>"><?= \App\Core\View::escape($d['name']) ?></option>
                         <?php endforeach; ?>
@@ -281,9 +279,9 @@
                     <input type="text" class="form-control" id="team_name_org" name="name" required maxlength="150">
                 </div>
                 <div class="mb-3">
-                    <label for="team_parent_org" class="form-label"><?= __('Parent Department') ?></label>
+                    <label for="team_parent_org" class="form-label"><?= __('Parent Unit') ?></label>
                     <select class="form-select" id="team_parent_org" name="parent_id" required>
-                        <option value=""><?= __('Select Department…') ?></option>
+                        <option value=""><?= __('Select Parent Unit…') ?></option>
                         <?php foreach ($departments as $d): ?>
                             <option value="<?= (int)$d['id'] ?>"><?= \App\Core\View::escape($d['name']) ?></option>
                         <?php endforeach; ?>
@@ -297,3 +295,4 @@
         </form>
     </div></div>
 </div>
+

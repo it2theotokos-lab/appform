@@ -86,8 +86,36 @@
     <!-- Visual Options Editor Panel -->
     <div class="col-md-8">
         <div class="glass-panel p-4">
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="font-heading text-white mb-0">Δεδομένα Repository</h5>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary btn-sm" onclick="addRow()"><i class="fa-solid fa-plus me-1"></i> <?= __('+ Νέα Εγγραφή') ?></button>
+                    <button class="btn btn-outline-info btn-sm" data-bs-toggle="modal" data-bs-target="#modalImport"><i class="fa-solid fa-file-import me-1"></i> <?= __('Import') ?></button>
+                    
+                    <!-- Export Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-file-export me-1"></i> <?= __('Export') ?>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/export?format=csv"><i class="fa-solid fa-file-csv me-2 text-info"></i>CSV</a></li>
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/export?format=xlsx"><i class="fa-solid fa-file-excel me-2 text-success"></i>Excel (.xlsx)</a></li>
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/export?format=json"><i class="fa-solid fa-file-code me-2 text-warning"></i>JSON</a></li>
+                        </ul>
+                    </div>
+
+                    <!-- Download Template Dropdown -->
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="fa-solid fa-download me-1"></i> <?= __('Λήψη Template') ?>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark">
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/template?format=csv"><i class="fa-solid fa-file-csv me-2 text-info"></i>CSV Template</a></li>
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/template?format=xlsx"><i class="fa-solid fa-file-excel me-2 text-success"></i>Excel (.xlsx) Template</a></li>
+                            <li><a class="dropdown-content dropdown-item" href="/admin/repositories/<?= $repo['id'] ?>/template?format=json"><i class="fa-solid fa-file-code me-2 text-warning"></i>JSON Template</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
 
             <div id="duplicateAlert" class="alert alert-warning d-none py-2 small">Προσοχή: Ανιχνεύθηκαν διπλότυπα Machine Keys στηλών ή εγγραφών!</div>
@@ -109,6 +137,129 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Repository Import (Upload -> Preview -> Import) -->
+<div class="modal fade" id="modalImport" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg"><div class="modal-content glass-panel">
+        <div class="modal-header border-0">
+            <h5 class="modal-title font-heading text-white"><i class="fa-solid fa-file-import me-2 text-info"></i><?= __('Import Δεδομένων Repository') ?></h5>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <form id="importPreviewForm" enctype="multipart/form-data">
+            <?= \App\Core\Csrf::field() ?>
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label text-white"><?= __('Επιλογή Αρχείου (CSV, XLSX, JSON)') ?></label>
+                        <input type="file" class="form-control" name="import_file" id="import_file" required accept=".csv,.xlsx,.json">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label text-white"><?= __('Στρατηγική Εισαγωγής') ?></label>
+                        <select class="form-select" name="strategy" id="import_strategy">
+                            <option value="upsert"><?= __('Upsert (Εισαγωγή Νέων + Ενημέρωση Υπαρχόντων)') ?></option>
+                            <option value="insert"><?= __('Insert Only (Εισαγωγή Μόνο Νέων)') ?></option>
+                            <option value="update"><?= __('Update Existing (Ενημέρωση Μόνο Υπαρχόντων)') ?></option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" class="btn btn-info btn-sm w-100 mb-3" onclick="runImportPreview()">
+                    <i class="fa-solid fa-eye me-1"></i> <?= __('Έλεγχος & Προεπισκόπηση (Preview)') ?>
+                </button>
+
+                <!-- Preview Result Container -->
+                <div id="importPreviewResults" class="d-none">
+                    <hr class="border-secondary my-3">
+                    <div id="previewStats" class="d-flex gap-2 flex-wrap mb-3"></div>
+                    <div id="previewErrors" class="alert alert-danger d-none py-2 fs-7 max-h-200 overflow-auto"></div>
+                    <div id="previewTableContainer" class="table-responsive max-h-300 overflow-auto">
+                        <table class="table table-sm table-dark table-striped align-middle" id="previewTable">
+                            <thead><tr id="previewTableHeader"></tr></thead>
+                            <tbody id="previewTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+        <form action="/admin/repositories/<?= $repo['id'] ?>/import/process" method="POST" id="importProcessForm">
+            <?= \App\Core\Csrf::field() ?>
+            <input type="hidden" name="temp_token" id="temp_token" value="">
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal"><?= __('Ακύρωση') ?></button>
+                <button type="submit" class="btn btn-success" id="btnConfirmImport" disabled>
+                    <i class="fa-solid fa-check-circle me-1"></i> <?= __('Επιβεβαίωση & Εφαρμογή Import') ?>
+                </button>
+            </div>
+        </form>
+    </div></div>
+</div>
+
+<script>
+async function runImportPreview() {
+    const fileInput = document.getElementById('import_file');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert("Παρακαλώ επιλέξτε ένα αρχείο.");
+        return;
+    }
+
+    const formData = new FormData(document.getElementById('importPreviewForm'));
+    const resultsContainer = document.getElementById('importPreviewResults');
+    const statsDiv = document.getElementById('previewStats');
+    const errorsDiv = document.getElementById('previewErrors');
+    const btnConfirm = document.getElementById('btnConfirmImport');
+
+    statsDiv.innerHTML = '<span class="spinner-border spinner-border-sm text-info"></span> Έλεγχος αρχείου...';
+    resultsContainer.classList.remove('d-none');
+    errorsDiv.classList.add('d-none');
+    btnConfirm.disabled = true;
+
+    try {
+        const response = await fetch('/admin/repositories/<?= $repo['id'] ?>/import/preview', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+        if (!data.success) {
+            statsDiv.innerHTML = `<span class="badge text-bg-danger">Σφάλμα: ${data.message}</span>`;
+            return;
+        }
+
+        document.getElementById('temp_token').value = data.temp_token;
+
+        statsDiv.innerHTML = `
+            <span class="badge text-bg-secondary">Σύνολο: ${data.total_rows}</span>
+            <span class="badge text-bg-success">Έγκυρα: ${data.valid_rows}</span>
+            <span class="badge text-bg-primary">Νέα: ${data.insert_rows}</span>
+            <span class="badge text-bg-info">Ενημερώσεις: ${data.update_rows}</span>
+            ${data.failed_rows > 0 ? `<span class="badge text-bg-danger">Σφάλματα: ${data.failed_rows}</span>` : ''}
+        `;
+
+        if (data.errors && data.errors.length > 0) {
+            errorsDiv.classList.remove('d-none');
+            errorsDiv.innerHTML = '<strong>Σφάλματα Validation:</strong><ul class="mb-0 ps-3">' +
+                data.errors.map(e => `<li>${e}</li>`).join('') + '</ul>';
+        }
+
+        // Render preview table
+        if (data.preview_rows && data.preview_rows.length > 0) {
+            const keys = Object.keys(data.preview_rows[0]);
+            document.getElementById('previewTableHeader').innerHTML = keys.map(k => `<th>${k}</th>`).join('');
+            document.getElementById('previewTableBody').innerHTML = data.preview_rows.map(row => 
+                `<tr>${keys.map(k => `<td>${row[k] || ''}</td>`).join('')}</tr>`
+            ).join('');
+        }
+
+        if (data.valid_rows > 0 && (!data.errors || data.errors.length === 0)) {
+            btnConfirm.disabled = false;
+        }
+    } catch(e) {
+        statsDiv.innerHTML = `<span class="badge text-bg-danger">Σφάλμα δικτύου ή απόκρισης: ${e.message}</span>`;
+    }
+}
+</script>
 
 <script>
 let columnsData = <?= empty($repo['columns_json']) ? '[]' : $repo['columns_json'] ?>;

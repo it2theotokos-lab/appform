@@ -105,25 +105,19 @@ class SharedFile {
 
         if ($orgUnitId) {
             // Get this unit's info
-            $stmtUnit = $db->prepare("SELECT type, parent_id FROM org_units WHERE id = ?");
-            $stmtUnit->execute([$orgUnitId]);
-            $unit = $stmtUnit->fetch(PDO::FETCH_ASSOC);
+                // Add conditions for user's unit and all ancestor units
+                $currentCheckId = (int)$orgUnitId;
+                while ($currentCheckId > 0) {
+                    $stmtUnit = $db->prepare("SELECT type, parent_id FROM org_units WHERE id = ?");
+                    $stmtUnit->execute([$currentCheckId]);
+                    $uInfo = $stmtUnit->fetch(PDO::FETCH_ASSOC);
+                    if (!$uInfo) break;
 
-            if ($unit) {
-                $unitType = $unit['type'];
-                $parentId = $unit['parent_id'];
+                    $conditions[] = "(sfp.grantee_id = ?)";
+                    $params[] = $currentCheckId;
 
-                // Add condition for user's own unit
-                $conditions[] = "(sfp.grantee_type = ? AND sfp.grantee_id = ?)";
-                $params[] = $unitType;
-                $params[] = $orgUnitId;
-
-                // If subdepartment or team, also check parent department
-                if ($parentId && in_array($unitType, ['subdepartment', 'team'], true)) {
-                    $conditions[] = "(sfp.grantee_type = 'department' AND sfp.grantee_id = ?)";
-                    $params[] = $parentId;
+                    $currentCheckId = $uInfo['parent_id'] !== null ? (int)$uInfo['parent_id'] : 0;
                 }
-            }
         }
 
         $whereClause = implode(' OR ', $conditions);
@@ -255,21 +249,17 @@ class SharedFile {
             }
 
             // Org unit grant
-            if ($orgUnitId && in_array($perm['grantee_type'], ['department', 'subdepartment', 'team'], true)) {
-                // Direct org unit match
-                if ((int)$perm['grantee_id'] === $orgUnitId) {
-                    return true;
-                }
-
-                // Check if permission is department-level and user is in a child unit
-                if ($perm['grantee_type'] === 'department') {
-                    // Check if user's org unit has this department as parent
-                    $stmtUnit = $db->prepare("SELECT parent_id FROM org_units WHERE id = ?");
-                    $stmtUnit->execute([$orgUnitId]);
-                    $unit = $stmtUnit->fetch(PDO::FETCH_ASSOC);
-                    if ($unit && (int)$unit['parent_id'] === (int)$perm['grantee_id']) {
+            if ($orgUnitId && in_array($perm['grantee_type'], ['department', 'subdepartment', 'team', 'unit'], true)) {
+                // Check direct or ancestor match
+                $currId = (int)$orgUnitId;
+                while ($currId > 0) {
+                    if ((int)$perm['grantee_id'] === $currId) {
                         return true;
                     }
+                    $stmtUnit = $db->prepare("SELECT parent_id FROM org_units WHERE id = ?");
+                    $stmtUnit->execute([$currId]);
+                    $unitInfo = $stmtUnit->fetch(PDO::FETCH_ASSOC);
+                    $currId = ($unitInfo && $unitInfo['parent_id'] !== null) ? (int)$unitInfo['parent_id'] : 0;
                 }
             }
         }

@@ -1041,6 +1041,10 @@ class Lang {
         'Current Password'      => ['en' => 'Current Password',      'el' => 'Τρέχων Κωδικός'],
         'Save Profile'          => ['en' => 'Save Profile',          'el' => 'Αποθήκευση Προφίλ'],
         'Personal Email'        => ['en' => 'Personal Email',        'el' => 'Προσωπικό Email'],
+        'Add Sub-unit'          => ['en' => 'Add Sub-unit',          'el' => 'Προσθήκη Υπομονάδας'],
+        'Parent Unit'           => ['en' => 'Parent Unit',           'el' => 'Γονική Μονάδα'],
+        'Root Unit (No Parent)' => ['en' => 'Root Unit (No Parent)', 'el' => 'Ρίζα (Χωρίς Γονέα)'],
+        'Move Unit'             => ['en' => 'Move Unit',             'el' => 'Μετακίνηση Μονάδας'],
 
         // ── Maintenance page ──────────────────────────────────────────────────
         'System under maintenance.' => ['en' => 'System under maintenance.', 'el' => 'Το σύστημα βρίσκεται υπό συντήρηση.'],

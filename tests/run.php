@@ -79,6 +79,7 @@ $testFiles = [
     'RolePermissionsTest.php',
     'UserEditPasswordIsolationTest.php',
     'DashboardRegressionTest.php',
+    'RepositoryImportExportTest.php',
 ];
 
 

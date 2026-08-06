@@ -12,6 +12,14 @@ use App\Core\Database;
 use App\Models\OrgUnit;
 use App\Models\User;
 
+if (!function_exists('__')) {
+    function __(string $key, array $replace = []): string {
+        return \App\Services\Lang::get($key, $replace);
+    }
+}
+
+\App\Core\App::$config = require __DIR__ . '/../config/config.php';
+
 echo "========================================\n";
 echo "  APPFORM v1.1.23 ORG STRUCTURE & PROFILE TESTS\n";
 echo "========================================\n";
@@ -68,20 +76,34 @@ $stmtUp->execute([$teamId, $userId2]);
 $u2 = User::findById($userId2);
 assertOrgTest((int)$u2['org_unit_id'] === $teamId, 'User correctly updated/assigned to Team');
 
-// ── TEST 3: Invalid Hierarchy Validation ──────────────────────────────────
-echo "\nTest 3: Invalid hierarchy validation rules...\n";
+// ── TEST 3: Unlimited Depth Hierarchy & Move Node Validation ────────────────
+echo "\nTest 3: Unlimited depth hierarchy & move node validation...\n";
 
-// Rule 3a: Department cannot have a parent
-$invDept = OrgUnit::create('Bad Dept', 'department', $deptId);
-assertOrgTest(!$invDept['success'], 'Department with parent rejected');
+// Rule 3a: Department / Sub-unit under Sub-department (Depth 3)
+$deepSubRes = OrgUnit::create('A Unit Level 3', 'subdepartment', $subId);
+assertOrgTest($deepSubRes['success'], 'Sub-department created under another Sub-department (Depth 3)');
+$deepSubId = $deepSubRes['id'];
 
-// Rule 3b: Sub-department / Team must have a parent
-$noParentSub = OrgUnit::create('Orphan Sub', 'subdepartment', null);
-assertOrgTest(!$noParentSub['success'], 'Sub-department without parent rejected');
+// Rule 3b: Sub-unit under Depth 3 (Depth 4)
+$deeperSubRes = OrgUnit::create('B Unit Level 4', 'team', $deepSubId);
+assertOrgTest($deeperSubRes['success'], 'Team created under Depth 3 unit (Depth 4)');
+$deeperSubId = $deeperSubRes['id'];
 
-// Rule 3c: Sub-department / Team cannot be created under a Sub-department
-$nestedTeam = OrgUnit::create('Nested Team', 'team', $subId);
-assertOrgTest(!$nestedTeam['success'], 'Team under Sub-department rejected');
+// Rule 3c: Move Node (Move Depth 4 unit directly under Department)
+$moveRes = OrgUnit::update($deeperSubId, 'B Unit Level 4 (Moved)', $deptId);
+assertOrgTest($moveRes['success'], 'Node moved successfully under Department');
+
+// Rule 3d: Block Circular Move (Move Department under its own child)
+$cycleMove = OrgUnit::update($deptId, 'IT Department Test', $subId);
+assertOrgTest(!$cycleMove['success'], 'Circular reference parent move correctly blocked');
+
+// Rule 3e: Self-parenting blocked
+$selfMove = OrgUnit::update($subId, 'Software Dev Test', $subId);
+assertOrgTest(!$selfMove['success'], 'Self-parenting move correctly blocked');
+
+// Cleanup deep test nodes
+OrgUnit::delete($deeperSubId);
+OrgUnit::delete($deepSubId);
 
 // ── TEST 4: Deletion Protection Guard ──────────────────────────────────────
 echo "\nTest 4: Deletion protection for units with children or users...\n";
