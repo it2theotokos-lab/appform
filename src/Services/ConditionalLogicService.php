@@ -116,10 +116,11 @@ class ConditionalLogicService {
         $graph = [];
         foreach ($fields as $f) {
             $deps = [];
-            // Parse Calculated Field formula dependencies
+            // Parse Calculated Field formula dependencies ({key} or bare field_xxx)
             if ($f['type'] === 'calculated' && !empty($f['formula'])) {
-                preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $f['formula'], $matches);
-                foreach (($matches[1] ?? []) as $d) {
+                preg_match_all('/(?:\{([a-zA-Z0-9_]+)\}|(field_[a-zA-Z0-9_]+))/', $f['formula'], $matches);
+                foreach ($matches[0] as $idx => $m) {
+                    $d = !empty($matches[1][$idx]) ? $matches[1][$idx] : $matches[2][$idx];
                     $deps[$d] = true;
                 }
             }

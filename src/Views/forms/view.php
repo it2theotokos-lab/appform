@@ -587,9 +587,51 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.repository-autocomplete-field').forEach(initAutocomplete);
     document.querySelectorAll('.repository-tags-field').forEach(initTagify);
 
+    function getRawFieldValue(key) {
+        const fieldDef = fieldsMap[key];
+        if (!fieldDef) return 0;
+
+        // Check if field is defined as a checkbox group (multi-option checkbox or repository checkbox)
+        if (fieldDef.type === 'checkbox') {
+            const allCheckboxes = document.querySelectorAll(`input[name="${key}[]"]`);
+            if (allCheckboxes.length > 0) {
+                const checked = Array.from(allCheckboxes).filter(c => c.checked);
+                const vals = checked.map(c => c.value).filter(v => v !== '');
+                return vals.length === 0 ? 0 : vals.join('|ITEM_SEP|');
+            }
+        }
+
+        const input = document.getElementById(key);
+        if (!input) {
+            // Check for radio groups
+            const radio = document.querySelector(`input[name="${key}"]:checked`);
+            if (radio) {
+                return getNumericChoiceValue(fieldDef, radio.value);
+            }
+            return 0;
+        }
+
+        if (input.type === 'checkbox') {
+            if (!input.checked) return 0;
+            return getNumericChoiceValue(fieldDef, input.value || '1');
+        }
+
+        if (input.tagName === 'SELECT') {
+            return getNumericChoiceValue(fieldDef, input.value);
+        }
+
+        return input.value || 0;
+    }
+
     function getFieldValue(key) {
         const fieldDef = fieldsMap[key];
         if (!fieldDef) return 0;
+
+        const raw = getRawFieldValue(key);
+        if (typeof raw === 'string' && raw.includes('|ITEM_SEP|')) {
+            const items = raw.split('|ITEM_SEP|');
+            return items.length;
+        }
 
         const input = document.getElementById(key);
         if (!input) {
@@ -629,16 +671,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function evaluateFormula(formula) {
-        // Resolve field placeholders {key}
-        let resolved = formula.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => {
-            return getFieldValue(key);
+        // Resolve field placeholders {key} or bare field_xxx keys
+        let resolved = formula.replace(/(\{([a-zA-Z0-9_]+)\}|(field_[a-zA-Z0-9_]+))/g, (match, full, bracedKey, bareKey) => {
+            const key = bracedKey || bareKey;
+            return getRawFieldValue(key);
         });
 
-        // Normalize decimals
-        resolved = resolved.replace(/,/g, '.');
+        // Resolve helper functions: round, abs, min, max, sum, count, floor, ceil
+        resolved = resolved.replace(/(round|abs|min|max|sum|count|floor|ceil)\(([^)]+)\)/gi, (match, func, argsStr) => {
+            const f = func.toLowerCase();
+            if (f === 'count') {
+                const rawArg = argsStr.trim();
+                if (rawArg.includes('|ITEM_SEP|')) {
+                    const items = rawArg.split('|ITEM_SEP|').filter(v => v !== '');
+                    return items.length;
+                }
+                if (rawArg === '' || rawArg === '0' || rawArg === 'null' || rawArg === 'undefined') {
+                    return 0;
+                }
+                return 1;
+            }
 
-        // Safe evaluation helper functions: round, abs, min, max, sum, floor, ceil
-        resolved = resolved.replace(/(round|abs|min|max|sum|floor|ceil)\(([^)]+)\)/gi, (match, func, argsStr) => {
             const args = argsStr.split(',').map(arg => {
                 try {
                     return evalSimpleMath(arg);
@@ -646,7 +699,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return 0;
                 }
             });
-            const f = func.toLowerCase();
+
             if (f === 'abs') return Math.abs(args[0]);
             if (f === 'ceil') return Math.ceil(args[0]);
             if (f === 'floor') return Math.floor(args[0]);
@@ -656,6 +709,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (f === 'sum') return args.reduce((a, b) => a + b, 0);
             return 0;
         });
+
+        // Normalize decimals for remaining arithmetic
+        resolved = resolved.replace(/,/g, '.');
 
         try {
             return evalSimpleMath(resolved);

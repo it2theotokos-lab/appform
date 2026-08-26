@@ -16,8 +16,8 @@ class CalculationService {
             return 0.0;
         }
 
-        // Validate characters to prevent code injection
-        if (!preg_match('/^[0-9\+\-\*\/\%\(\)\.\,a-zA-Z]+$/i', $formula)) {
+        // Validate characters to prevent code injection (allow | and _ for internal item delimiters)
+        if (!preg_match('/^[0-9\+\-\*\/\%\(\)\.\,a-zA-Z\|_]+$/i', $formula)) {
             throw new \Exception("Μη έγκυροι χαρακτήρες στον τύπο υπολογισμού.");
         }
 
@@ -29,17 +29,31 @@ class CalculationService {
     }
 
     /**
-     * Replaces {field_key} placeholders with numerical values.
+     * Replaces {field_key} placeholders with numerical values or internal string delimiters for count().
      */
     public static function resolveReferences(string $formula, array $values, array $fieldsMap): string {
-        return preg_replace_callback('/\{([a-zA-Z0-9_]+)\}/', function($matches) use ($values, $fieldsMap) {
-            $key = $matches[1];
+        return preg_replace_callback('/(\{([a-zA-Z0-9_]+)\}|(field_[a-zA-Z0-9_]+))/', function($matches) use ($values, $fieldsMap) {
+            $key = !empty($matches[2]) ? $matches[2] : $matches[3];
             if (!isset($fieldsMap[$key])) {
                 throw new \Exception("Άγνωστο πεδίο: " . $key);
             }
 
             $rawVal = $values[$key] ?? 0;
             $fieldDef = $fieldsMap[$key];
+
+            // Multi-value array or json decoded array handling (e.g. checkbox options list)
+            if (is_array($rawVal)) {
+                $filtered = array_filter($rawVal, function($v) { return $v !== '' && $v !== null; });
+                return empty($filtered) ? '0' : implode('|ITEM_SEP|', $filtered);
+            }
+
+            if (is_string($rawVal) && (str_starts_with(trim($rawVal), '[') || str_contains($rawVal, ','))) {
+                $decoded = json_decode($rawVal, true);
+                if (is_array($decoded)) {
+                    $filtered = array_filter($decoded, function($v) { return $v !== '' && $v !== null; });
+                    return empty($filtered) ? '0' : implode('|ITEM_SEP|', $filtered);
+                }
+            }
 
             // Resolve numerical values for checkboxes, radios, and dropdown choices
             if (in_array($fieldDef['type'], ['select', 'radio', 'checkbox'])) {
@@ -68,10 +82,26 @@ class CalculationService {
     }
 
     private static function parseExpression(string $expr): float {
-        // Resolve helper functions: round, abs, min, max, sum, floor, ceil
-        $expr = preg_replace_callback('/(round|abs|min|max|sum|floor|ceil)\(([^)]+)\)/i', function($m) {
+        // Resolve helper functions: round, abs, min, max, sum, count, floor, ceil
+        $expr = preg_replace_callback('/(round|abs|min|max|sum|count|floor|ceil)\(([^)]+)\)/i', function($m) {
             $func = strtolower($m[1]);
             $rawArgs = $m[2];
+            
+            if ($func === 'count') {
+                $rawArg = trim($rawArgs);
+                if (str_contains($rawArg, '|ITEM_SEP|')) {
+                    $items = explode('|ITEM_SEP|', $rawArg);
+                    $validItems = array_filter($items, function($v) {
+                        return $v !== '';
+                    });
+                    return (string)count($validItems);
+                }
+                if ($rawArg === '' || $rawArg === '0') {
+                    return '0';
+                }
+                return '1';
+            }
+
             // Split by comma but verify we only parse numeric arguments
             $parts = explode(',', $rawArgs);
             $args = [];
@@ -183,8 +213,12 @@ class CalculationService {
         $graph = [];
         foreach ($fields as $f) {
             if ($f['type'] === 'calculated' && !empty($f['formula'])) {
-                preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $f['formula'], $matches);
-                $graph[$f['key']] = $matches[1] ?? [];
+                preg_match_all('/(?:\{([a-zA-Z0-9_]+)\}|(field_[a-zA-Z0-9_]+))/', $f['formula'], $matches);
+                $keys = [];
+                foreach ($matches[0] as $idx => $m) {
+                    $keys[] = !empty($matches[1][$idx]) ? $matches[1][$idx] : $matches[2][$idx];
+                }
+                $graph[$f['key']] = $keys;
             }
         }
 
