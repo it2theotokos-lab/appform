@@ -39,7 +39,10 @@ class UserController extends Controller {
         
         $page = (int)($_GET['page'] ?? 1);
         if ($page < 1) $page = 1;
-        $limit = 10;
+        
+        $limit = (int)\App\Models\SystemSetting::getVal('records_per_page', 15);
+        if ($limit <= 0) $limit = 15;
+        
         $offset = ($page - 1) * $limit;
 
         $db = Database::getInstance();

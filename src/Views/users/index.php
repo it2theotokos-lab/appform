@@ -132,9 +132,44 @@
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination Controls -->
+    <?php if (isset($totalPages) && $totalPages > 1): ?>
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center mb-0">
+                <?php 
+                    // Build base URL for pagination links preserving filters
+                    $queryParams = $_GET;
+                    unset($queryParams['page']);
+                    $queryString = http_build_query($queryParams);
+                    $baseUrl = '/admin/users?' . ($queryString ? $queryString . '&' : '');
+                ?>
+                
+                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($currentPage - 1) ?>" aria-label="<?= __('Previous') ?>">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+                
+                <?php for ($p = 1; $p <= $totalPages; $p++): ?>
+                    <li class="page-item <?= $p === $currentPage ? 'active' : '' ?>">
+                        <a class="page-link" href="<?= $baseUrl . 'page=' . $p ?>"><?= $p ?></a>
+                    </li>
+                <?php endfor; ?>
+                
+                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($currentPage + 1) ?>" aria-label="<?= __('Next') ?>">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
     <?php endif; ?>
 </div>
-
 <!-- Create Team Modal -->
 <div class="modal fade" id="modalCreateTeam" tabindex="-1" aria-labelledby="modalCreateTeamLabel" aria-hidden="true">
     <div class="modal-dialog">
