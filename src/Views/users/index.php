@@ -149,20 +149,20 @@
                     $baseUrl = '/admin/users?' . ($queryString ? $queryString . '&' : '');
                 ?>
                 
-                <li class="page-item <?= $currentPage <= 1 ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($currentPage - 1) ?>" aria-label="<?= __('Previous') ?>">
+                <li class="page-item <?= $page <= 1 ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($page - 1) ?>" aria-label="<?= __('Previous') ?>">
                         <span aria-hidden="true">&laquo;</span>
                     </a>
                 </li>
                 
                 <?php for ($p = 1; $p <= $totalPages; $p++): ?>
-                    <li class="page-item <?= $p === $currentPage ? 'active' : '' ?>">
+                    <li class="page-item <?= $p === $page ? 'active' : '' ?>">
                         <a class="page-link" href="<?= $baseUrl . 'page=' . $p ?>"><?= $p ?></a>
                     </li>
                 <?php endfor; ?>
                 
-                <li class="page-item <?= $currentPage >= $totalPages ? 'disabled' : '' ?>">
-                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($currentPage + 1) ?>" aria-label="<?= __('Next') ?>">
+                <li class="page-item <?= $page >= $totalPages ? 'disabled' : '' ?>">
+                    <a class="page-link" href="<?= $baseUrl . 'page=' . ($page + 1) ?>" aria-label="<?= __('Next') ?>">
                         <span aria-hidden="true">&raquo;</span>
                     </a>
                 </li>
