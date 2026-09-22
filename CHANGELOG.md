@@ -142,3 +142,9 @@ All notable changes to **AppForm** will be documented in this file.
 - **Reporting Hierarchy & Tree View**: Added manager assignments, loops validations, and interactive org hierarchy tree.
 - **LDAP / Active Directory Integration**: Connected config views, dual login fallback and auto provisioning syncs.
 - **System Health Dashboard**: Real-time status checks on DB, job queue, LDAP, SMTP configurations.
+## [1.1.46] - 2026-09-22
+
+### Fixed
+- Aligned submission status storage with all reviewing workflow transitions, including return for corrections and cancellation.
+- Allowed users with `submissions.review` permission to use the existing return-to-draft review action.
+- Displayed the responsible user for every submission status-history entry in both reviewer and submitter views.

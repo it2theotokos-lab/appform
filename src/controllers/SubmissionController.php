@@ -825,7 +825,7 @@ class SubmissionController extends Controller {
 
     public function returnToDraft($params) {
         $this->checkCsrf();
-        if (Auth::role() !== 'administrator') {
+        if (Auth::role() !== 'administrator' && !Auth::hasPermission('submissions.review')) {
             http_response_code(403);
             View::render('errors/403');
             exit;

@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS form_submissions (
     form_version_id INT NOT NULL,
     user_id INT NOT NULL,
     data_json LONGTEXT NOT NULL,
-    status ENUM('draft', 'submitted', 'under_review', 'approved', 'rejected') DEFAULT 'submitted',
+    status ENUM('draft', 'submitted', 'under_review', 'approved', 'rejected', 'returned', 'cancelled') DEFAULT 'submitted',
     submitted_at TIMESTAMP NULL DEFAULT NULL,
     reviewed_by INT NULL,
     reviewed_at TIMESTAMP NULL DEFAULT NULL,

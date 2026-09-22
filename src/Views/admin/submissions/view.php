@@ -157,10 +157,19 @@ if ($hasDesign):
             <h6 class="text-white mb-3 border-bottom border-glass pb-2"><?= __('Approval History') ?></h6>
             <div class="d-flex flex-column gap-3">
                 <?php foreach ($history as $h): ?>
+                    <?php
+                    $historyActor = trim((string)($h['user_fullname'] ?? ''));
+                    if ($historyActor === '') $historyActor = trim((string)($h['user_name'] ?? ''));
+                    if ($historyActor === '') $historyActor = __('System');
+                    ?>
                     <div class="small">
                         <div class="d-flex justify-content-between text-muted">
                             <span>v<?= strtoupper($h['old_status']) ?> &rarr; v<?= strtoupper($h['new_status']) ?></span>
                             <span><?= date('d/m H:i', strtotime($h['created_at'])) ?></span>
+                        </div>
+                        <div class="text-info mt-1">
+                            <i class="fa-solid fa-user-check me-1" aria-hidden="true"></i>
+                            <?= __('By') ?>: <?= \App\Core\View::escape($historyActor) ?>
                         </div>
                         <?php if ($h['notes']): ?>
                             <div class="text-white mt-1 italic">"<?= htmlspecialchars($h['notes']) ?>"</div>
