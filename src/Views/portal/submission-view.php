@@ -1,5 +1,5 @@
 <div class="mb-4">
-    <a href="/dashboard" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> <?= __('Back to Dashboard') ?></a>
+    <a href="/my-submissions" class="btn btn-outline-secondary btn-sm mb-3"><i class="fa-solid fa-arrow-left"></i> Πίσω στις Υποβολές μου</a>
     <h3 class="font-heading text-white"><?= __('Submission') ?> #<?= $submission['id'] ?></h3>
     <small class="text-muted"><?= __('Form') ?>: <?= htmlspecialchars($submission['form_title']) ?> (v<?= $submission['form_version_id'] ?>)</small>
 </div>
@@ -25,16 +25,25 @@ if ($hasDesign):
             <h5 class="font-heading mb-4 text-white"><?= __('Form Answers') ?></h5>
 
             <?php foreach ($schema['sections'] as $sec): ?>
+                <?php
+                $submittedFields = array_values(array_filter($sec['fields'] ?? [], function ($field) use ($answers) {
+                    if (in_array($field['type'] ?? '', ['heading', 'divider', 'page_break', 'html'], true)) return false;
+                    $key = $field['key'] ?? '';
+                    return $key !== ''
+                        && array_key_exists($key, $answers)
+                        && \App\Services\NotificationTemplateService::hasMeaningfulValue($answers[$key]);
+                }));
+                if (empty($submittedFields)) continue;
+                ?>
                 <div class="mb-4 border-bottom border-glass pb-3">
                     <h6 class="text-info font-heading mb-3"><?= \App\Core\View::escape($sec['title']) ?></h6>
                     
                     <?php if (isset($sec['fields'])): ?>
-                        <?php foreach ($sec['fields'] as $f): ?>
-                            <?php if (in_array($f['type'], ['heading', 'divider'])) continue; ?>
+                        <?php foreach ($submittedFields as $f): ?>
                             
                             <div class="mb-3">
                                 <label class="text-muted small d-block"><?= \App\Core\View::escape($f['label']) ?></label>
-                                <div class="text-white fw-bold" style="overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; max-width: 100%;">
+                                <div class="text-white fw-bold" style="overflow-wrap: anywhere; word-break: break-word; white-space: pre-line; max-width: 100%;">
                                     <?php 
                                     $ans = $answers[$f['key']] ?? null;
                                     if ($f['type'] === 'file' && !empty($ans)):
@@ -52,7 +61,7 @@ if ($hasDesign):
                                             <span class="text-muted"><?= __('No file uploaded') ?></span>
                                         <?php endif; ?>
                                     <?php else: ?>
-                                        <?= \App\Core\View::escape($ans ?? '—') ?>
+                                        <?= \App\Core\View::escape(\App\Services\NotificationTemplateService::formatSubmittedValue($ans, $f)) ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -73,6 +82,16 @@ if ($hasDesign):
                     <?= htmlspecialchars(__($submission['status'])) ?>
                 </span>
             </div>
+
+            <?php if (
+                $submission['status'] === 'draft'
+                && (int)$submission['user_id'] === (int)\App\Core\Auth::id()
+                && !empty($submission['form_slug'])
+            ): ?>
+                <a href="/forms/<?= rawurlencode($submission['form_slug']) ?>" class="btn btn-warning w-100 mb-3">
+                    <i class="fa-solid fa-pen-to-square me-2"></i> Επεξεργασία και Υποβολή Προσχεδίου
+                </a>
+            <?php endif; ?>
 
             <?php if ($submission['review_notes']): ?>
                 <div class="mb-4 p-3 bg-dark bg-opacity-50 rounded border border-glass">

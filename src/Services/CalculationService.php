@@ -44,14 +44,14 @@ class CalculationService {
             // Multi-value array or json decoded array handling (e.g. checkbox options list)
             if (is_array($rawVal)) {
                 $filtered = array_filter($rawVal, function($v) { return $v !== '' && $v !== null; });
-                return empty($filtered) ? '0' : implode('|ITEM_SEP|', $filtered);
+                return empty($filtered) ? '0' : implode('|ITEM_SEP|', array_fill(0, count($filtered), '1'));
             }
 
             if (is_string($rawVal) && (str_starts_with(trim($rawVal), '[') || str_contains($rawVal, ','))) {
                 $decoded = json_decode($rawVal, true);
                 if (is_array($decoded)) {
                     $filtered = array_filter($decoded, function($v) { return $v !== '' && $v !== null; });
-                    return empty($filtered) ? '0' : implode('|ITEM_SEP|', $filtered);
+                    return empty($filtered) ? '0' : implode('|ITEM_SEP|', array_fill(0, count($filtered), '1'));
                 }
             }
 

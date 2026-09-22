@@ -6,6 +6,7 @@
     $activeScope = $activeScope ?? 'own';
     $queryParams = $_GET;
     ?>
+    <div class="d-flex gap-2 flex-wrap justify-content-end">
     <div class="btn-group" role="group" aria-label="Εύρος Υποβολών">
         <a href="?<?= http_build_query(array_merge($queryParams, ['scope' => 'own'])) ?>" class="btn btn-sm <?= $activeScope === 'own' ? 'btn-primary' : 'btn-outline-secondary' ?>">
             <i class="fa-solid fa-user me-1"></i> Οι Υποβολές μου
@@ -20,6 +21,27 @@
                 <i class="fa-solid fa-globe me-1"></i> Όλες οι Υποβολές
             </a>
         <?php endif; ?>
+    </div>
+    <?php if (\App\Core\Auth::role() === 'administrator' || \App\Core\Auth::hasPermission('submissions.review')): ?>
+        <?php $exportQuery = http_build_query($queryParams); ?>
+        <div class="dropdown">
+            <button class="btn btn-success btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fa-solid fa-file-export me-1"></i> Export
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="/admin/submissions/export/excel<?= $exportQuery !== '' ? '?' . htmlspecialchars($exportQuery) : '' ?>">
+                        <i class="fa-solid fa-file-excel me-2 text-success"></i>Excel (.xlsx)
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="/admin/submissions/export/csv<?= $exportQuery !== '' ? '?' . htmlspecialchars($exportQuery) : '' ?>">
+                        <i class="fa-solid fa-file-csv me-2 text-info"></i>CSV
+                    </a>
+                </li>
+            </ul>
+        </div>
+    <?php endif; ?>
     </div>
 </div>
 
@@ -103,6 +125,16 @@ include __DIR__ . '/../../shared/filter_bar.php';
                                     <a href="/admin/submissions/<?= $sub['uuid'] ?>" class="btn btn-premium btn-sm" title="Προβολή / Αξιολόγηση">
                                         <i class="fa-solid fa-eye me-1" aria-hidden="true"></i> Προβολή
                                     </a>
+
+                                    <?php if (
+                                        $sub['status'] === 'draft'
+                                        && (int)$sub['user_id'] === (int)\App\Core\Auth::id()
+                                        && !empty($sub['form_slug'])
+                                    ): ?>
+                                        <a href="/forms/<?= rawurlencode($sub['form_slug']) ?>" class="btn btn-warning btn-sm" title="Επεξεργασία και Υποβολή Προσχεδίου">
+                                            <i class="fa-solid fa-pen-to-square me-1" aria-hidden="true"></i> Επεξεργασία
+                                        </a>
+                                    <?php endif; ?>
 
                                     <?php if ($sub['status'] !== 'draft'): ?>
                                         <form action="/admin/submissions/<?= $sub['uuid'] ?>/return-to-draft" method="POST" class="js-confirm-action d-inline" data-confirm-title="Επιστροφή σε Πρόχειρο" data-confirm-message="Η υποβολή θα επιστραφεί στον χρήστη ως Πρόχειρο (Draft) και θα μπορεί να την τροποποιήσει. Θέλετε να συνεχίσετε;" data-confirm-button="Επιστροφή" data-confirm-variant="warning">

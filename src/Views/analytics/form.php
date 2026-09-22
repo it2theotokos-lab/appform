@@ -109,7 +109,7 @@
         <div class="col-md-6">
             <div class="glass-panel p-4 h-100">
                 <h6 class="text-white font-heading mb-3 border-bottom border-glass pb-2">
-                    <?= htmlspecialchars($key) ?> (<?= strtoupper($analysis['type']) ?>)
+                    <?= htmlspecialchars($analysis['label'] ?? $key) ?> (<?= strtoupper($analysis['type']) ?>)
                 </h6>
 
                 <?php if ($analysis['type'] === 'number'): ?>

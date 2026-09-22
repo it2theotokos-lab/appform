@@ -103,7 +103,7 @@ if ($roleSlug === 'administrator') {
             ]
         ],
     ];
-} else {
+} elseif ($roleSlug === 'user') {
     // Regular user
     $menuSections = [
         [
@@ -122,6 +122,73 @@ if ($roleSlug === 'administrator') {
                 ['label' => __('My Draft Documents'),     'route' => '/documents/drafts',    'icon' => 'fa-solid fa-file-pen'],
                 ['label' => __('My Submitted Documents'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open'],
                 ['label' => __('Approval Tasks'),         'route' => '/workflow/tasks',       'icon' => 'fa-solid fa-square-check'],
+            ]
+        ],
+    ];
+} else {
+    // Custom roles: build the sidebar from assigned permissions.
+    // No custom role slug is hardcoded here.
+    $menuSections = [
+        [
+            'title' => __('General'),
+            'items' => [
+                ['label' => __('Dashboard'), 'route' => '/dashboard', 'icon' => 'fa-solid fa-gauge-high', 'permission' => 'dashboard.view'],
+            ]
+        ],
+        [
+            'title' => __('Administration'),
+            'items' => [
+                ['label' => __('Users'), 'route' => '/admin/users', 'icon' => 'fa-solid fa-users', 'permission' => 'users.view'],
+                ['label' => __('Roles'), 'route' => '/admin/roles', 'icon' => 'fa-solid fa-user-shield', 'permission' => 'roles.manage'],
+                ['label' => __('Repositories'), 'route' => '/admin/repositories', 'icon' => 'fa-solid fa-database', 'permission' => 'repositories.manage'],
+            ]
+        ],
+        [
+            'title' => __('Forms'),
+            'items' => [
+                ['label' => __('Form Builder'), 'route' => '/admin/forms', 'icon' => 'fa-solid fa-wpforms', 'permission' => 'forms.manage'],
+                ['label' => __('PDF Form Designer'), 'route' => '/admin/pdf-designer', 'icon' => 'fa-solid fa-file-pdf', 'permission' => 'forms.manage'],
+                ['label' => __('Document Templates'), 'route' => '/admin/document-templates', 'icon' => 'fa-solid fa-file-pdf', 'permission' => 'document_templates.view'],
+                ['label' => __('Workflow Design'), 'route' => '/admin/workflows', 'icon' => 'fa-solid fa-diagram-project', 'permission' => 'workflows.view'],
+                ['label' => __('Navigation'), 'route' => '/admin/menus', 'icon' => 'fa-solid fa-bars', 'permission' => 'menus.manage'],
+            ]
+        ],
+        [
+            'title' => __('Workflow'),
+            'items' => [
+                [
+                    'label' => __('Submissions'),
+                    'route' => '/admin/submissions',
+                    'icon' => 'fa-solid fa-envelope-open-text',
+                    'permissions_any' => ['submissions.review', 'submissions.view.all', 'submissions.view.subordinates'],
+                ],
+                ['label' => __('My Form Submissions'), 'route' => '/my-submissions', 'icon' => 'fa-solid fa-receipt', 'permission' => 'submissions.view.own'],
+                ['label' => __('Notifications'), 'route' => '/notifications', 'icon' => 'fa-solid fa-bell', 'badge' => $unreadCount],
+            ]
+        ],
+        [
+            'title' => __('Reports'),
+            'items' => [
+                ['label' => __('Analytics'), 'route' => '/admin/analytics', 'icon' => 'fa-solid fa-chart-line', 'permission' => 'analytics.view'],
+                ['label' => __('Imports/Exports'), 'route' => '/admin/data-exchange', 'icon' => 'fa-solid fa-arrow-right-arrow-left', 'permission' => 'data_exchange.view'],
+                ['label' => __('Audit Logs'), 'route' => '/admin/audit', 'icon' => 'fa-solid fa-clock-rotate-left', 'permission' => 'audit.view'],
+            ]
+        ],
+        [
+            'title' => __('System'),
+            'items' => [
+                ['label' => __('Settings'), 'route' => '/admin/settings', 'icon' => 'fa-solid fa-gears', 'permission' => 'settings.manage'],
+                ['label' => __('System Health'), 'route' => '/admin/health', 'icon' => 'fa-solid fa-heart-pulse', 'permission' => 'settings.view'],
+            ]
+        ],
+        [
+            'title' => __('Documents'),
+            'items' => [
+                ['label' => __('Files'), 'route' => '/admin/files', 'icon' => 'fa-solid fa-folder-closed', 'permission' => 'document_templates.view'],
+                ['label' => __('New Document'), 'route' => '/documents/templates', 'icon' => 'fa-solid fa-file-signature', 'permission' => 'document_templates.view'],
+                ['label' => __('My Drafts'), 'route' => '/documents/drafts', 'icon' => 'fa-solid fa-file-pen', 'permission' => 'document_templates.view'],
+                ['label' => __('My Submissions'), 'route' => '/documents/submissions', 'icon' => 'fa-solid fa-folder-open', 'permission' => 'document_templates.view'],
+                ['label' => __('Approval Tasks'), 'route' => '/workflow/tasks', 'icon' => 'fa-solid fa-square-check', 'permission' => 'workflow_tasks.view_all'],
             ]
         ],
     ];
@@ -206,6 +273,22 @@ if (!function_exists('hasActiveChild')) {
         return false;
     }
 }
+
+// Permission visibility helper used by custom-role menu entries.
+if (!function_exists('canViewSidebarItem')) {
+    function canViewSidebarItem(array $item): bool {
+        if (!empty($item['permission']) && !\App\Core\Auth::hasPermission($item['permission'])) {
+            return false;
+        }
+        if (!empty($item['permissions_any']) && is_array($item['permissions_any'])) {
+            foreach ($item['permissions_any'] as $permission) {
+                if (\App\Core\Auth::hasPermission($permission)) return true;
+            }
+            return false;
+        }
+        return true;
+    }
+}
 ?>
 
 <aside class="sidebar" id="app-sidebar" role="navigation" aria-label="<?= __('Main menu') ?>">
@@ -243,12 +326,16 @@ if (!function_exists('hasActiveChild')) {
     <!-- Nav Sections -->
     <div class="sidebar-body">
         <?php foreach ($menuSections as $section): ?>
+            <?php
+            $visibleSectionItems = array_values(array_filter($section['items'], 'canViewSidebarItem'));
+            if (empty($visibleSectionItems)) continue;
+            ?>
             <div class="sidebar-section">
                 <div class="sidebar-section-title" aria-hidden="true"><?= htmlspecialchars($section['title']) ?></div>
                 <ul class="nav-menu" role="list">
                     <?php 
                     $renderMenuItem = function($item, $depth = 0) use (&$renderMenuItem, $currentUri) {
-                        if (isset($item['permission']) && !\App\Core\Auth::hasPermission($item['permission'])) return;
+                        if (!canViewSidebarItem($item)) return;
                         
                         $hasChildren = !empty($item['children']);
                         $active = isActive($item['route'] ?? '', $currentUri);
@@ -256,9 +343,7 @@ if (!function_exists('hasActiveChild')) {
                         
                         // Skip empty parent with no visible children and no valid route
                         if ($hasChildren) {
-                            $visibleChildren = array_filter($item['children'], function($c) {
-                                return !isset($c['permission']) || \App\Core\Auth::hasPermission($c['permission']);
-                            });
+                            $visibleChildren = array_filter($item['children'], 'canViewSidebarItem');
                             if (empty($visibleChildren) && ($item['route'] === '#' || empty($item['route']))) return;
                         }
 
@@ -302,7 +387,7 @@ if (!function_exists('hasActiveChild')) {
                     <?php 
                     };
 
-                    foreach ($section['items'] as $item) {
+                    foreach ($visibleSectionItems as $item) {
                         $renderMenuItem($item, 0);
                     }
                     ?>

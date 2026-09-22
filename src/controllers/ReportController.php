@@ -11,7 +11,8 @@ use PDO;
 
 class ReportController extends Controller {
     public function analyticsIndex() {
-        $forms = Form::getAll();
+        $db = Database::getInstance();
+        $forms = $db->query("SELECT * FROM forms WHERE status = 'published' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
         View::render('analytics/index', [
             'title' => 'Στατιστικά & Analytics',
             'forms' => $forms
@@ -41,6 +42,7 @@ class ReportController extends Controller {
                     foreach ($sec['fields'] as $f) {
                         if (in_array($f['type'], ['select', 'radio', 'checkbox', 'number', 'yes_no', 'rating'])) {
                             $fieldsAnalysis[$f['key']] = AnalyticsService::getFieldAnalysis($formId, $f['key'], $f);
+                            $fieldsAnalysis[$f['key']]['label'] = $f['label'] ?? $f['key'];
                         }
                     }
                 }
@@ -109,6 +111,7 @@ class ReportController extends Controller {
                     foreach ($sec['fields'] as $f) {
                         if (in_array($f['type'], ['select', 'radio', 'checkbox', 'number', 'yes_no', 'rating'])) {
                             $fieldsAnalysis[$f['key']] = AnalyticsService::getFieldAnalysis($formId, $f['key'], $f);
+                            $fieldsAnalysis[$f['key']]['label'] = $f['label'] ?? $f['key'];
                         }
                     }
                 }
@@ -254,7 +257,7 @@ class ReportController extends Controller {
         if (!empty($form['survey_analytics']) && !empty($form['survey_charts_pdf'])) {
             foreach ($fieldsAnalysis as $key => $analysis) {
                 $html .= '<div style="margin-bottom: 15px; page-break-inside: avoid;">
-                    <div style="font-weight: bold; margin-bottom: 5px;">' . htmlspecialchars($key) . ' (' . strtoupper($analysis['type']) . ')</div>';
+                    <div style="font-weight: bold; margin-bottom: 5px;">' . htmlspecialchars($analysis['label'] ?? $key) . ' (' . strtoupper($analysis['type']) . ')</div>';
                 
                 if ($analysis['type'] === 'number') {
                     $html .= '<table class="data-table" style="width: 50%;">

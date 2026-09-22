@@ -689,7 +689,7 @@ class SubmissionController extends Controller {
         }
 
         $sql = "
-            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title, u.username 
+            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title, f.slug as form_slug, u.username
             FROM form_submissions s 
             LEFT JOIN forms f ON s.form_id = f.id 
             JOIN users u ON s.user_id = u.id 

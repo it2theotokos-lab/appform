@@ -79,6 +79,13 @@ class FormNotificationTriggerService {
                 // 4. Resolve template smart tags in subject and body templates
                 $subject = self::replaceSmartTags($rule['subject_template'], $submissionDetails, $answers);
                 $body = self::replaceSmartTags($rule['body_template'], $submissionDetails, $answers);
+                if (str_contains($body, '{all_fields}')) {
+                    $body = str_replace(
+                        '{all_fields}',
+                        NotificationTemplateService::renderSubmittedFields($answers, $schema, $fieldsMap),
+                        $body
+                    );
+                }
 
                 // 5. Send emails to resolved recipient addresses & create internal notifications
                 foreach ($recipients as $recipientEmail) {

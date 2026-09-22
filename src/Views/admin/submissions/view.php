@@ -29,16 +29,25 @@ if ($hasDesign):
             <h5 class="font-heading mb-4 text-white"><?= __('Submission Values') ?></h5>
 
             <?php foreach ($schema['sections'] as $sec): ?>
+                <?php
+                $submittedFields = array_values(array_filter($sec['fields'] ?? [], function ($field) use ($answers) {
+                    if (in_array($field['type'] ?? '', ['heading', 'divider', 'page_break', 'html'], true)) return false;
+                    $key = $field['key'] ?? '';
+                    return $key !== ''
+                        && array_key_exists($key, $answers)
+                        && \App\Services\NotificationTemplateService::hasMeaningfulValue($answers[$key]);
+                }));
+                if (empty($submittedFields)) continue;
+                ?>
                 <div class="mb-4 border-bottom border-glass pb-3">
                     <h6 class="text-info font-heading mb-3"><?= \App\Core\View::escape($sec['title']) ?></h6>
                     
                     <?php if (isset($sec['fields'])): ?>
-                        <?php foreach ($sec['fields'] as $f): ?>
-                            <?php if (in_array($f['type'], ['heading', 'divider'])) continue; ?>
+                        <?php foreach ($submittedFields as $f): ?>
                             
                             <div class="mb-3">
                                 <label class="text-muted small d-block"><?= \App\Core\View::escape($f['label']) ?></label>
-                                <div class="text-white fw-bold" style="overflow-wrap: anywhere; word-break: break-word; white-space: pre-wrap; max-width: 100%;">
+                                <div class="text-white fw-bold" style="overflow-wrap: anywhere; word-break: break-word; white-space: pre-line; max-width: 100%;">
                                     <?php 
                                     $ans = $answers[$f['key']] ?? null;
                                     if ($f['type'] === 'file' && !empty($ans)):
@@ -83,7 +92,7 @@ if ($hasDesign):
                                     <?php elseif ($f['type'] === 'consent'): ?>
                                         <span><?= $ans ? __('Yes (Consent given)') : __('No') ?></span>
                                     <?php else: ?>
-                                        <?= is_array($ans) ? \App\Core\View::escape(json_encode($ans, JSON_UNESCAPED_UNICODE)) : \App\Core\View::escape($ans ?? '—') ?>
+                                        <?= \App\Core\View::escape(\App\Services\NotificationTemplateService::formatSubmittedValue($ans, $f)) ?>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -99,6 +108,19 @@ if ($hasDesign):
         <!-- Current status card -->
         <div class="glass-panel p-4 mb-4">
             <h5 class="font-heading mb-3 text-white"><?= __('Status') ?>: <?= strtoupper($submission['status']) ?></h5>
+
+            <?php if (
+                $submission['status'] === 'draft'
+                && (int)$submission['user_id'] === (int)\App\Core\Auth::id()
+                && !empty($submission['form_slug'])
+            ): ?>
+                <a href="/forms/<?= rawurlencode($submission['form_slug']) ?>" class="btn btn-warning w-100">
+                    <i class="fa-solid fa-pen-to-square me-2"></i> Επεξεργασία και Υποβολή Προσχεδίου
+                </a>
+                <div class="text-muted small mt-2">
+                    Το προσχέδιο θα ανοίξει με τα αποθηκευμένα στοιχεία του.
+                </div>
+            <?php endif; ?>
             
             <?php if ($submission['status'] === 'submitted'): ?>
                 <form action="/admin/submissions/<?= $submission['uuid'] ?>/start-review" method="POST">
@@ -165,4 +187,3 @@ function submitReview(event, actionUrl) {
     form.action = actionUrl;
 }
 </script>
-

@@ -266,6 +266,7 @@ $router->get('/my-submissions/{uuid}/files/{fileId}/download', [\App\Controllers
 
 // Admin Submissions Reviews
 $router->get('/admin/submissions', [\App\Controllers\SubmissionController::class, 'listSubmissions'], ['auth']);
+$router->get('/admin/submissions/export/{format}', [\App\Controllers\ExportController::class, 'exportFilteredSubmissions'], ['auth', 'permission:submissions.review']);
 $router->get('/admin/submissions/{uuid}', [\App\Controllers\SubmissionController::class, 'showReview'], ['auth', 'permission:submissions.review']);
 $router->post('/admin/submissions/{uuid}/start-review', [\App\Controllers\SubmissionController::class, 'startReview'], ['auth', 'permission:submissions.review']);
 $router->post('/admin/submissions/{uuid}/approve', [\App\Controllers\SubmissionController::class, 'approve'], ['auth', 'permission:submissions.review']);
