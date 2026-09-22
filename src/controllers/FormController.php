@@ -216,7 +216,7 @@ class FormController extends Controller {
                 UPDATE forms 
                 SET title = ?, slug = ?, description = ?, is_active = ?, allow_drafts = ?,
                     form_mode = ?, submission_access_mode = ?, is_anonymous = ?, survey_analytics = ?, survey_charts_pdf = ?,
-                    submission_starts_at = ?, submission_expires_at = ?, expiration_message = ?, single_submission_enabled = ?,
+                    submission_starts_at = ?, submission_expires_at = ?, expiration_message = ?, single_submission_enabled = ?, daily_submission_enabled = ?,
                     maximum_submissions = ?, capacity_closed_message = ?,
                     is_public = ?, require_terms_acceptance = ?, terms_link_label = ?, terms_checkbox_label = ?, terms_content = ?
                 WHERE id = ?
@@ -236,6 +236,7 @@ class FormController extends Controller {
                 $expiresAt,
                 $data['expiration_message'] ?? null,
                 isset($data['single_submission_enabled']) ? 1 : 0,
+                isset($data['daily_submission_enabled']) ? 1 : 0,
                 $maxSub,
                 $data['capacity_closed_message'] ?? null,
                 isset($data['is_public']) ? 1 : 0,
@@ -523,10 +524,10 @@ class FormController extends Controller {
                 INSERT INTO forms (title, slug, description, current_version, status, is_active, allow_drafts,
                                   form_mode, is_anonymous, survey_analytics, survey_charts_pdf,
                                   submission_starts_at, submission_expires_at, expiration_message,
-                                  single_submission_enabled, maximum_submissions, capacity_closed_message,
+                                  single_submission_enabled, daily_submission_enabled, maximum_submissions, capacity_closed_message,
                                   is_public, require_terms_acceptance, terms_link_label, terms_checkbox_label, terms_content,
                                   public_token, created_by)
-                VALUES (?, ?, ?, 1, 'draft', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
+                VALUES (?, ?, ?, 1, 'draft', 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)
             ");
             $ins->execute([
                 $form['title'] . ' (Αντίγραφο)',
@@ -541,6 +542,7 @@ class FormController extends Controller {
                 $form['submission_expires_at'] ?? null,
                 $form['expiration_message'] ?? null,
                 $form['single_submission_enabled'] ?? 0,
+                $form['daily_submission_enabled'] ?? 0,
                 $form['maximum_submissions'] ?? null,
                 $form['capacity_closed_message'] ?? null,
                 $form['is_public'] ?? 0,
@@ -666,6 +668,23 @@ class FormController extends Controller {
             if ($statusCheck !== 'available') {
                 http_response_code(403);
                 $greekMsg = \App\Services\FormAvailabilityService::getGreekMessage($statusCheck, $form);
+                if ($statusCheck === 'already_submitted_today') {
+                    $todaySubmission = \App\Services\FormAvailabilityService::getTodaySubmission((int)$form['id'], (int)Auth::id());
+                    $pendingRequest = null;
+                    if ($todaySubmission) {
+                        $pendingStmt = $db->prepare("SELECT * FROM submission_correction_requests WHERE submission_id = ? AND status = 'pending' ORDER BY id DESC LIMIT 1");
+                        $pendingStmt->execute([$todaySubmission['id']]);
+                        $pendingRequest = $pendingStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+                    }
+                    View::render('forms/submission-limited', [
+                        'title' => 'Ημερήσιος περιορισμός υποβολής',
+                        'message' => $greekMsg,
+                        'form' => $form,
+                        'submission' => $todaySubmission,
+                        'pendingRequest' => $pendingRequest,
+                    ], $layout);
+                    exit;
+                }
                 if ($layout === 'public') {
                     // Render error inside standalone public layout cleanly
                     View::render('errors/public_error', [

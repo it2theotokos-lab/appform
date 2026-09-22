@@ -84,7 +84,7 @@ if ($hasDesign):
             </div>
 
             <?php if (
-                $submission['status'] === 'draft'
+                in_array($submission['status'], ['draft', 'returned'], true)
                 && (int)$submission['user_id'] === (int)\App\Core\Auth::id()
                 && !empty($submission['form_slug'])
             ): ?>
@@ -97,6 +97,21 @@ if ($hasDesign):
                 <div class="mb-4 p-3 bg-dark bg-opacity-50 rounded border border-glass">
                     <small class="text-muted d-block mb-1"><?= __('Review Notes') ?>:</small>
                     <p class="mb-0 text-white"><?= \App\Core\View::escape($submission['review_notes']) ?></p>
+                </div>
+            <?php endif; ?>
+
+            <?php if (!empty($dailySubmissionEnabled) && in_array($submission['status'], ['submitted', 'under_review', 'approved', 'rejected'], true)): ?>
+                <div class="mb-4 p-3 rounded border border-warning bg-warning bg-opacity-10">
+                    <h6 class="text-warning"><i class="fa-solid fa-pen-to-square me-2"></i>Αίτημα διόρθωσης</h6>
+                    <?php if (($correctionRequest['status'] ?? '') === 'pending'): ?>
+                        <p class="small text-white mb-0">Το αίτημα έχει σταλεί και αναμένει απόφαση reviewer.</p>
+                    <?php else: ?>
+                        <form action="/my-submissions/<?= rawurlencode($submission['uuid']) ?>/correction-request" method="POST">
+                            <?= \App\Core\Csrf::field() ?>
+                            <textarea name="reason" class="form-control mb-2" rows="3" required maxlength="2000" placeholder="Τι χρειάζεται να διορθωθεί;"></textarea>
+                            <button type="submit" class="btn btn-warning btn-sm w-100">Αποστολή αιτήματος στον reviewer</button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             <?php endif; ?>
 

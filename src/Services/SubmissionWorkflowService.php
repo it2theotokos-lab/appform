@@ -12,8 +12,8 @@ class SubmissionWorkflowService {
         'submitted' => ['under_review', 'approved', 'rejected', 'returned', 'draft', 'cancelled'],
         'under_review' => ['approved', 'rejected', 'returned', 'draft', 'cancelled'],
         'returned' => ['submitted', 'draft', 'cancelled'],
-        'approved' => ['draft'],
-        'rejected' => ['draft'],
+        'approved' => ['returned', 'draft'],
+        'rejected' => ['returned', 'draft'],
         'cancelled' => ['draft']
     ];
 

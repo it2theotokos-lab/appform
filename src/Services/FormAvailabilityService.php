@@ -60,6 +60,21 @@ class FormAvailabilityService {
             }
         }
 
+        // One completed submission per user, per form, per calendar day.
+        // Returned submissions are excluded so an approved correction can be edited.
+        if ($userId && !empty($form['daily_submission_enabled'])) {
+            $stmtCheck = $db->prepare("
+                SELECT COUNT(*) FROM form_submissions
+                WHERE form_id = ? AND user_id = ?
+                  AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+                  AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
+            ");
+            $stmtCheck->execute([$form['id'], $userId]);
+            if ((int)$stmtCheck->fetchColumn() > 0) {
+                return 'already_submitted_today';
+            }
+        }
+
         return 'available';
     }
 
@@ -75,8 +90,25 @@ class FormAvailabilityService {
                 return trim($form['capacity_closed_message'] ?? '') !== '' ? $form['capacity_closed_message'] : 'Η έρευνα έχει ολοκληρωθεί, καθώς συμπληρώθηκε ο απαιτούμενος αριθμός συμμετοχών.';
             case 'already_submitted':
                 return 'Έχετε ήδη υποβάλει αυτή τη φόρμα και δεν επιτρέπεται δεύτερη υποβολή.';
+            case 'already_submitted_today':
+                return 'Έχετε ήδη υποβάλει αυτή τη φόρμα σήμερα. Μπορείτε να ζητήσετε διόρθωση της υπάρχουσας υποβολής από τον reviewer.';
             default:
                 return 'Διαθέσιμη';
         }
+    }
+
+    public static function getTodaySubmission(int $formId, int $userId): ?array {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT * FROM form_submissions
+            WHERE form_id = ? AND user_id = ?
+              AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+              AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
+            ORDER BY COALESCE(submitted_at, created_at) DESC, id DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$formId, $userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ?: null;
     }
 }

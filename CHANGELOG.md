@@ -148,3 +148,11 @@ All notable changes to **AppForm** will be documented in this file.
 - Aligned submission status storage with all reviewing workflow transitions, including return for corrections and cancellation.
 - Allowed users with `submissions.review` permission to use the existing return-to-draft review action.
 - Displayed the responsible user for every submission status-history entry in both reviewer and submitter views.
+## [1.1.47] - 2026-09-22
+
+### Added
+- Optional one-submission-per-user-per-calendar-day restriction for each form.
+- User correction requests with reviewer approval/rejection, internal notifications and complete status-history tracking.
+
+### Changed
+- Approved correction requests reopen the existing submission instead of creating a duplicate submission.

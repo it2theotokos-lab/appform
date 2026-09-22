@@ -164,6 +164,30 @@ class SubmissionController extends Controller {
                 }
             }
 
+            // Enforce the per-user daily limit again while the form row is locked.
+            if ($status === 'submitted' && $userId && !empty($formLocked['daily_submission_enabled'])) {
+                $stmtDaily = $db->prepare("
+                    SELECT COUNT(*) FROM form_submissions
+                    WHERE form_id = ? AND user_id = ?
+                      AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+                      AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
+                ");
+                $stmtDaily->execute([$form['id'], $userId]);
+                if ((int)$stmtDaily->fetchColumn() > 0) {
+                    $db->rollBack();
+                    $msg = 'Έχετε ήδη υποβάλει αυτή τη φόρμα σήμερα. Μπορείτε να ζητήσετε διόρθωση της υπάρχουσας υποβολής από τον reviewer.';
+                    if ($isAjax) {
+                        http_response_code(409);
+                        header('Content-Type: application/json');
+                        echo json_encode(['success' => false, 'message' => $msg]);
+                        exit;
+                    }
+                    Session::flash('error', $msg);
+                    $this->redirect('/forms/' . $slug);
+                    return;
+                }
+            }
+
             $existingUuid = trim($data['submission_uuid'] ?? '');
             $existingSub = null;
             if ($existingUuid !== '') {
@@ -284,13 +308,15 @@ class SubmissionController extends Controller {
             if ($existingSub) {
                 $updSub = $db->prepare("
                     UPDATE form_submissions 
-                    SET user_id = ?, data_json = ?, status = ?, submitted_at = COALESCE(submitted_at, ?),
+                    SET user_id = ?, data_json = ?, status = ?,
+                        submitted_at = CASE WHEN ? = 'submitted' THEN ? ELSE submitted_at END,
                         terms_accepted_at = ?, terms_version_hash = ?
                     WHERE id = ?
                 ");
                 $updSub->execute([
                     $storeUserId,
                     json_encode($answers, JSON_UNESCAPED_UNICODE),
+                    $status,
                     $status,
                     $submittedAt,
                     $termsAcceptedAt,
@@ -537,6 +563,10 @@ class SubmissionController extends Controller {
         $schema = json_decode($submission['schema_json'], true);
         $files = SubmissionFile::getFilesBySubmissionId($submission['id']);
         $history = SubmissionStatusHistory::getHistoryBySubmissionId($submission['id']);
+        $requestStmt = Database::getInstance()->prepare("SELECT * FROM submission_correction_requests WHERE submission_id = ? ORDER BY id DESC LIMIT 1");
+        $requestStmt->execute([$submission['id']]);
+        $correctionRequest = $requestStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $formSettings = Form::findById((int)$submission['form_id']);
 
         View::render('portal/submission-view', [
             'title' => 'Στοιχεία Υποβολής #' . $submission['id'],
@@ -545,6 +575,8 @@ class SubmissionController extends Controller {
             'answers' => $answers,
             'files' => $files,
             'history' => $history
+            ,'correctionRequest' => $correctionRequest
+            ,'dailySubmissionEnabled' => !empty($formSettings['daily_submission_enabled'])
         ]);
     }
 
@@ -588,6 +620,137 @@ class SubmissionController extends Controller {
         header('Content-Length: ' . $file['file_size']);
         readfile($file['storage_path']);
         exit;
+    }
+
+    public function requestCorrection($params) {
+        $this->checkCsrf();
+        $uuid = (string)$params['uuid'];
+        $reason = trim((string)($_POST['reason'] ?? ''));
+        $submission = Submission::getDetailsByUuid($uuid);
+
+        if (!$submission || (int)$submission['user_id'] !== (int)Auth::id()) {
+            http_response_code($submission ? 403 : 404);
+            View::render($submission ? 'errors/403' : 'errors/404');
+            return;
+        }
+        $form = Form::findById((int)$submission['form_id']);
+        if (empty($form['daily_submission_enabled'])) {
+            Session::flash('error', 'Η δυνατότητα αιτήματος διόρθωσης δεν είναι ενεργή για αυτή τη φόρμα.');
+            $this->redirect('/my-submissions/' . rawurlencode($uuid));
+            return;
+        }
+        if ($reason === '') {
+            Session::flash('error', 'Ο λόγος του αιτήματος διόρθωσης είναι υποχρεωτικός.');
+            $this->redirect('/my-submissions/' . rawurlencode($uuid));
+            return;
+        }
+        if (!in_array($submission['status'], ['submitted', 'under_review', 'approved', 'rejected'], true)) {
+            Session::flash('error', 'Η συγκεκριμένη υποβολή είναι ήδη διαθέσιμη για επεξεργασία ή δεν δέχεται αίτημα διόρθωσης.');
+            $this->redirect('/my-submissions/' . rawurlencode($uuid));
+            return;
+        }
+
+        $db = Database::getInstance();
+        $db->beginTransaction();
+        try {
+            $pending = $db->prepare("SELECT id FROM submission_correction_requests WHERE submission_id = ? AND status = 'pending' FOR UPDATE");
+            $pending->execute([$submission['id']]);
+            if ($pending->fetch()) {
+                throw new Exception('Υπάρχει ήδη ενεργό αίτημα διόρθωσης για αυτή την υποβολή.');
+            }
+            $insert = $db->prepare("INSERT INTO submission_correction_requests (submission_id, requested_by, reason) VALUES (?, ?, ?)");
+            $insert->execute([$submission['id'], Auth::id(), $reason]);
+            $history = $db->prepare("INSERT INTO submission_status_history (submission_id, old_status, new_status, notes, changed_by) VALUES (?, ?, ?, ?, ?)");
+            $history->execute([$submission['id'], $submission['status'], $submission['status'], 'Αίτημα διόρθωσης: ' . $reason, Auth::id()]);
+            $db->commit();
+
+            $this->notifyCorrectionReviewers($submission, $reason);
+            Session::flash('success', 'Το αίτημα διόρθωσης στάλθηκε στους reviewers.');
+        } catch (Exception $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            Session::flash('error', $e->getMessage());
+        }
+        $this->redirect('/my-submissions/' . rawurlencode($uuid));
+    }
+
+    public function approveCorrectionRequest($params) {
+        $this->decideCorrectionRequest($params, 'approved');
+    }
+
+    public function rejectCorrectionRequest($params) {
+        $this->decideCorrectionRequest($params, 'rejected');
+    }
+
+    private function decideCorrectionRequest(array $params, string $decision): void {
+        $this->checkCsrf();
+        $uuid = (string)$params['uuid'];
+        $requestId = (int)$params['requestId'];
+        $reviewerNotes = trim((string)($_POST['reviewer_notes'] ?? ''));
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT cr.*, s.uuid, s.id AS submission_id, s.status AS submission_status, s.user_id, f.title AS form_title
+            FROM submission_correction_requests cr
+            JOIN form_submissions s ON s.id = cr.submission_id
+            JOIN forms f ON f.id = s.form_id
+            WHERE cr.id = ? AND s.uuid = ?
+        ");
+        $stmt->execute([$requestId, $uuid]);
+        $request = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$request || $request['status'] !== 'pending') {
+            Session::flash('error', 'Το αίτημα δεν βρέθηκε ή έχει ήδη απαντηθεί.');
+            $this->redirect('/admin/submissions/' . rawurlencode($uuid));
+            return;
+        }
+
+        try {
+            if ($decision === 'approved') {
+                $note = 'Αίτημα διόρθωσης εγκρίθηκε' . ($reviewerNotes !== '' ? ': ' . $reviewerNotes : '.');
+                SubmissionWorkflowService::changeStatus($uuid, 'returned', $note);
+            } else {
+                $db->beginTransaction();
+                $note = 'Αίτημα διόρθωσης απορρίφθηκε' . ($reviewerNotes !== '' ? ': ' . $reviewerNotes : '.');
+                $history = $db->prepare("INSERT INTO submission_status_history (submission_id, old_status, new_status, notes, changed_by) VALUES (?, ?, ?, ?, ?)");
+                $history->execute([$request['submission_id'], $request['submission_status'], $request['submission_status'], $note, Auth::id()]);
+                $db->commit();
+            }
+
+            $update = $db->prepare("UPDATE submission_correction_requests SET status = ?, reviewed_by = ?, reviewer_notes = ?, reviewed_at = NOW() WHERE id = ? AND status = 'pending'");
+            $update->execute([$decision, Auth::id(), $reviewerNotes, $requestId]);
+            \App\Services\NotificationService::notify(
+                (int)$request['user_id'],
+                'correction_request_' . $decision,
+                $decision === 'approved' ? 'Εγκρίθηκε το αίτημα διόρθωσης' : 'Απορρίφθηκε το αίτημα διόρθωσης',
+                'Η απόφαση αφορά τη φόρμα «' . $request['form_title'] . '».' . ($reviewerNotes !== '' ? ' Σχόλιο: ' . $reviewerNotes : ''),
+                '/my-submissions/' . rawurlencode($uuid)
+            );
+            Session::flash('success', $decision === 'approved' ? 'Το αίτημα εγκρίθηκε και η υποβολή άνοιξε για διόρθωση.' : 'Το αίτημα διόρθωσης απορρίφθηκε.');
+        } catch (Exception $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            Session::flash('error', $e->getMessage());
+        }
+        $this->redirect('/admin/submissions/' . rawurlencode($uuid));
+    }
+
+    private function notifyCorrectionReviewers(array $submission, string $reason): void {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("
+            SELECT DISTINCT u.id
+            FROM users u
+            JOIN roles r ON r.id = u.role_id
+            LEFT JOIN role_permissions rp ON rp.role_id = r.id
+            LEFT JOIN permissions p ON p.id = rp.permission_id
+            WHERE u.is_active = 1 AND (r.slug = 'administrator' OR p.slug = 'submissions.review')
+        ");
+        $stmt->execute();
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $reviewerId) {
+            \App\Services\NotificationService::notify(
+                (int)$reviewerId,
+                'correction_request',
+                'Νέο αίτημα διόρθωσης υποβολής',
+                'Υποβολή #' . $submission['id'] . ' στη φόρμα «' . $submission['form_title'] . '». Αιτιολογία: ' . $reason,
+                '/admin/submissions/' . rawurlencode($submission['uuid'])
+            );
+        }
     }
 
     // --- Admin Review workflow actions ---
@@ -757,6 +920,15 @@ class SubmissionController extends Controller {
         $schema = json_decode($submission['schema_json'], true);
         $files = SubmissionFile::getFilesBySubmissionId($submission['id']);
         $history = SubmissionStatusHistory::getHistoryBySubmissionId($submission['id']);
+        $requestStmt = Database::getInstance()->prepare("
+            SELECT cr.*, requester.full_name AS requester_name, reviewer.full_name AS reviewer_name
+            FROM submission_correction_requests cr
+            LEFT JOIN users requester ON requester.id = cr.requested_by
+            LEFT JOIN users reviewer ON reviewer.id = cr.reviewed_by
+            WHERE cr.submission_id = ? ORDER BY cr.id DESC LIMIT 1
+        ");
+        $requestStmt->execute([$submission['id']]);
+        $correctionRequest = $requestStmt->fetch(PDO::FETCH_ASSOC) ?: null;
 
         View::render('admin/submissions/view', [
             'title' => 'Αξιολόγηση Υποβολής #' . $submission['id'],
@@ -765,6 +937,7 @@ class SubmissionController extends Controller {
             'answers' => $answers,
             'files' => $files,
             'history' => $history
+            ,'correctionRequest' => $correctionRequest
         ]);
     }
 

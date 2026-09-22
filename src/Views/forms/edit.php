@@ -97,6 +97,12 @@
             <label class="form-check-label text-muted" for="single_submission_enabled">Allow only one submission per user (Περιορισμός μίας υποβολής ανά χρήστη)</label>
         </div>
 
+        <div class="mb-4 form-check">
+            <input type="checkbox" class="form-check-input" id="daily_submission_enabled" name="daily_submission_enabled" value="1" <?= ($form['daily_submission_enabled'] ?? 0) ? 'checked' : '' ?>>
+            <label class="form-check-label text-muted" for="daily_submission_enabled">Μία υποβολή ανά χρήστη ανά ημέρα</label>
+            <div class="form-text text-muted">Αν ο χρήστης έχει ήδη υποβάλει σήμερα, θα μπορεί να ζητήσει από reviewer να ανοίξει την ίδια υποβολή για διόρθωση.</div>
+        </div>
+
         <div class="mb-3">
             <label for="maximum_submissions" class="form-label text-white">Μέγιστος Αριθμός Ολοκληρωμένων Υποβολών (Maximum Completed Submissions)</label>
             <input type="number" class="form-control" id="maximum_submissions" name="maximum_submissions" min="1" value="<?= $form['maximum_submissions'] ?: '' ?>">

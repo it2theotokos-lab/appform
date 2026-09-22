@@ -80,6 +80,9 @@ class FormAccessService {
             if ($availStatus === 'already_submitted') {
                 return ['allowed' => false, 'reason' => 'Έχετε ήδη υποβάλει αυτή τη φόρμα και δεν επιτρέπεται δεύτερη υποβολή.'];
             }
+            if ($availStatus === 'already_submitted_today') {
+                return ['allowed' => false, 'reason' => 'Έχετε ήδη υποβάλει αυτή τη φόρμα σήμερα.'];
+            }
         }
 
         // 3. Administrator bypass

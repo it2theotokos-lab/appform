@@ -262,6 +262,7 @@ $router->post('/admin/forms/{id}/assignments', [\App\Controllers\FormAssignmentC
 // User Submissions
 $router->get('/my-submissions', [\App\Controllers\SubmissionController::class, 'mySubmissions'], ['auth', 'permission:submissions.view.own']);
 $router->get('/my-submissions/{uuid}', [\App\Controllers\SubmissionController::class, 'viewSubmission'], ['auth', 'permission:submissions.view.own']);
+$router->post('/my-submissions/{uuid}/correction-request', [\App\Controllers\SubmissionController::class, 'requestCorrection'], ['auth', 'permission:submissions.view.own']);
 $router->get('/my-submissions/{uuid}/files/{fileId}/download', [\App\Controllers\SubmissionController::class, 'downloadFile'], ['auth', 'permission:submissions.download.own']);
 
 // Admin Submissions Reviews
@@ -273,6 +274,8 @@ $router->post('/admin/submissions/{uuid}/approve', [\App\Controllers\SubmissionC
 $router->post('/admin/submissions/{uuid}/reject', [\App\Controllers\SubmissionController::class, 'reject'], ['auth', 'permission:submissions.review']);
 $router->post('/admin/submissions/{uuid}/return', [\App\Controllers\SubmissionController::class, 'returnSubmission'], ['auth', 'permission:submissions.review']);
 $router->post('/admin/submissions/{uuid}/return-to-draft', [\App\Controllers\SubmissionController::class, 'returnToDraft'], ['auth', 'permission:submissions.review']);
+$router->post('/admin/submissions/{uuid}/correction-request/{requestId}/approve', [\App\Controllers\SubmissionController::class, 'approveCorrectionRequest'], ['auth', 'permission:submissions.review']);
+$router->post('/admin/submissions/{uuid}/correction-request/{requestId}/reject', [\App\Controllers\SubmissionController::class, 'rejectCorrectionRequest'], ['auth', 'permission:submissions.review']);
 $router->post('/admin/submissions/{uuid}/delete', [\App\Controllers\SubmissionController::class, 'deleteSubmission'], ['auth', 'permission:submissions.delete']);
 
 // Profile Management

@@ -47,6 +47,7 @@ $testFiles = [
     'SubmissionDraftTest.php',
     'SubmissionValidationTest.php',
     'SubmissionWorkflowTest.php',
+    'DailySubmissionCorrectionTest.php',
     'SubmissionOwnershipTest.php',
     'FileUploadValidationTest.php',
     'FileDownloadAuthorizationTest.php',

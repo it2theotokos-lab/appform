@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS forms (
     submission_expires_at DATETIME DEFAULT NULL,
     expiration_message TEXT DEFAULT NULL,
     single_submission_enabled TINYINT(1) DEFAULT 0,
+    daily_submission_enabled TINYINT(1) DEFAULT 0,
     maximum_submissions INT(10) UNSIGNED DEFAULT NULL,
     capacity_closed_message TEXT DEFAULT NULL,
     is_public TINYINT(1) NOT NULL DEFAULT 0,
@@ -164,6 +165,24 @@ CREATE TABLE IF NOT EXISTS submission_files (
     storage_path VARCHAR(255) NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (submission_id) REFERENCES form_submissions(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 9.5. User correction requests for an existing submission
+CREATE TABLE IF NOT EXISTS submission_correction_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id INT NOT NULL,
+    requested_by INT NOT NULL,
+    reason TEXT NOT NULL,
+    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    reviewed_by INT NULL,
+    reviewer_notes TEXT NULL,
+    reviewed_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES form_submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (requested_by) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_correction_submission_status (submission_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 10. Navigation Menus table

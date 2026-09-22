@@ -130,6 +130,26 @@ if ($hasDesign):
             <?php endif; ?>
         </div>
 
+        <?php if (($correctionRequest['status'] ?? '') === 'pending'): ?>
+            <div class="glass-panel p-4 mb-4 border border-warning">
+                <h5 class="font-heading text-warning mb-3"><i class="fa-solid fa-user-pen me-2"></i>Αίτημα διόρθωσης χρήστη</h5>
+                <div class="small text-muted mb-2">Από: <?= \App\Core\View::escape($correctionRequest['requester_name'] ?: $submission['submitter_name']) ?></div>
+                <div class="text-white p-3 bg-dark bg-opacity-25 rounded mb-3" style="white-space: pre-wrap;"><?= \App\Core\View::escape($correctionRequest['reason']) ?></div>
+                <form method="POST">
+                    <?= \App\Core\Csrf::field() ?>
+                    <textarea name="reviewer_notes" class="form-control mb-3" rows="3" maxlength="2000" placeholder="Σχόλιο προς τον χρήστη (προαιρετικό)"></textarea>
+                    <div class="d-flex gap-2">
+                        <button formaction="/admin/submissions/<?= rawurlencode($submission['uuid']) ?>/correction-request/<?= (int)$correctionRequest['id'] ?>/approve" class="btn btn-success flex-fill" type="submit">
+                            <i class="fa-solid fa-check me-1"></i> Έγκριση και άνοιγμα
+                        </button>
+                        <button formaction="/admin/submissions/<?= rawurlencode($submission['uuid']) ?>/correction-request/<?= (int)$correctionRequest['id'] ?>/reject" class="btn btn-danger flex-fill" type="submit">
+                            <i class="fa-solid fa-xmark me-1"></i> Απόρριψη
+                        </button>
+                    </div>
+                </form>
+            </div>
+        <?php endif; ?>
+
         <?php if ($submission['status'] === 'under_review'): ?>
             <div class="glass-panel p-4 mb-4">
                 <h5 class="font-heading mb-4 text-white"><?= __('Make Decision') ?></h5>
