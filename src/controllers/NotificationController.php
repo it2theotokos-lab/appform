@@ -35,13 +35,20 @@ class NotificationController extends Controller {
 
     public function index($params = []) {
         $userId = Auth::id();
-        $notifications = \App\Services\NotificationService::getNotifications($userId);
+        $perPage = 20;
+        $total = \App\Services\NotificationService::getNotificationCount($userId);
+        $totalPages = max(1, (int)ceil($total / $perPage));
+        $page = max(1, min($totalPages, (int)($_GET['page'] ?? 1)));
+        $notifications = \App\Services\NotificationService::getNotifications($userId, $page, $perPage);
         $unreadCount = \App\Services\NotificationService::getUnreadCount($userId);
 
         View::render('notifications/index', [
             'title' => 'Ειδοποιήσεις',
             'notifications' => $notifications,
-            'unreadCount' => $unreadCount
+            'unreadCount' => $unreadCount,
+            'page' => $page,
+            'totalPages' => $totalPages,
+            'totalNotifications' => $total
         ]);
     }
 
@@ -57,6 +64,21 @@ class NotificationController extends Controller {
         $this->checkCsrf();
         $userId = Auth::id();
         \App\Services\NotificationService::markAllAsRead($userId);
+        $this->redirect('/notifications');
+    }
+
+    public function deleteUserNotification($params) {
+        $this->checkCsrf();
+        $id = isset($params['id']) ? (int)$params['id'] : 0;
+        \App\Services\NotificationService::deleteNotification($id, Auth::id());
+        Session::flash('success', 'Η ειδοποίηση διαγράφηκε.');
+        $this->redirect('/notifications?page=' . max(1, (int)($_POST['page'] ?? 1)));
+    }
+
+    public function deleteAllUserNotifications() {
+        $this->checkCsrf();
+        \App\Services\NotificationService::deleteAll(Auth::id());
+        Session::flash('success', 'Οι ειδοποιήσεις σας διαγράφηκαν.');
         $this->redirect('/notifications');
     }
 

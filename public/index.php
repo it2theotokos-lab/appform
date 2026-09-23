@@ -347,6 +347,8 @@ $router->get('/admin/audit', [\App\Controllers\AuditController::class, 'index'],
 $router->get('/notifications', [\App\Controllers\NotificationController::class, 'index'], ['auth']);
 $router->post('/notifications/{id}/read', [\App\Controllers\NotificationController::class, 'read'], ['auth']);
 $router->post('/notifications/read-all', [\App\Controllers\NotificationController::class, 'readAll'], ['auth']);
+$router->post('/notifications/{id}/delete', [\App\Controllers\NotificationController::class, 'deleteUserNotification'], ['auth']);
+$router->post('/notifications/delete-all', [\App\Controllers\NotificationController::class, 'deleteAllUserNotifications'], ['auth']);
 
 // Analytics
 $router->get('/admin/analytics', [\App\Controllers\ReportController::class, 'analyticsIndex'], ['auth', 'permission:analytics.view']);

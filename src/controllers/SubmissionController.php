@@ -54,9 +54,25 @@ class SubmissionController extends Controller {
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') || 
                   (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
         $now = date('Y-m-d H:i:s');
+        $data = Request::all();
 
-        // 1. Enforce availability and restriction constraints (Bypass for admin)
-        if (!$isAdmin) {
+        // A returned draft belongs to its submitter and is allowed to be completed
+        // again. Load it before applying one-submission-per-day availability rules.
+        $existingUuid = trim($data['submission_uuid'] ?? '');
+        $existingSub = null;
+        if ($existingUuid !== '' && $userId) {
+            $db = Database::getInstance();
+            $chkSub = $db->prepare("SELECT * FROM form_submissions WHERE uuid = ? AND user_id = ?");
+            $chkSub->execute([$existingUuid, $userId]);
+            $candidate = $chkSub->fetch(PDO::FETCH_ASSOC);
+            if ($candidate && in_array($candidate['status'], ['draft', 'returned'], true)) {
+                $existingSub = $candidate;
+            }
+        }
+
+        // 1. Enforce availability and restriction constraints (Bypass for admin).
+        // Do not block an existing editable draft with the daily limit.
+        if (!$isAdmin && !$existingSub) {
             $statusCheck = \App\Services\FormAvailabilityService::checkAvailability($form, $userId);
             if ($statusCheck !== 'available') {
                 $greekMsg = \App\Services\FormAvailabilityService::getGreekMessage($statusCheck, $form);
@@ -71,7 +87,6 @@ class SubmissionController extends Controller {
             }
         }
 
-        $data = Request::all();
         $status = $data['status'] ?? 'submitted'; // draft or submitted
 
         // Terms of Use Server-side Validation
@@ -186,14 +201,6 @@ class SubmissionController extends Controller {
                     $this->redirect('/forms/' . $slug);
                     return;
                 }
-            }
-
-            $existingUuid = trim($data['submission_uuid'] ?? '');
-            $existingSub = null;
-            if ($existingUuid !== '') {
-                $chkSub = $db->prepare("SELECT * FROM form_submissions WHERE uuid = ? AND user_id = ?");
-                $chkSub->execute([$existingUuid, $userId]);
-                $existingSub = $chkSub->fetch(PDO::FETCH_ASSOC);
             }
 
             if ($existingSub) {

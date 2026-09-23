@@ -659,11 +659,23 @@ class FormController extends Controller {
         // Try to load any existing draft/returned submission for this user
         $db = Database::getInstance();
 
-        // 1. Enforce availability and restriction constraints (Bypass for admin)
+        // Load a saved draft before enforcing the daily limit. A submission returned
+        // for correction must always be editable by its owner, even when the form
+        // normally permits only one submission per day.
+        $stmtSub = $db->prepare("
+            SELECT * FROM form_submissions
+            WHERE form_id = ? AND user_id = ? AND status IN ('draft', 'returned')
+            ORDER BY updated_at DESC LIMIT 1
+        ");
+        $stmtSub->execute([$form['id'], Auth::id()]);
+        $existingSub = $stmtSub->fetch(PDO::FETCH_ASSOC);
+
+        // 1. Enforce availability and restriction constraints (Bypass for admin).
+        // Existing drafts are intentionally excluded from this check.
         $isAdmin = (Auth::role() === 'administrator');
         $layout = !empty($params['publicLayout']) ? 'public' : 'app';
 
-        if (!$isAdmin) {
+        if (!$isAdmin && !$existingSub) {
             $statusCheck = \App\Services\FormAvailabilityService::checkAvailability($form, Auth::id());
             if ($statusCheck !== 'available') {
                 http_response_code(403);
@@ -696,14 +708,6 @@ class FormController extends Controller {
                 die('<div style="font-family:sans-serif; text-align:center; padding:50px;"><h2>' . htmlspecialchars($greekMsg) . '</h2></div>');
             }
         }
-
-        $stmtSub = $db->prepare("
-            SELECT * FROM form_submissions 
-            WHERE form_id = ? AND user_id = ? AND status IN ('draft', 'returned') 
-            ORDER BY updated_at DESC LIMIT 1
-        ");
-        $stmtSub->execute([$form['id'], Auth::id()]);
-        $existingSub = $stmtSub->fetch(PDO::FETCH_ASSOC);
 
         $answers = [];
         $submissionUuid = '';

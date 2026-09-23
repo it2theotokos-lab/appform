@@ -2,6 +2,15 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.51-Stable] - 2026-09-23
+
+### Fixed
+- **Returned Drafts**: A user's own draft or returned submission now opens for editing and re-submission before the daily-submission restriction is evaluated.
+- **Correction Request Sender**: Existing correction-request notifications are backfilled with the requester, so the reviewer can see who requested the change.
+
+### Added
+- **Notification Inbox Controls**: Every user can delete individual notifications or clear their own inbox. Notifications are displayed 20 per page with previous/next navigation.
+
 ## [1.1.50-Stable] - 2026-09-23
 
 ### Fixed

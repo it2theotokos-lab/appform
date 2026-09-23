@@ -22,17 +22,31 @@ class NotificationService {
         return (int)($row['count'] ?? 0);
     }
 
-    public static function getNotifications(int $userId): array {
+    public static function getNotifications(int $userId, int $page = 1, int $perPage = 20): array {
         $db = Database::getInstance();
+        $page = max(1, $page);
+        $perPage = max(1, min(100, $perPage));
+        $offset = ($page - 1) * $perPage;
         $stmt = $db->prepare("
             SELECT n.*, COALESCE(sender.full_name, sender.username) AS sender_name
             FROM notifications n
             LEFT JOIN users sender ON sender.id = n.sender_user_id
             WHERE n.user_id = ?
-            ORDER BY n.created_at DESC LIMIT 50
+            ORDER BY n.created_at DESC
+            LIMIT :limit OFFSET :offset
         ");
-        $stmt->execute([$userId]);
+        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public static function getNotificationCount(int $userId): int {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("SELECT COUNT(*) FROM notifications WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return (int)$stmt->fetchColumn();
     }
 
     public static function markAsRead(int $notificationId, int $userId): bool {
@@ -44,6 +58,20 @@ class NotificationService {
     public static function markAllAsRead(int $userId): bool {
         $db = Database::getInstance();
         $stmt = $db->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ?");
+        return $stmt->execute([$userId]);
+    }
+
+    /** A user may delete only notifications delivered to that same user. */
+    public static function deleteNotification(int $notificationId, int $userId): bool {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("DELETE FROM notifications WHERE id = ? AND user_id = ?");
+        return $stmt->execute([$notificationId, $userId]);
+    }
+
+    /** Clear a user's own notification inbox; never affects other users. */
+    public static function deleteAll(int $userId): bool {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("DELETE FROM notifications WHERE user_id = ?");
         return $stmt->execute([$userId]);
     }
 }
