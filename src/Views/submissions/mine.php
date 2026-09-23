@@ -17,6 +17,7 @@ $filtersConfig = [
         '' => __('All'),
         'draft' => __('Draft'),
         'submitted' => __('Submitted'),
+        'correction_requested' => __('CORRECTION REQUESTED'),
         'under_review' => __('In Review'),
         'returned' => __('Returned for Correction'),
         'approved' => __('Approved'),
@@ -57,6 +58,7 @@ include __DIR__ . '/../shared/filter_bar.php';
                                 if ($sub['status'] === 'approved') { $badgeClass = 'badge-status-approved'; $statusLabel = __('APPROVED'); }
                                 elseif ($sub['status'] === 'rejected') { $badgeClass = 'badge-status-rejected'; $statusLabel = __('REJECTED'); }
                                 elseif ($sub['status'] === 'under_review') { $badgeClass = 'badge-status-pending'; $statusLabel = __('IN REVIEW'); }
+                                elseif ($sub['status'] === 'correction_requested') { $badgeClass = 'badge-status-pending'; $statusLabel = __('CORRECTION REQUESTED'); }
                                 elseif ($sub['status'] === 'returned') { $badgeClass = 'badge-status-pending'; $statusLabel = __('RETURNED'); }
                                 elseif ($sub['status'] === 'submitted') { $badgeClass = 'badge-status-pending'; $statusLabel = __('SUBMITTED'); }
                                 elseif ($sub['status'] === 'draft') { $badgeClass = 'badge-status-draft'; $statusLabel = __('DRAFT'); }

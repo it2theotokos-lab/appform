@@ -217,7 +217,11 @@ try {
                             $route = $item['route_name'] ?? $item['url'] ?? '#';
                             if ($item['item_type'] === 'form' && !empty($item['form_id'])) {
                                 $fObj = \App\Models\Form::findById((int)$item['form_id']);
-                                if ($fObj && !empty($fObj['slug'])) {
+                                // A menu link must never expose a form that is unavailable to users.
+                                if (!$fObj || empty($fObj['is_active']) || ($fObj['status'] ?? '') !== 'published') {
+                                    continue;
+                                }
+                                if (!empty($fObj['slug'])) {
                                     $route = "/forms/" . $fObj['slug'];
                                 } else {
                                     $route = "/forms/" . $item['form_id'];

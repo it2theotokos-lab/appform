@@ -323,6 +323,7 @@ class Lang {
         'Submission Date'        => ['en' => 'Submission Date',        'el' => 'Ημερομηνία Υποβολής'],
         'You have not made any submissions yet.' => ['en' => 'You have not made any submissions yet.', 'el' => 'Δεν έχετε κάνει καμία υποβολή ακόμα.'],
         'submitted'              => ['en' => 'SUBMITTED',              'el' => 'ΥΠΟΒΛΗΘΗΚΕ'],
+        'correction_requested'   => ['en' => 'CORRECTION REQUESTED',   'el' => 'ΑΙΤΗΜΑ ΔΙΟΡΘΩΣΗΣ'],
         'returned'               => ['en' => 'RETURNED',               'el' => 'ΕΠΙΣΤΡΑΦΗΚΕ'],
         'in_review'              => ['en' => 'IN REVIEW',              'el' => 'ΥΠΟ ΕΠΙΘΕΩΡΗΣΗ'],
         'rejected'               => ['en' => 'REJECTED',               'el' => 'ΑΠΟΡΡΙΦΘΗΚΕ'],

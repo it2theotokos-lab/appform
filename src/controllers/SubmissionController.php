@@ -145,7 +145,7 @@ class SubmissionController extends Controller {
             if ($status === 'submitted' && !empty($formLocked['maximum_submissions'])) {
                 $stmtCount = $db->prepare("
                     SELECT COUNT(*) FROM form_submissions 
-                    WHERE form_id = ? AND status IN ('submitted', 'under_review', 'approved', 'rejected', 'returned')
+                    WHERE form_id = ? AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected', 'returned')
                 ");
                 $stmtCount->execute([$form['id']]);
                 $completedCount = (int)$stmtCount->fetchColumn();
@@ -169,7 +169,7 @@ class SubmissionController extends Controller {
                 $stmtDaily = $db->prepare("
                     SELECT COUNT(*) FROM form_submissions
                     WHERE form_id = ? AND user_id = ?
-                      AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+                      AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected')
                       AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
                 ");
                 $stmtDaily->execute([$form['id'], $userId]);
@@ -658,10 +658,15 @@ class SubmissionController extends Controller {
             if ($pending->fetch()) {
                 throw new Exception('Υπάρχει ήδη ενεργό αίτημα διόρθωσης για αυτή την υποβολή.');
             }
-            $insert = $db->prepare("INSERT INTO submission_correction_requests (submission_id, requested_by, reason) VALUES (?, ?, ?)");
-            $insert->execute([$submission['id'], Auth::id(), $reason]);
+            $insert = $db->prepare("INSERT INTO submission_correction_requests (submission_id, requested_by, original_status, reason) VALUES (?, ?, ?, ?)");
+            $insert->execute([$submission['id'], Auth::id(), $submission['status'], $reason]);
+            $updateStatus = $db->prepare("UPDATE form_submissions SET status = 'correction_requested', reviewed_by = NULL, reviewed_at = NULL WHERE id = ? AND status = ?");
+            $updateStatus->execute([$submission['id'], $submission['status']]);
+            if ($updateStatus->rowCount() !== 1) {
+                throw new Exception('Η κατάσταση της υποβολής άλλαξε. Παρακαλώ δοκιμάστε ξανά.');
+            }
             $history = $db->prepare("INSERT INTO submission_status_history (submission_id, old_status, new_status, notes, changed_by) VALUES (?, ?, ?, ?, ?)");
-            $history->execute([$submission['id'], $submission['status'], $submission['status'], 'Αίτημα διόρθωσης: ' . $reason, Auth::id()]);
+            $history->execute([$submission['id'], $submission['status'], 'correction_requested', 'Αίτημα διόρθωσης: ' . $reason, Auth::id()]);
             $db->commit();
 
             $this->notifyCorrectionReviewers($submission, $reason);
@@ -707,11 +712,9 @@ class SubmissionController extends Controller {
                 $note = 'Αίτημα διόρθωσης εγκρίθηκε' . ($reviewerNotes !== '' ? ': ' . $reviewerNotes : '.');
                 SubmissionWorkflowService::changeStatus($uuid, 'returned', $note);
             } else {
-                $db->beginTransaction();
                 $note = 'Αίτημα διόρθωσης απορρίφθηκε' . ($reviewerNotes !== '' ? ': ' . $reviewerNotes : '.');
-                $history = $db->prepare("INSERT INTO submission_status_history (submission_id, old_status, new_status, notes, changed_by) VALUES (?, ?, ?, ?, ?)");
-                $history->execute([$request['submission_id'], $request['submission_status'], $request['submission_status'], $note, Auth::id()]);
-                $db->commit();
+                $restoreStatus = $request['original_status'] ?? 'submitted';
+                SubmissionWorkflowService::changeStatus($uuid, $restoreStatus, $note);
             }
 
             $update = $db->prepare("UPDATE submission_correction_requests SET status = ?, reviewed_by = ?, reviewer_notes = ?, reviewed_at = NOW() WHERE id = ? AND status = 'pending'");
@@ -734,7 +737,7 @@ class SubmissionController extends Controller {
     private function notifyCorrectionReviewers(array $submission, string $reason): void {
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            SELECT DISTINCT u.id
+            SELECT DISTINCT u.id, u.email, u.full_name
             FROM users u
             JOIN roles r ON r.id = u.role_id
             LEFT JOIN role_permissions rp ON rp.role_id = r.id
@@ -742,7 +745,8 @@ class SubmissionController extends Controller {
             WHERE u.is_active = 1 AND (r.slug = 'administrator' OR p.slug = 'submissions.review')
         ");
         $stmt->execute();
-        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $reviewerId) {
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $reviewer) {
+            $reviewerId = (int)$reviewer['id'];
             \App\Services\NotificationService::notify(
                 (int)$reviewerId,
                 'correction_request',
@@ -750,6 +754,17 @@ class SubmissionController extends Controller {
                 'Υποβολή #' . $submission['id'] . ' στη φόρμα «' . $submission['form_title'] . '». Αιτιολογία: ' . $reason,
                 '/admin/submissions/' . rawurlencode($submission['uuid'])
             );
+            if (!empty($reviewer['email'])) {
+                $subject = 'Νέο αίτημα διόρθωσης υποβολής: ' . $submission['form_title'];
+                $body = "Ο χρήστης ζήτησε διόρθωση για την υποβολή #{$submission['id']} στη φόρμα \"{$submission['form_title']}\".\n\n"
+                    . "Αιτιολογία: {$reason}\n\n"
+                    . 'Δείτε και αποφασίστε εδώ: /admin/submissions/' . $submission['uuid'];
+                try {
+                    \App\Services\EmailService::sendEmail($reviewer['email'], $subject, $body);
+                } catch (\Throwable $emailError) {
+                    // In-app notification and the pending request remain available if SMTP is temporarily unavailable.
+                }
+            }
         }
     }
 
@@ -869,7 +884,7 @@ class SubmissionController extends Controller {
         $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Fetch forms for dropdown filter
-        $forms = $db->query("SELECT id, title FROM forms ORDER BY title ASC")->fetchAll(PDO::FETCH_ASSOC);
+        $forms = $db->query("SELECT id, title FROM forms WHERE is_active = 1 AND status = 'published' ORDER BY title ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         View::render('admin/submissions/index', [
             'title' => 'Διαχείριση Υποβολών',

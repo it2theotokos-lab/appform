@@ -76,6 +76,7 @@ $filtersConfig = [
         '' => 'Όλες',
         'draft' => 'Draft',
         'submitted' => 'Submitted',
+        'correction_requested' => __('CORRECTION REQUESTED'),
         'under_review' => 'In Review',
         'returned' => 'Returned for Correction',
         'approved' => 'Approved',
@@ -117,8 +118,9 @@ include __DIR__ . '/../../shared/filter_bar.php';
                                 if ($sub['status'] === 'approved') $badgeClass = 'badge-status-approved';
                                 elseif ($sub['status'] === 'rejected') $badgeClass = 'badge-status-rejected';
                                 elseif ($sub['status'] === 'under_review') $badgeClass = 'badge-status-pending';
+                                elseif ($sub['status'] === 'correction_requested') $badgeClass = 'badge-status-pending';
                                 ?>
-                                <span class="<?= $badgeClass ?>"><?= strtoupper($sub['status']) ?></span>
+                                <span class="<?= $badgeClass ?>"><?= __($sub['status']) ?></span>
                             </td>
                             <td class="text-end">
                                 <div class="d-flex justify-content-end gap-2 flex-wrap">
@@ -136,7 +138,7 @@ include __DIR__ . '/../../shared/filter_bar.php';
                                         </a>
                                     <?php endif; ?>
 
-                                    <?php if ($sub['status'] !== 'draft'): ?>
+                                    <?php if (!in_array($sub['status'], ['draft', 'correction_requested'], true)): ?>
                                         <form action="/admin/submissions/<?= $sub['uuid'] ?>/return-to-draft" method="POST" class="js-confirm-action d-inline" data-confirm-title="Επιστροφή σε Πρόχειρο" data-confirm-message="Η υποβολή θα επιστραφεί στον χρήστη ως Πρόχειρο (Draft) και θα μπορεί να την τροποποιήσει. Θέλετε να συνεχίσετε;" data-confirm-button="Επιστροφή" data-confirm-variant="warning">
                                             <?= \App\Core\Csrf::field() ?>
                                             <input type="hidden" name="review_notes" value="Επιστροφή σε πρόχειρο από διαχειριστή">

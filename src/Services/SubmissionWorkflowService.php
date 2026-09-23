@@ -9,11 +9,12 @@ use Exception;
 class SubmissionWorkflowService {
     protected static $transitions = [
         'draft' => ['submitted', 'cancelled'],
-        'submitted' => ['under_review', 'approved', 'rejected', 'returned', 'draft', 'cancelled'],
-        'under_review' => ['approved', 'rejected', 'returned', 'draft', 'cancelled'],
+        'submitted' => ['correction_requested', 'under_review', 'approved', 'rejected', 'returned', 'draft', 'cancelled'],
+        'correction_requested' => ['submitted', 'under_review', 'approved', 'rejected', 'returned', 'draft', 'cancelled'],
+        'under_review' => ['correction_requested', 'approved', 'rejected', 'returned', 'draft', 'cancelled'],
         'returned' => ['submitted', 'draft', 'cancelled'],
-        'approved' => ['returned', 'draft'],
-        'rejected' => ['returned', 'draft'],
+        'approved' => ['correction_requested', 'returned', 'draft'],
+        'rejected' => ['correction_requested', 'returned', 'draft'],
         'cancelled' => ['draft']
     ];
 

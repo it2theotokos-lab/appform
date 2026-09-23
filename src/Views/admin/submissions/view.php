@@ -107,7 +107,7 @@ if ($hasDesign):
     <div class="col-md-5">
         <!-- Current status card -->
         <div class="glass-panel p-4 mb-4">
-            <h5 class="font-heading mb-3 text-white"><?= __('Status') ?>: <?= strtoupper($submission['status']) ?></h5>
+            <h5 class="font-heading mb-3 text-white"><?= __('Status') ?>: <?= __($submission['status']) ?></h5>
 
             <?php if (
                 $submission['status'] === 'draft'

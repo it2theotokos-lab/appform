@@ -100,7 +100,7 @@ if ($hasDesign):
                 </div>
             <?php endif; ?>
 
-            <?php if (!empty($dailySubmissionEnabled) && in_array($submission['status'], ['submitted', 'under_review', 'approved', 'rejected'], true)): ?>
+            <?php if (!empty($dailySubmissionEnabled) && in_array($submission['status'], ['submitted', 'correction_requested', 'under_review', 'approved', 'rejected'], true)): ?>
                 <div class="mb-4 p-3 rounded border border-warning bg-warning bg-opacity-10">
                     <h6 class="text-warning"><i class="fa-solid fa-pen-to-square me-2"></i>Αίτημα διόρθωσης</h6>
                     <?php if (($correctionRequest['status'] ?? '') === 'pending'): ?>

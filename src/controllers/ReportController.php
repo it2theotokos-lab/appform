@@ -12,7 +12,7 @@ use PDO;
 class ReportController extends Controller {
     public function analyticsIndex() {
         $db = Database::getInstance();
-        $forms = $db->query("SELECT * FROM forms WHERE status = 'published' ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        $forms = $db->query("SELECT * FROM forms WHERE status = 'published' AND is_active = 1 ORDER BY id DESC")->fetchAll(PDO::FETCH_ASSOC);
         View::render('analytics/index', [
             'title' => 'Στατιστικά & Analytics',
             'forms' => $forms

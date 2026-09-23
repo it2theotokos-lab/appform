@@ -4,6 +4,7 @@ ALTER TABLE form_submissions
     MODIFY COLUMN status ENUM(
         'draft',
         'submitted',
+        'correction_requested',
         'under_review',
         'approved',
         'rejected',

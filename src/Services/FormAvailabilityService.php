@@ -28,7 +28,7 @@ class FormAvailabilityService {
         if (!empty($form['maximum_submissions'])) {
             $stmt = $db->prepare("
                 SELECT COUNT(*) FROM form_submissions 
-                WHERE form_id = ? AND status IN ('submitted', 'under_review', 'approved', 'rejected', 'returned')
+                WHERE form_id = ? AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected', 'returned')
             ");
             $stmt->execute([$form['id']]);
             $completedCount = (int)$stmt->fetchColumn();
@@ -50,7 +50,7 @@ class FormAvailabilityService {
                 $hasSubmitted = ((int)$stmtCheck->fetchColumn() > 0);
             } else {
                 // Normal Single Submission Check
-                $stmtCheck = $db->prepare("SELECT COUNT(*) FROM form_submissions WHERE form_id = ? AND user_id = ? AND status IN ('submitted', 'under_review', 'approved', 'rejected', 'returned')");
+                $stmtCheck = $db->prepare("SELECT COUNT(*) FROM form_submissions WHERE form_id = ? AND user_id = ? AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected', 'returned')");
                 $stmtCheck->execute([$form['id'], $userId]);
                 $hasSubmitted = ((int)$stmtCheck->fetchColumn() > 0);
             }
@@ -66,7 +66,7 @@ class FormAvailabilityService {
             $stmtCheck = $db->prepare("
                 SELECT COUNT(*) FROM form_submissions
                 WHERE form_id = ? AND user_id = ?
-                  AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+                  AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected')
                   AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
             ");
             $stmtCheck->execute([$form['id'], $userId]);
@@ -102,7 +102,7 @@ class FormAvailabilityService {
         $stmt = $db->prepare("
             SELECT * FROM form_submissions
             WHERE form_id = ? AND user_id = ?
-              AND status IN ('submitted', 'under_review', 'approved', 'rejected')
+              AND status IN ('submitted', 'correction_requested', 'under_review', 'approved', 'rejected')
               AND DATE(COALESCE(submitted_at, created_at)) = CURDATE()
             ORDER BY COALESCE(submitted_at, created_at) DESC, id DESC
             LIMIT 1

@@ -2,6 +2,14 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.48-Stable] - 2026-09-23
+
+### Added
+- **Correction Request Workflow**: A user's correction request now transitions the submission to the explicit `Correction Requested` state, retains the prior status for a rejection decision, records every transition in history, sends an in-app notification and an email to each eligible reviewer, and appears clearly on the reviewer detail screen.
+
+### Changed
+- **Form Visibility**: Inactive or unpublished forms are excluded from user navigation, submission filters, and Analytics form selection.
+
 ## [1.1.29-Stable] - 2026-08-03
 
 ### Fixed
