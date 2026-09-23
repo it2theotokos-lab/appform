@@ -5,13 +5,13 @@ use App\Core\Database;
 use PDO;
 
 class NotificationService {
-    public static function notify(int $userId, string $type, string $title, string $message, ?string $linkUrl = null): bool {
+    public static function notify(int $userId, string $type, string $title, string $message, ?string $linkUrl = null, ?int $senderUserId = null): bool {
         $db = Database::getInstance();
         $stmt = $db->prepare("
-            INSERT INTO notifications (user_id, type, title, message, link_url)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO notifications (user_id, sender_user_id, type, title, message, link_url)
+            VALUES (?, ?, ?, ?, ?, ?)
         ");
-        return $stmt->execute([$userId, $type, $title, $message, $linkUrl]);
+        return $stmt->execute([$userId, $senderUserId, $type, $title, $message, $linkUrl]);
     }
 
     public static function getUnreadCount(int $userId): int {
@@ -24,7 +24,13 @@ class NotificationService {
 
     public static function getNotifications(int $userId): array {
         $db = Database::getInstance();
-        $stmt = $db->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 50");
+        $stmt = $db->prepare("
+            SELECT n.*, COALESCE(sender.full_name, sender.username) AS sender_name
+            FROM notifications n
+            LEFT JOIN users sender ON sender.id = n.sender_user_id
+            WHERE n.user_id = ?
+            ORDER BY n.created_at DESC LIMIT 50
+        ");
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }

@@ -2,6 +2,11 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.50-Stable] - 2026-09-23
+
+### Fixed
+- **Pending Correction Requests**: Existing pending correction requests are migrated into the reviewer queue and receive the `Correction Requested` status automatically.
+
 ## [1.1.49-Stable] - 2026-09-23
 
 ### Fixed

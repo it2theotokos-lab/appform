@@ -55,6 +55,7 @@ CREATE TABLE IF NOT EXISTS notification_templates (
 CREATE TABLE IF NOT EXISTS notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
+    sender_user_id INT NULL,
     type VARCHAR(50) DEFAULT 'system',
     title VARCHAR(150) NOT NULL,
     message TEXT NOT NULL,
@@ -62,7 +63,8 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read TINYINT(1) DEFAULT 0,
     read_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 5. System Settings Table

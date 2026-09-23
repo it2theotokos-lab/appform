@@ -22,6 +22,9 @@
                             <strong class="text-soft"><?= \App\Core\View::escape($n['title']) ?></strong>
                         </div>
                         <p class="mb-1 text-muted" style="font-size:0.875rem;"><?= \App\Core\View::escape($n['message']) ?></p>
+                        <?php if (!empty($n['sender_name'])): ?>
+                            <small class="text-info d-block mb-1" style="font-size:0.75rem;"><i class="fa-solid fa-user me-1" aria-hidden="true"></i>Από: <?= \App\Core\View::escape($n['sender_name']) ?></small>
+                        <?php endif; ?>
                         <small class="text-muted" style="font-size:0.75rem;"><i class="fa-regular fa-clock me-1" aria-hidden="true"></i><?= date('d/m/Y H:i', strtotime($n['created_at'])) ?></small>
                     </div>
                     <div>

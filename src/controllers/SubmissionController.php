@@ -669,7 +669,9 @@ class SubmissionController extends Controller {
             $history->execute([$submission['id'], $submission['status'], 'correction_requested', 'Αίτημα διόρθωσης: ' . $reason, Auth::id()]);
             $db->commit();
 
-            $this->notifyCorrectionReviewers($submission, $reason);
+            $requester = Auth::user() ?: [];
+            $requesterName = trim((string)($requester['full_name'] ?? $submission['submitter_name'] ?? 'Χρήστης'));
+            $this->notifyCorrectionReviewers($submission, $reason, $requesterName, (int)Auth::id());
             Session::flash('success', 'Το αίτημα διόρθωσης στάλθηκε στους reviewers.');
         } catch (Exception $e) {
             if ($db->inTransaction()) $db->rollBack();
@@ -734,7 +736,7 @@ class SubmissionController extends Controller {
         $this->redirect('/admin/submissions/' . rawurlencode($uuid));
     }
 
-    private function notifyCorrectionReviewers(array $submission, string $reason): void {
+    private function notifyCorrectionReviewers(array $submission, string $reason, string $requesterName, int $requesterId): void {
         $db = Database::getInstance();
         $stmt = $db->prepare("
             SELECT DISTINCT u.id, u.email, u.full_name
@@ -750,13 +752,14 @@ class SubmissionController extends Controller {
             \App\Services\NotificationService::notify(
                 (int)$reviewerId,
                 'correction_request',
-                'Νέο αίτημα διόρθωσης υποβολής',
-                'Υποβολή #' . $submission['id'] . ' στη φόρμα «' . $submission['form_title'] . '». Αιτιολογία: ' . $reason,
-                '/admin/submissions/' . rawurlencode($submission['uuid'])
+                'Νέο αίτημα διόρθωσης από ' . $requesterName,
+                'Από: ' . $requesterName . ' | Υποβολή #' . $submission['id'] . ' στη φόρμα «' . $submission['form_title'] . '». Αιτιολογία: ' . $reason,
+                '/admin/submissions/' . rawurlencode($submission['uuid']),
+                $requesterId
             );
             if (!empty($reviewer['email'])) {
                 $subject = 'Νέο αίτημα διόρθωσης υποβολής: ' . $submission['form_title'];
-                $body = "Ο χρήστης ζήτησε διόρθωση για την υποβολή #{$submission['id']} στη φόρμα \"{$submission['form_title']}\".\n\n"
+                $body = "Από: {$requesterName}\n\nΟ χρήστης ζήτησε διόρθωση για την υποβολή #{$submission['id']} στη φόρμα \"{$submission['form_title']}\".\n\n"
                     . "Αιτιολογία: {$reason}\n\n"
                     . 'Δείτε και αποφασίστε εδώ: /admin/submissions/' . $submission['uuid'];
                 try {
