@@ -2,6 +2,11 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.49-Stable] - 2026-09-23
+
+### Fixed
+- **Correction Request Migration Recovery**: Added a new, idempotent migration to apply the `Correction Requested` database status and the original-status field even when a previous migration name was already recorded by an installation.
+
 ## [1.1.48-Stable] - 2026-09-23
 
 ### Added
