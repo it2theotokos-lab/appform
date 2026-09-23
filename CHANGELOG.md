@@ -2,6 +2,11 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.52-Stable] - 2026-09-23
+
+### Fixed
+- **Notifications 500 Error**: Corrected the MySQL prepared-statement parameters used by notification pagination. The inbox now loads normally for every role.
+
 ## [1.1.51-Stable] - 2026-09-23
 
 ### Fixed

@@ -31,11 +31,13 @@ class NotificationService {
             SELECT n.*, COALESCE(sender.full_name, sender.username) AS sender_name
             FROM notifications n
             LEFT JOIN users sender ON sender.id = n.sender_user_id
-            WHERE n.user_id = ?
+            WHERE n.user_id = :user_id
             ORDER BY n.created_at DESC
             LIMIT :limit OFFSET :offset
         ");
-        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+        // Use named parameters consistently. MySQL PDO rejects queries that mix
+        // positional (`?`) and named placeholders, which would make the inbox 500.
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();

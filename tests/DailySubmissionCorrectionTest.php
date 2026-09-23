@@ -41,6 +41,7 @@ assert(str_contains($routes, '/notifications/delete-all'));
 assert(str_contains($formController, '!$existingSub'));
 assert(str_contains($notificationService, 'getNotificationCount'));
 assert(str_contains($notificationService, 'deleteNotification'));
+assert(str_contains($notificationService, 'WHERE n.user_id = :user_id'));
 assert(str_contains($notificationController, 'deleteAllUserNotifications'));
 assert(str_contains($notificationView, 'Διαγραφή όλων'));
 assert(str_contains($portalView, 'Αποστολή αιτήματος στον reviewer'));
