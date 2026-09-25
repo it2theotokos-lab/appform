@@ -50,7 +50,12 @@ class SubmissionValidator {
 
             // Required validation on final submit
             if ($isFinal && ($field['required'] ?? false)) {
-                if ($value === null || (is_string($value) && trim($value) === '')) {
+                // A checkbox group is submitted as an array. It is required when
+                // the entire group is empty, not when a particular checkbox is off.
+                $isEmpty = $value === null
+                    || (is_string($value) && trim($value) === '')
+                    || (is_array($value) && count($value) === 0);
+                if ($isEmpty) {
                     // Check conditional visibility - if conditional vis check hides it, it's not required!
                     if (!$this->isFieldHidden($field, $submittedData)) {
                         $this->errors[$key][] = "Το πεδίο " . htmlspecialchars($field['label']) . " είναι υποχρεωτικό.";

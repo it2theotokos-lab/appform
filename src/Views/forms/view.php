@@ -810,27 +810,31 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const visible = (action === 'show') ? matched : !matched;
-            const input = wrapper.querySelector('input, textarea, select');
+            const key = wrapper.dataset.fieldKey;
+            const fieldDef = fieldsMap[key];
+            const inputs = wrapper.querySelectorAll('input, textarea, select');
             
             if (visible) {
                 wrapper.style.display = '';
                 wrapper.removeAttribute('aria-hidden');
-                if (input) {
+                inputs.forEach(input => {
                     input.removeAttribute('disabled');
-                    // Restore required attribute if field has required configuration
-                    const key = wrapper.dataset.fieldKey;
-                    const fieldDef = fieldsMap[key];
-                    if (fieldDef && fieldDef.required) {
+                    // A required checkbox group is validated as one group below.
+                    // Never make its first checkbox required: unchecking that one
+                    // must not block a valid selection of the remaining entries.
+                    if (fieldDef && fieldDef.required && fieldDef.type !== 'checkbox') {
                         input.setAttribute('required', 'required');
+                    } else if (fieldDef && fieldDef.type === 'checkbox') {
+                        input.removeAttribute('required');
                     }
-                }
+                });
             } else {
                 wrapper.style.display = 'none';
                 wrapper.setAttribute('aria-hidden', 'true');
-                if (input) {
+                inputs.forEach(input => {
                     input.setAttribute('disabled', 'disabled');
                     input.removeAttribute('required');
-                }
+                });
             }
         } catch(e) {}
     }
@@ -981,6 +985,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
     ajaxForm.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        // Browser `required` cannot express "at least one checkbox in this
+        // group". Validate groups explicitly, but only for final submission;
+        // saving a draft is deliberately allowed with incomplete answers.
+        if (submitterStatus === 'submitted') {
+            let firstInvalidCheckbox = null;
+            Object.entries(fieldsMap).forEach(([key, fieldDef]) => {
+                if (!fieldDef.required || fieldDef.type !== 'checkbox') return;
+                const wrapper = document.getElementById(`wrapper_${key}`);
+                if (!wrapper || wrapper.style.display === 'none' || wrapper.classList.contains('d-none')) return;
+                const group = wrapper.querySelectorAll(`input[name="${key}[]"]`);
+                if (group.length && !Array.from(group).some(input => input.checked)) {
+                    group.forEach(input => input.classList.add('is-invalid'));
+                    firstInvalidCheckbox ||= group[0];
+                } else {
+                    group.forEach(input => input.classList.remove('is-invalid'));
+                }
+            });
+            if (firstInvalidCheckbox) {
+                firstInvalidCheckbox.focus();
+                const errorBox = document.getElementById('ajaxSubmitError');
+                document.getElementById('ajaxErrorMsg').textContent = 'Επιλέξτε τουλάχιστον μία εγγραφή από τη λίστα.';
+                document.getElementById('ajaxSubmitStatusContainer').classList.remove('d-none');
+                errorBox.classList.remove('d-none');
+                return;
+            }
+        }
         
         const submitButtons = ajaxForm.querySelectorAll('button[type="submit"]');
         submitButtons.forEach(btn => btn.disabled = true);

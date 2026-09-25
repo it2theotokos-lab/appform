@@ -2,6 +2,11 @@
 
 All notable changes to **AppForm** will be documented in this file.
 
+## [1.1.53-Stable] - 2026-09-25
+
+### Fixed
+- **Required Beneficiary Lists**: Checkbox lists now validate the group as a whole. A user may remove the first preselected beneficiary and still save a draft or submit when another beneficiary remains selected.
+
 ## [1.1.52-Stable] - 2026-09-23
 
 ### Fixed
