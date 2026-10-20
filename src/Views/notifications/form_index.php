@@ -343,6 +343,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Track active input for Smart Tag insertion
     const subjectInput = document.getElementById('notif_subject');
+    const previewFields = <?= json_encode($fields ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    const previewBasicTags = {
+        '{form_name}': <?= json_encode($form['title'] ?? 'Form', JSON_UNESCAPED_UNICODE) ?>,
+        '{submission_id}': 'TEST',
+        '{submission_uuid}': 'TEST',
+        '{submitted_at}': new Date().toLocaleString('el-GR'),
+        '{submission_date}': new Date().toLocaleString('el-GR'),
+        '{submitter_name}': 'Test User',
+        '{submitter_email}': 'test@example.com'
+    };
+
+    function previewFieldValue(key) {
+        const field = previewFields.find(item => item.key === key);
+        if (!field) return '';
+        const type = field.type || 'text';
+        const options = Array.isArray(field.options) ? field.options : [];
+        if (['select', 'radio', 'checkbox'].includes(type) && options.length) {
+            return options[0].label || options[0].value || '';
+        }
+        if (type === 'date') return new Date().toLocaleDateString('el-GR');
+        if (['datetime', 'date_time'].includes(type)) return new Date().toLocaleString('el-GR');
+        if (['checkbox', 'consent'].includes(type)) return field.label || field.placeholder || 'Ναι';
+        if (type === 'email') return 'test@example.com';
+        return 'Δείγμα: ' + (field.label || key);
+    }
+
+    function renderPreviewTags(template) {
+        let rendered = template;
+        Object.entries(previewBasicTags).forEach(([tag, value]) => {
+            rendered = rendered.split(tag).join(value);
+        });
+        return rendered.replace(/\{field:([a-zA-Z0-9_]+)\}/gi, (_, key) => previewFieldValue(key));
+    }
+
     const bodyInput = document.getElementById('notif_body');
     const bodyTextInput = document.getElementById('notif_body_text');
 
@@ -373,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const previewBtn = document.getElementById('previewHtmlBtn');
     if (previewBtn) {
         previewBtn.addEventListener('click', () => {
-            const rawHtml = bodyInput.value || '<p class="text-muted">Empty message.</p>';
+            const rawHtml = renderPreviewTags(bodyInput.value || '<p class="text-muted">Empty message.</p>');
             const iframe = document.getElementById('previewIframe');
             // Write sanitized content into iframe with scripts disabled
             const doc = iframe.contentWindow.document;

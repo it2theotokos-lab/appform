@@ -71,14 +71,14 @@ class FormNotificationTriggerService {
                 }
 
                 // 3. Resolve recipients based on recipient type
-                $recipients = self::resolveRecipients($rule, $submissionDetails, $answers);
+                $recipients = self::resolveRecipients($rule, $submissionDetails, $answers, $fieldsMap);
                 if (empty($recipients)) {
                     continue;
                 }
 
                 // 4. Resolve template smart tags in subject and body templates
-                $subject = self::replaceSmartTags($rule['subject_template'], $submissionDetails, $answers);
-                $body = self::replaceSmartTags($rule['body_template'], $submissionDetails, $answers);
+                $subject = self::replaceSmartTags($rule['subject_template'], $submissionDetails, $answers, $fieldsMap);
+                $body = self::replaceSmartTags($rule['body_template'], $submissionDetails, $answers, $fieldsMap);
                 if (str_contains($body, '{all_fields}')) {
                     $body = str_replace(
                         '{all_fields}',
@@ -221,7 +221,7 @@ class FormNotificationTriggerService {
         }
     }
 
-    protected static function resolveRecipients(array $rule, array $submissionDetails, array $answers): array {
+    protected static function resolveRecipients(array $rule, array $submissionDetails, array $answers, array $fieldsMap = []): array {
         $type = $rule['recipient_type'] ?? 'fixed';
         $db = Database::getInstance();
 
@@ -229,7 +229,7 @@ class FormNotificationTriggerService {
             case 'fixed':
                 $toStr = $rule['to_recipients'] ?? '';
                 // Resolve dynamic placeholders inside fixed recipient field (e.g. {field:email})
-                $toStr = self::replaceSmartTags($toStr, $submissionDetails, $answers);
+                $toStr = self::replaceSmartTags($toStr, $submissionDetails, $answers, $fieldsMap);
                 return array_filter(array_map('trim', explode(',', $toStr)));
 
             case 'submitter':
@@ -286,7 +286,7 @@ class FormNotificationTriggerService {
         return [];
     }
 
-    protected static function replaceSmartTags(string $template, array $submissionDetails, array $answers): string {
+    protected static function replaceSmartTags(string $template, array $submissionDetails, array $answers, array $fieldsMap = []): string {
         $db = Database::getInstance();
         $managerName = '';
         $managerEmail = '';
@@ -326,13 +326,77 @@ class FormNotificationTriggerService {
         $result = str_replace(array_keys($tags), array_values($tags), $template);
 
         // Resolve dynamic field-based placeholders {field:FIELD_KEY}
-        $result = preg_replace_callback('/\{field:([a-zA-Z0-9_]+)\}/i', function($m) use ($answers) {
+        $result = preg_replace_callback('/\{field:([a-zA-Z0-9_]+)\}/i', function($m) use ($answers, $fieldsMap) {
             $key = $m[1];
-            $val = $answers[$key] ?? '';
-            return is_array($val) ? implode(', ', $val) : (string)$val;
+            $val = $answers[$key] ?? null;
+            return NotificationTemplateService::formatSubmittedValue($val, $fieldsMap[$key] ?? null);
         }, $result);
 
         return $result;
+    }
+
+    /**
+     * Renders a notification template with representative values for Preview and Test Email.
+     * A real submission always uses its submitted answers in trigger().
+     */
+    public static function previewTemplateForForm(int $formId, string $template): string {
+        $db = Database::getInstance();
+        $stmt = $db->prepare("\n            SELECT f.title, v.schema_json\n            FROM forms f\n            LEFT JOIN form_versions v ON v.form_id = f.id AND v.version_number = f.current_version\n            WHERE f.id = ?\n        ");
+        $stmt->execute([$formId]);
+        $form = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+        $schema = json_decode($form['schema_json'] ?? '{}', true) ?: [];
+
+        $fieldsMap = [];
+        $answers = [];
+        foreach ($schema['sections'] ?? [] as $section) {
+            foreach ($section['fields'] ?? [] as $field) {
+                $key = $field['key'] ?? '';
+                if ($key === '') {
+                    continue;
+                }
+                $fieldsMap[$key] = $field;
+                $answers[$key] = self::sampleFieldValue($field);
+            }
+        }
+
+        $details = [
+            'form_id' => $formId,
+            'form_title' => $form['title'] ?? 'Form',
+            'id' => 'TEST',
+            'uuid' => 'TEST',
+            'submitted_at' => date('Y-m-d H:i:s'),
+            'status' => 'submitted',
+            'submitter_name' => 'Test User',
+            'user_email' => 'test@example.com',
+        ];
+        $result = self::replaceSmartTags($template, $details, $answers, $fieldsMap);
+        if (str_contains($result, '{all_fields}')) {
+            $result = str_replace('{all_fields}', NotificationTemplateService::renderSubmittedFields($answers, $schema, $fieldsMap), $result);
+        }
+        return $result;
+    }
+
+    private static function sampleFieldValue(array $field) {
+        $type = $field['type'] ?? 'text';
+        $options = $field['options'] ?? [];
+        if (in_array($type, ['select', 'radio', 'checkbox'], true) && is_array($options) && $options !== []) {
+            return $type === 'checkbox'
+                ? [($options[0]['value'] ?? '')]
+                : ($options[0]['value'] ?? '');
+        }
+        if (in_array($type, ['checkbox', 'consent'], true)) {
+            return '1';
+        }
+        if ($type === 'date') {
+            return date('Y-m-d');
+        }
+        if (in_array($type, ['datetime', 'date_time'], true)) {
+            return date('Y-m-d H:i:s');
+        }
+        if ($type === 'email') {
+            return 'test@example.com';
+        }
+        return 'Δείγμα: ' . ($field['label'] ?? $field['key'] ?? 'τιμή');
     }
 
     /**

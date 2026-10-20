@@ -9,6 +9,7 @@ use App\Core\View;
 use App\Core\Database;
 use App\Models\Form;
 use App\Models\FormVersion;
+use App\Services\FormNotificationTriggerService;
 use PDO;
 
 class NotificationController extends Controller {
@@ -352,9 +353,16 @@ class NotificationController extends Controller {
             $this->back();
         }
 
-        // Build test subject & body with placeholder stripped of smart tags
-        $testSubject = '[TEST] ' . ($notif['subject_template'] ?? 'Δοκιμαστική Ειδοποίηση');
-        $testBody    = "=== ΔΟΚΙΜΑΣΤΙΚΟ EMAIL ===\n\n" . ($notif['body_template'] ?? '') . "\n\n=== ΤΕΛΟΣ ΔΟΚΙΜΗΣ ===";
+        // A test email has no submission context. Use representative, formatted values
+        // so administrators never receive unresolved smart tags or internal option IDs.
+        $testSubject = '[TEST] ' . FormNotificationTriggerService::previewTemplateForForm(
+            $formId,
+            $notif['subject_template'] ?? 'Test notification'
+        );
+        $testBody = FormNotificationTriggerService::previewTemplateForForm(
+            $formId,
+            $notif['body_template'] ?? ''
+        );
 
         $logStatus = 'failed';
         $logMsg    = 'SMTP not attempted';

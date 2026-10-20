@@ -618,7 +618,15 @@ class FormController extends Controller {
     }
 
     public function showPublicForm($params) {
-        $slug = $params['slug'];
+        // This action is also used after a public-token lookup.  Do not allow a
+        // missing route parameter to reach the strictly typed Form::findBySlug().
+        $slug = $params['slug'] ?? null;
+        if (!is_string($slug) || $slug === '') {
+            http_response_code(404);
+            View::render('errors/404');
+            exit;
+        }
+
         $form = is_numeric($slug) ? Form::findById((int)$slug) : Form::findBySlug($slug);
         
         if (!$form) {
@@ -776,8 +784,13 @@ class FormController extends Controller {
             exit;
         }
 
-        // Forward to normal public form display using token lookup bypass, passing publicLayout flag
-        $this->showPublicForm(array_merge($params, ['publicLayout' => true]));
+        // The /f/{token} route provides "token", while the normal public-form
+        // renderer resolves forms through "slug". Forward the slug from the
+        // already verified token lookup and keep the dedicated public layout.
+        $this->showPublicForm(array_merge($params, [
+            'slug' => (string) $form['slug'],
+            'publicLayout' => true,
+        ]));
     }
 
     public function regeneratePublicToken($params) {

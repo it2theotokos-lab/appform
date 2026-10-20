@@ -99,6 +99,26 @@ class NotificationTemplateService {
             }
         }
 
+        // Notifications must show human-readable selections, never option IDs such as "1".
+        if ($fieldDef && isset($fieldDef['type'])) {
+            $type = $fieldDef['type'];
+            if (in_array($type, ['select', 'radio', 'checkbox'], true)) {
+                $optionValue = self::formatOptionValue($val, $fieldDef);
+                if ($optionValue !== null) {
+                    return $optionValue;
+                }
+            }
+            if (in_array($type, ['date', 'datetime', 'date_time'], true)) {
+                return self::formatDateValue($val, $type);
+            }
+            if (in_array($type, ['checkbox', 'consent'], true)) {
+                if (!self::isSelected($val)) {
+                    return '';
+                }
+                return trim((string)($fieldDef['label'] ?? $fieldDef['placeholder'] ?? 'Ναι'));
+            }
+        }
+
         if (is_array($val)) {
             return implode("\n", self::flattenDisplayValues($val));
         }
@@ -117,6 +137,53 @@ class NotificationTemplateService {
         }
 
         return (string)$val;
+    }
+
+    /** Returns option labels instead of their internal stored values. */
+    private static function formatOptionValue($val, array $fieldDef): ?string {
+        $options = $fieldDef['options'] ?? [];
+        if (!is_array($options) || $options === []) {
+            return null;
+        }
+
+        $values = is_array($val) ? $val : [$val];
+        $labels = [];
+        foreach ($values as $value) {
+            foreach ($options as $option) {
+                if (!is_array($option) || !array_key_exists('value', $option)) {
+                    continue;
+                }
+                if ((string)$option['value'] === (string)$value) {
+                    $label = trim((string)($option['label'] ?? $option['value']));
+                    if ($label !== '') {
+                        $labels[] = $label;
+                    }
+                    continue 2;
+                }
+            }
+        }
+        return $labels === [] ? '' : implode(', ', array_values(array_unique($labels)));
+    }
+
+    private static function formatDateValue($val, string $type): string {
+        if (!is_scalar($val) || trim((string)$val) === '') {
+            return '';
+        }
+        try {
+            $date = new \DateTimeImmutable((string)$val);
+            return in_array($type, ['datetime', 'date_time'], true)
+                ? $date->format('d/m/Y H:i')
+                : $date->format('d/m/Y');
+        } catch (\Exception $e) {
+            return (string)$val;
+        }
+    }
+
+    private static function isSelected($val): bool {
+        if (is_bool($val)) {
+            return $val;
+        }
+        return in_array(strtolower(trim((string)$val)), ['1', 'true', 'yes', 'on'], true);
     }
 
     private static function flattenDisplayValues(array $values): array {

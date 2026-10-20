@@ -110,7 +110,13 @@ include __DIR__ . '/../../shared/filter_bar.php';
                         <tr>
                             <td>#<?= $sub['id'] ?></td>
                             <td><strong><?= \App\Core\View::escape($sub['form_title']) ?></strong></td>
-                            <td><span class="badge-status-draft" style="color:var(--color-primary); font-weight: 500;">@<?= \App\Core\View::escape($sub['username']) ?></span></td>
+                            <td>
+                                <?php if (!empty($sub['is_guest_submission'])): ?>
+                                    <span class="text-muted"><i class="fa-solid fa-globe me-1" aria-hidden="true"></i>Δημόσια υποβολή</span>
+                                <?php else: ?>
+                                    <span class="badge-status-draft" style="color:var(--color-primary); font-weight: 500;">@<?= \App\Core\View::escape($sub['username']) ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td><?= $sub['submitted_at'] ? date('d/m/Y H:i', strtotime($sub['submitted_at'])) : 'Προσχέδιο' ?></td>
                             <td>
                                 <?php
@@ -174,4 +180,39 @@ include __DIR__ . '/../../shared/filter_bar.php';
             </tbody>
         </table>
     </div>
+
+    <?php
+    $currentPage = $currentPage ?? 1;
+    $totalPages = $totalPages ?? 1;
+    $paginationQuery = $_GET;
+    unset($paginationQuery['page']);
+    $pageUrl = static function (int $page) use ($paginationQuery): string {
+        return '?' . http_build_query(array_merge($paginationQuery, ['page' => $page]));
+    };
+    ?>
+    <?php if ($totalPages > 1): ?>
+        <nav class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-3" aria-label="Σελιδοποίηση υποβολών">
+            <?php if ($currentPage > 1): ?>
+                <a class="btn btn-outline-secondary btn-sm" href="<?= htmlspecialchars($pageUrl($currentPage - 1)) ?>">
+                    <i class="fa-solid fa-chevron-left me-1" aria-hidden="true"></i> Προηγούμενη σελίδα
+                </a>
+            <?php else: ?>
+                <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+                    <i class="fa-solid fa-chevron-left me-1" aria-hidden="true"></i> Προηγούμενη σελίδα
+                </span>
+            <?php endif; ?>
+
+            <span class="text-muted small">Σελίδα <?= (int)$currentPage ?> από <?= (int)$totalPages ?></span>
+
+            <?php if ($currentPage < $totalPages): ?>
+                <a class="btn btn-outline-secondary btn-sm" href="<?= htmlspecialchars($pageUrl($currentPage + 1)) ?>">
+                    Επόμενη σελίδα <i class="fa-solid fa-chevron-right ms-1" aria-hidden="true"></i>
+                </a>
+            <?php else: ?>
+                <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">
+                    Επόμενη σελίδα <i class="fa-solid fa-chevron-right ms-1" aria-hidden="true"></i>
+                </span>
+            <?php endif; ?>
+        </nav>
+    <?php endif; ?>
 </div>

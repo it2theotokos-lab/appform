@@ -124,7 +124,7 @@ CREATE TABLE IF NOT EXISTS form_submissions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     form_id INT NOT NULL,
     form_version_id INT NOT NULL,
-    user_id INT NOT NULL,
+    user_id INT NULL,
     data_json LONGTEXT NOT NULL,
     status ENUM('draft', 'submitted', 'correction_requested', 'under_review', 'approved', 'rejected', 'returned', 'cancelled') DEFAULT 'submitted',
     submitted_at TIMESTAMP NULL DEFAULT NULL,

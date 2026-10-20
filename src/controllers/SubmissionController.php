@@ -825,6 +825,8 @@ class SubmissionController extends Controller {
         $submitter = trim($_GET['submitter'] ?? '');
         $dateFrom = trim($_GET['date_from'] ?? '');
         $dateTo = trim($_GET['date_to'] ?? '');
+        $pageSize = 20;
+        $requestedPage = max(1, (int)($_GET['page'] ?? 1));
 
         $where = [];
         $params = [];
@@ -876,18 +878,32 @@ class SubmissionController extends Controller {
             $params[] = $dateTo . " 23:59:59";
         }
 
-        $sql = "
-            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title, f.slug as form_slug, u.username
+        $fromSql = "
             FROM form_submissions s 
             LEFT JOIN forms f ON s.form_id = f.id 
-            JOIN users u ON s.user_id = u.id 
+            LEFT JOIN users u ON s.user_id = u.id
         ";
 
+        $whereSql = '';
         if (!empty($where)) {
-            $sql .= " WHERE " . implode(" AND ", $where);
+            $whereSql = " WHERE " . implode(" AND ", $where);
         }
 
-        $sql .= " ORDER BY s.created_at DESC";
+        $countStmt = $db->prepare("SELECT COUNT(*) " . $fromSql . $whereSql);
+        $countStmt->execute($params);
+        $totalRecords = (int)$countStmt->fetchColumn();
+        $totalPages = max(1, (int)ceil($totalRecords / $pageSize));
+        $currentPage = min($requestedPage, $totalPages);
+        $offset = ($currentPage - 1) * $pageSize;
+
+        $sql = "
+            SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') as form_title,
+                   f.slug as form_slug,
+                   COALESCE(u.username, 'Δημόσια υποβολή') AS username,
+                   CASE WHEN s.user_id IS NULL THEN 1 ELSE 0 END AS is_guest_submission
+            " . $fromSql . $whereSql . "
+            ORDER BY s.created_at DESC
+            LIMIT {$pageSize} OFFSET {$offset}";
 
         $stmt = $db->prepare($sql);
         $stmt->execute($params);
@@ -904,7 +920,10 @@ class SubmissionController extends Controller {
             'canViewAll' => $canViewAll,
             'canViewSubordinates' => $canViewSubordinates,
             'canViewOwn' => $canViewOwn,
-            'totalRecords' => count($submissions)
+            'totalRecords' => $totalRecords,
+            'currentPage' => $currentPage,
+            'totalPages' => $totalPages,
+            'pageSize' => $pageSize
         ]);
     }
 
