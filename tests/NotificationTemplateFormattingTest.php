@@ -44,3 +44,15 @@ assertSameValue(
     'checkbox options use display labels'
 );
 
+assertSameValue(
+    NotificationTemplateService::formatSubmittedValue(['PAPADOPOULOS NIKOS', 'IOANNOU MARIA'], [
+        'type' => 'checkbox',
+        // A repository field can retain an unrelated/stale options array in
+        // its schema while the actual checkbox labels come from the repository.
+        'options' => [['value' => '1', 'label' => 'Unused static choice']],
+        'dataSource' => 'repository',
+    ]),
+    "PAPADOPOULOS NIKOS\nIOANNOU MARIA",
+    'repository beneficiary list remains visible'
+);
+

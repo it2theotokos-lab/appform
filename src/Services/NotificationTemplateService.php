@@ -111,7 +111,10 @@ class NotificationTemplateService {
             if (in_array($type, ['date', 'datetime', 'date_time'], true)) {
                 return self::formatDateValue($val, $type);
             }
-            if (in_array($type, ['checkbox', 'consent'], true)) {
+            // Single consent checkboxes are scalar values. Checkbox groups,
+            // including repository-backed beneficiary lists, are arrays and
+            // must continue to the generic array formatter below.
+            if (in_array($type, ['checkbox', 'consent'], true) && !is_array($val)) {
                 if (!self::isSelected($val)) {
                     return '';
                 }
@@ -162,7 +165,11 @@ class NotificationTemplateService {
                 }
             }
         }
-        return $labels === [] ? '' : implode(', ', array_values(array_unique($labels)));
+        // Repository-backed checkbox groups keep their options outside the
+        // schema.  Their submitted values are already displayable names, so
+        // falling back to the generic array formatter preserves old and new
+        // beneficiary lists instead of rendering an empty value.
+        return $labels === [] ? null : implode(', ', array_values(array_unique($labels)));
     }
 
     private static function formatDateValue($val, string $type): string {
