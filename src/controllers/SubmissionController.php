@@ -902,7 +902,7 @@ class SubmissionController extends Controller {
                    COALESCE(u.username, 'Δημόσια υποβολή') AS username,
                    CASE WHEN s.user_id IS NULL THEN 1 ELSE 0 END AS is_guest_submission
             " . $fromSql . $whereSql . "
-            ORDER BY s.created_at DESC
+            ORDER BY s.created_at DESC, s.id DESC
             LIMIT {$pageSize} OFFSET {$offset}";
 
         $stmt = $db->prepare($sql);

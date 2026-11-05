@@ -77,15 +77,19 @@ class ExportController extends Controller {
 
         $sql = "
             SELECT s.*, COALESCE(f.title, 'Αρχειοθετημένη/Διαγραμμένη Φόρμα') AS form_title,
-                   f.slug AS form_slug, u.username, u.email AS submitter_email,
+                   f.slug AS form_slug,
+                   COALESCE(u.username, 'Δημόσια υποβολή') AS username,
+                   COALESCE(u.email, '') AS submitter_email,
                    COALESCE(fv.schema_json, '{\"schemaVersion\":1,\"sections\":[]}') AS schema_json
             FROM form_submissions s
             LEFT JOIN forms f ON s.form_id = f.id
             LEFT JOIN form_versions fv ON s.form_version_id = fv.id
-            JOIN users u ON s.user_id = u.id
+            LEFT JOIN users u ON s.user_id = u.id
         ";
         if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
-        $sql .= ' ORDER BY s.created_at DESC';
+        // Match the submissions screen's ordering, including records created
+        // in the same second.
+        $sql .= ' ORDER BY s.created_at DESC, s.id DESC';
 
         $stmt = $db->prepare($sql);
         $stmt->execute($queryParams);
